@@ -80,7 +80,7 @@ export function FillRecorder() {
         setStatus(
           failures.length
             ? `Sync needs attention: ${failures.join("; ")}`
-            : "Filled trades synced locally.",
+            : "CoW fills synced locally. Hyperliquid raw evidence only; derivative accounting BLOCKED for Phase I.",
         );
         timer = setTimeout(sync, 20000);
       }

@@ -1,0 +1,18 @@
+$ python3 scripts/audit/live-preflight.py
+$ git status --short
+?? scripts/audit/live-preflight.py
+$ git rev-parse HEAD
+3651f775bdb6ee6c0df601bf1a9dbf3e488b77fc
+src/lib/config.ts: FEES_ENABLED: false
+src/lib/config.ts: MAINNET_ENABLED: false
+src/lib/config.ts: feeRecipient: ""
+src/lib/config.ts: builderAddress: ""
+src/lib/hyperliquid.ts: new HttpTransport({ isTestnet: true })
+CoW permitted trading chain: Sepolia 11155111; actual wallet chain NOT VERIFIED until external provider attached.
+Hyperliquid transport: https://api.hyperliquid-testnet.xyz (info/exchange)
+Public live parameters: {"PIT_LIVE_CDP_URL": "MISSING", "PIT_TEST_ACCOUNT": "MISSING", "PIT_SEPOLIA_SELL_TOKEN": "MISSING", "PIT_SEPOLIA_BUY_TOKEN": "MISSING", "PIT_SEPOLIA_SELL_AMOUNT": "MISSING", "PIT_HL_PRICE": "MISSING", "PIT_HL_SIZE": "MISSING"}
+Secret-named PIT/PUBLIC environment variables present: 0
+Root environment files: [".env.example"]
+No process environment values were logged; external wallet custody is required.
+
+[exit_code=0]

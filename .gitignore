@@ -6,3 +6,6 @@ dist/
 playwright-report/
 test-results/
 *.tsbuildinfo
+
+# Unreviewed operator browser evidence; publish only explicitly reviewed artifacts.
+docs/audit/phase-h/live/

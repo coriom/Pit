@@ -24,6 +24,18 @@ export function assertEvent(event: unknown): asserts event is TaxlotEvent {
       `Taxlot schema validation failed: ${JSON.stringify(validate.errors)}`,
     );
 }
+export const DERIVATIVE_ACCOUNTING_BLOCKED =
+  "Hyperliquid derivative accounting is BLOCKED for Phase I. Raw fills are evidence only; no Taxlot event or derivative CSV is produced.";
+export function isDerivativeEvidence(e: TaxlotEvent) {
+  return (
+    e.source.includes("hyperliquid") ||
+    e.asset.startsWith("HL-PERP:") ||
+    e.counter_asset === "USDC-NOTIONAL"
+  );
+}
+function assertAccountingSupported(e: TaxlotEvent) {
+  if (isDerivativeEvidence(e)) throw new Error(DERIVATIVE_ACCOUNTING_BLOCKED);
+}
 export async function eventDB() {
   assertStorageEnabled();
   return openDB("pit-taxlot-v1", 1, {
@@ -37,6 +49,7 @@ export async function eventDB() {
 // Validate before every write, including duplicates. ID check and sequence allocation share a transaction.
 export async function appendEvent(event: TaxlotEvent, raw: unknown) {
   assertEvent(event);
+  assertAccountingSupported(event);
   const db = await eventDB();
   const tx = db.transaction(["events", "raw", "meta"], "readwrite");
   if (await tx.objectStore("events").get(event.id)) {
@@ -97,6 +110,7 @@ export function eventsCSV(events: TaxlotEvent[]) {
       columns.map(csvCell).join(","),
       ...events.map((e) => {
         assertEvent(e);
+        assertAccountingSupported(e);
         const row = {
           ...e,
           fee_asset: e.fee[0]?.asset ?? "",
@@ -110,15 +124,16 @@ export function eventsCSV(events: TaxlotEvent[]) {
   );
 }
 export async function downloadCSV(account: string, derivatives = false) {
+  if (derivatives) throw new Error(DERIVATIVE_ACCOUNTING_BLOCKED);
   const events = (await listEvents(account)).filter(
-    (e) => e.source.includes("hyperliquid") === derivatives,
+    (e) => !isDerivativeEvidence(e),
   );
   const url = URL.createObjectURL(
     new Blob([eventsCSV(events)], { type: "text/csv;charset=utf-8" }),
   );
   const a = document.createElement("a");
   a.href = url;
-  a.download = derivatives ? "pit-perps-review.csv" : "pit-taxlot.csv";
+  a.download = "pit-taxlot.csv";
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   return events.length;

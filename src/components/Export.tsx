@@ -1,7 +1,7 @@
 import { storageEnabled, STORAGE_WARNING } from "../lib/storage-policy";
 import { useAccount } from "wagmi";
 import { useState } from "react";
-import { downloadCSV } from "../lib/events";
+import { downloadCSV, DERIVATIVE_ACCOUNTING_BLOCKED } from "../lib/events";
 export function Export() {
   const enabled = storageEnabled();
   const { address } = useAccount();
@@ -21,8 +21,8 @@ export function Export() {
       </button>
       <button
         style={{ marginTop: 8 }}
-        disabled={!address || !enabled}
-        onClick={() => run(true)}
+        disabled
+        title={DERIVATIVE_ACCOUNTING_BLOCKED}
       >
         Perps review CSV
       </button>
@@ -37,10 +37,7 @@ export function Export() {
           workflow.
         </p>
       )}
-      <p className="notice">
-        Spot trades and derivative records export separately. Perps require tax
-        review.
-      </p>
+      <p className="notice">{DERIVATIVE_ACCOUNTING_BLOCKED}</p>
       <small role="status">{status}</small>
     </>
   );

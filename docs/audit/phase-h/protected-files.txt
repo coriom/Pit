@@ -1,0 +1,3 @@
+$ git diff --exit-code 3651f775bdb6ee6c0df601bf1a9dbf3e488b77fc -- src/lib/config.ts src/lib/cow.ts src/lib/hyperliquid.ts src/lib/storage-origins.ts src/lib/storage-policy.ts schemas/events.v1.json src/pages/legal.astro scripts/deploy.sh public/_headers
+
+[exit_code=0]

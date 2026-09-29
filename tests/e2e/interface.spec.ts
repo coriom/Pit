@@ -18,6 +18,9 @@ test("production swap, wallet dialog, navigation and CSP", async ({ page }) => {
   });
   await page.goto("/");
   await expect(
+    page.getByRole("button", { name: "Perps review CSV", exact: true }),
+  ).toBeDisabled();
+  await expect(
     page.getByRole("heading", { name: "Swap tokens" }),
   ).toBeVisible();
   await expect(

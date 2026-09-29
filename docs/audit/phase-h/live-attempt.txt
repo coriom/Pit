@@ -1,0 +1,4 @@
+$ node scripts/live-e2e.mjs
+LIVE EXECUTION BLOCKED: missing public configuration: PIT_LIVE_CDP_URL, PIT_TEST_ACCOUNT, PIT_SEPOLIA_SELL_TOKEN, PIT_SEPOLIA_BUY_TOKEN, PIT_SEPOLIA_SELL_AMOUNT, PIT_HL_PRICE, PIT_HL_SIZE. No test order was sent.
+
+[exit_code=2]

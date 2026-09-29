@@ -56,38 +56,21 @@ export async function recordCowFill(
     throw new Error("Wallet chain changed during fill sync");
   return appendEvent(event, fill);
 }
-function multiply(a: string, b: string) {
-  const da = a.split(".")[1]?.length ?? 0,
-    db = b.split(".")[1]?.length ?? 0;
-  return formatUnits(
-    BigInt(a.replace(".", "")) * BigInt(b.replace(".", "")),
-    da + db,
-  );
-}
 type HlFill = Awaited<ReturnType<typeof readPerps>>["fills"][number];
-export function perpEvent(fill: HlFill, account: string): TaxlotEvent {
-  const id = `hl:testnet:${account.toLowerCase()}:${fill.tid}`;
-  return {
-    version: 1,
-    id,
-    type: "trade",
-    timestamp: new Date(fill.time).toISOString(),
-    sequence: 0,
-    asset: `HL-PERP:${fill.coin}:${fill.side}`,
-    quantity: fill.sz,
-    counter_asset: "USDC-NOTIONAL",
-    counter_quantity: multiply(fill.px, fill.sz),
-    fee:
-      Number(fill.fee) >= 0
-        ? [{ asset: fill.feeToken, quantity: fill.fee }]
-        : [],
-    source: "pit:hyperliquid:testnet:derivative-review",
-    account: account.toLowerCase(),
-    raw_row_ref: id,
-    txid: fill.hash,
-    valuation_note: `DERIVATIVE REVIEW ONLY; not a spot acquisition or disposal. Direction=${fill.dir}; closedPnl=${fill.closedPnl}; signed fee=${fill.fee}. Raw fill preserved. Do not import into spot tax calculation.`,
-  };
-}
+// Taxlot v1 has no derivative model. Preserve protocol evidence only; never
+// manufacture a spot event, notional asset, or tax treatment from a perp fill.
 export async function recordPerpFills(fills: HlFill[], account: string) {
-  for (const fill of fills) await appendEvent(perpEvent(fill, account), fill);
+  const db = await eventDB();
+  const tx = db.transaction("raw", "readwrite");
+  for (const fill of fills) {
+    const id = `hl:testnet:${account.toLowerCase()}:${fill.tid}`;
+    await tx.store.put({
+      id,
+      account: account.toLowerCase(),
+      kind: "hyperliquid-fill-evidence",
+      accounting: "BLOCKED_PHASE_I",
+      payload: fill,
+    });
+  }
+  await tx.done;
 }

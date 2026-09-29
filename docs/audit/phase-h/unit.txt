@@ -1,0 +1,24 @@
+$ pnpm test
+
+> pit@0.1.0 test /home/corio/PIT
+> vitest run
+
+
+ RUN  v3.2.7 /home/corio/PIT
+
+ ✓ tests/schema-provenance.test.ts (1 test) 5ms
+ ✓ tests/storage-policy.test.ts (5 tests) 51ms
+ ✓ tests/audit-builder-path.test.ts (1 test) 12ms
+ ✓ tests/audit-taxlot.test.ts (1 test) 114ms
+ ✓ tests/events.test.ts (4 tests) 128ms
+ ✓ tests/hyperliquid.test.ts (2 tests) 7ms
+ ✓ tests/cow.test.ts (6 tests) 20ms
+ ✓ tests/audit-fees.test.ts (4 tests) 8ms
+
+ Test Files  8 passed (8)
+      Tests  24 passed (24)
+   Start at  20:03:25
+   Duration  1.95s (transform 522ms, setup 228ms, collect 5.97s, tests 344ms, environment 2ms, prepare 1.32s)
+
+
+[exit_code=0]

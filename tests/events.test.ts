@@ -8,9 +8,11 @@ import {
   assertEvent,
   eventsCSV,
   listEvents,
+  eventDB,
+  downloadCSV,
   type TaxlotEvent,
 } from "../src/lib/events";
-import { perpEvent } from "../src/lib/record-fills";
+import { recordPerpFills } from "../src/lib/record-fills";
 const event: TaxlotEvent = {
   version: 1,
   id: "cow:1",
@@ -56,7 +58,7 @@ it("keeps stablecoins as trade and preserves CSV precision and escaping", () => 
   expect(csv).toContain("1.000000000000000001");
   expect(csv).toContain('"\'=1+1,""test""\nnext"');
 });
-it("records derivative notional exactly and marks it for separate review", () => {
+it("retains raw derivative evidence without manufacturing Taxlot events or CSV", async () => {
   const fill = {
     tid: 1,
     time: 1790683200000,
@@ -70,8 +72,29 @@ it("records derivative notional exactly and marks it for separate review", () =>
     dir: "Open Long",
     closedPnl: "0",
   };
-  const e = perpEvent(fill as any, "0xabc");
-  assertEvent(e);
-  expect(e.counter_quantity).toBe("246.925905678");
-  expect(e.valuation_note).toContain("DERIVATIVE REVIEW ONLY");
+  const account = "perp-only-fixture";
+  const db = await eventDB();
+  const sequence = await db.get("meta", "sequence");
+  await recordPerpFills([fill as any], account);
+  await recordPerpFills([fill as any], account);
+  expect(await listEvents(account)).toEqual([]);
+  const raw = await db.get("raw", `hl:testnet:${account}:1`);
+  expect(raw.payload).toEqual(fill);
+  expect(raw.accounting).toBe("BLOCKED_PHASE_I");
+  expect(await db.get("meta", "sequence")).toBe(sequence);
+  await expect(downloadCSV(account, true)).rejects.toThrow(
+    "BLOCKED for Phase I",
+  );
+  const legacy = {
+    ...event,
+    id: "legacy-perp",
+    source: "pit:hyperliquid:testnet:derivative-review",
+    asset: "HL-PERP:ETH:B",
+    counter_asset: "USDC-NOTIONAL",
+  };
+  await expect(appendEvent(legacy, fill)).rejects.toThrow(
+    "BLOCKED for Phase I",
+  );
+  expect(() => eventsCSV([legacy])).toThrow("BLOCKED for Phase I");
+  db.close();
 });
