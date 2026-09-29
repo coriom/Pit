@@ -1,0 +1,16 @@
+$ pnpm check
+
+> pit@0.1.0 check /home/corio/PIT
+> astro check
+
+20:22:41 [content] Syncing content
+20:22:41 [content] Synced content
+20:22:41 [types] Generated 68ms
+20:22:41 [check] Getting diagnostics for Astro files in /home/corio/PIT...
+Result (43 files): 
+- 0 errors
+- 0 warnings
+- 0 hints
+
+
+[exit_code=0]

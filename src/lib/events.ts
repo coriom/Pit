@@ -1,3 +1,8 @@
+import {
+  DERIVATIVE_ACCOUNTING_BLOCKED,
+  assertNotDerivativeSource,
+} from "./accounting-compatibility";
+export { DERIVATIVE_ACCOUNTING_BLOCKED } from "./accounting-compatibility";
 import { assertStorageEnabled } from "./storage-policy";
 import { openDB } from "idb";
 import validate from "./validate-event";
@@ -24,13 +29,11 @@ export function assertEvent(event: unknown): asserts event is TaxlotEvent {
       `Taxlot schema validation failed: ${JSON.stringify(validate.errors)}`,
     );
 }
-export const DERIVATIVE_ACCOUNTING_BLOCKED =
-  "Hyperliquid derivative accounting is BLOCKED for Phase I. Raw fills are evidence only; no Taxlot event or derivative CSV is produced.";
 export function isDerivativeEvidence(e: TaxlotEvent) {
   return (
-    e.source.includes("hyperliquid") ||
-    e.asset.startsWith("HL-PERP:") ||
-    e.counter_asset === "USDC-NOTIONAL"
+    e.source.toLowerCase().includes("hyperliquid") ||
+    e.asset.toUpperCase().startsWith("HL-PERP:") ||
+    e.counter_asset?.toUpperCase() === "USDC-NOTIONAL"
   );
 }
 function assertAccountingSupported(e: TaxlotEvent) {
@@ -50,6 +53,7 @@ export async function eventDB() {
 export async function appendEvent(event: TaxlotEvent, raw: unknown) {
   assertEvent(event);
   assertAccountingSupported(event);
+  assertNotDerivativeSource(raw);
   const db = await eventDB();
   const tx = db.transaction(["events", "raw", "meta"], "readwrite");
   if (await tx.objectStore("events").get(event.id)) {
@@ -111,6 +115,10 @@ export function eventsCSV(events: TaxlotEvent[]) {
       ...events.map((e) => {
         assertEvent(e);
         assertAccountingSupported(e);
+        if (e.fee.length > 1)
+          throw new Error(
+            "Taxlot Generic CSV mapping supports one fee leg; export blocked to prevent fee loss",
+          );
         const row = {
           ...e,
           fee_asset: e.fee[0]?.asset ?? "",

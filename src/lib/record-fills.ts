@@ -1,12 +1,21 @@
 import type { Trade } from "@cowprotocol/cow-sdk";
 import { erc20Abi, formatUnits, type PublicClient } from "viem";
 import { appendEvent, eventDB, type TaxlotEvent } from "./events";
-import type { readPerps } from "./hyperliquid";
+import { assertNotDerivativeSource } from "./accounting-compatibility";
 export async function recordCowFill(
   fill: Trade,
   chainId: number,
   provider: PublicClient,
 ) {
+  assertNotDerivativeSource(fill);
+  if (
+    !fill ||
+    typeof fill.orderUid !== "string" ||
+    !fill.orderUid ||
+    typeof fill.sellToken !== "string" ||
+    typeof fill.buyToken !== "string"
+  )
+    throw new Error("Invalid CoW trade source");
   const key = `cow:${chainId}:${fill.orderUid}:${fill.blockNumber}:${fill.logIndex}`;
   if (await (await eventDB()).get("events", key)) return false;
   if ((await provider.getChainId()) !== chainId)
@@ -55,22 +64,4 @@ export async function recordCowFill(
   if ((await provider.getChainId()) !== chainId)
     throw new Error("Wallet chain changed during fill sync");
   return appendEvent(event, fill);
-}
-type HlFill = Awaited<ReturnType<typeof readPerps>>["fills"][number];
-// Taxlot v1 has no derivative model. Preserve protocol evidence only; never
-// manufacture a spot event, notional asset, or tax treatment from a perp fill.
-export async function recordPerpFills(fills: HlFill[], account: string) {
-  const db = await eventDB();
-  const tx = db.transaction("raw", "readwrite");
-  for (const fill of fills) {
-    const id = `hl:testnet:${account.toLowerCase()}:${fill.tid}`;
-    await tx.store.put({
-      id,
-      account: account.toLowerCase(),
-      kind: "hyperliquid-fill-evidence",
-      accounting: "BLOCKED_PHASE_I",
-      payload: fill,
-    });
-  }
-  await tx.done;
 }

@@ -1,0 +1,291 @@
+$ python3 scripts/audit/derivative-contract.py
+$ git rev-parse HEAD
+a5830a1eb3f0b030994d77b9bf82aa8a25da4daf
+$ git -C /home/corio/TAXLOT rev-parse HEAD
+a4879aec7ecee5f0049ddfd4780000ae9a63b2e9
+Exact schema byte equality: True; SHA256 d8eb339ed7acd7da3b68ef09fe5c1b01c4cc3258cb401a4f2ba8805e7a3b07d7
+Root: $ref #/definitions/EventV1; object additionalProperties=False
+{"constraints": {"const": 1, "type": "number"}, "pointer": "#/definitions/EventV1/properties/version", "required": true}
+{"constraints": {"minLength": 1, "type": "string"}, "pointer": "#/definitions/EventV1/properties/id", "required": true}
+{"constraints": {"enum": ["deposit", "withdrawal", "trade", "disposal", "purchase_with_crypto", "staking_reward", "airdrop", "fee", "transfer_internal"], "type": "string"}, "pointer": "#/definitions/EventV1/properties/type", "required": true}
+{"constraints": {"format": "date-time", "type": "string"}, "pointer": "#/definitions/EventV1/properties/timestamp", "required": true}
+{"constraints": {"minimum": 0, "type": "integer"}, "pointer": "#/definitions/EventV1/properties/sequence", "required": true}
+{"constraints": {"minLength": 1, "type": "string"}, "pointer": "#/definitions/EventV1/properties/asset", "required": true}
+{"constraints": {"pattern": "^(0|[1-9]\\d*)(\\.\\d+)?$", "type": "string"}, "pointer": "#/definitions/EventV1/properties/quantity", "required": true}
+{"constraints": {"type": ["string", "null"]}, "pointer": "#/definitions/EventV1/properties/counter_asset", "required": true}
+{"constraints": {"anyOf": [{"$ref": "#/definitions/EventV1/properties/quantity"}, {"type": "null"}]}, "pointer": "#/definitions/EventV1/properties/counter_quantity", "required": true}
+{"constraints": {"items": {"additionalProperties": false, "properties": {"asset": {"minLength": 1, "type": "string"}, "quantity": {"$ref": "#/definitions/EventV1/properties/quantity"}}, "required": ["asset", "quantity"], "type": "object"}, "type": "array"}, "pointer": "#/definitions/EventV1/properties/fee", "required": true}
+{"constraints": {"minLength": 1, "type": "string"}, "pointer": "#/definitions/EventV1/properties/source", "required": true}
+{"constraints": {"minLength": 1, "type": "string"}, "pointer": "#/definitions/EventV1/properties/account", "required": true}
+{"constraints": {"minLength": 1, "type": "string"}, "pointer": "#/definitions/EventV1/properties/raw_row_ref", "required": true}
+{"constraints": {"type": "string"}, "pointer": "#/definitions/EventV1/properties/txid", "required": false}
+{"constraints": {"type": "string"}, "pointer": "#/definitions/EventV1/properties/destination", "required": false}
+{"constraints": {"items": {"type": "string"}, "type": "array"}, "pointer": "#/definitions/EventV1/properties/linked_refs", "required": false}
+{"constraints": {"$ref": "#/definitions/EventV1/properties/quantity"}, "pointer": "#/definitions/EventV1/properties/acquisition_eur", "required": false}
+{"constraints": {"$ref": "#/definitions/EventV1/properties/quantity"}, "pointer": "#/definitions/EventV1/properties/proceeds_eur", "required": false}
+{"constraints": {"$ref": "#/definitions/EventV1/properties/quantity"}, "pointer": "#/definitions/EventV1/properties/portfolio_eur", "required": false}
+{"constraints": {"type": "boolean"}, "pointer": "#/definitions/EventV1/properties/basis_confirmed", "required": false}
+{"constraints": {"type": "string"}, "pointer": "#/definitions/EventV1/properties/valuation_note", "required": false}
+{"constraints": {"$ref": "#/definitions/EventV1/properties/quantity"}, "pointer": "#/definitions/EventV1/properties/soulte_received_eur", "required": false}
+{"constraints": {"$ref": "#/definitions/EventV1/properties/quantity"}, "pointer": "#/definitions/EventV1/properties/soulte_paid_eur", "required": false}
+
+SOURCE /home/corio/TAXLOT/src/importers/index.ts SHA256 6f5d5c9cea24b88e868b7bc8bb022a341aed3c23c6c41d761f133b4d1a0e4e55
+1: import Papa from 'papaparse';
+2: import Decimal from 'decimal.js';
+3: import { assetName, eventSchema, fiat, type Event, type ImportResult } from '../domain/events';
+4: export type Platform = 'Binance' | 'Kraken' | 'Coinbase' | 'Ledger Live' | 'Generic';
+5: export interface Mapping { timestamp: string; type: string; asset: string; quantity: string; counter_asset?: string; counter_quantity?: string; fee_asset?: string; fee_quantity?: string; txid?: string; acquisition_eur?: string; proceeds_eur?: string; soulte_received_eur?:string; soulte_paid_eur?:string; types?: Record<string,Event['type']> }
+6: export interface ImportOptions { platform: Platform; account: string; fileId: string; mapping?: Mapping }
+7: type Row = Record<string,string>;
+8: function num(s: string) { const n = new Decimal(s.trim().replace(',', '.')); if (!n.isFinite()) throw Error('Nombre invalide'); return n.abs().toFixed(); }
+9: function utc(s: string) { const v = s.trim().replace(' UTC','Z').replace(' ', 'T'); if (!/^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(v)) throw Error('Date ISO attendue'); return new Date(/(Z|[+-]\d\d:\d\d)$/.test(v) ? v : `${v}Z`).toISOString(); }
+10: export function importCsv(csv: string, options: ImportOptions): ImportResult {
+11:   // Coinbase exports may start with an account/report preamble.
+12:   const lines = csv.replace(/^\uFEFF/,'').split(/\r?\n/);
+13:   const header = options.platform === 'Coinbase' ? lines.findIndex(l => l.includes('Timestamp') && l.includes('Transaction Type')) : 0;
+14:   const parsed = Papa.parse<Row>(lines.slice(Math.max(header,0)).join('\n'), { header:true, skipEmptyLines:'greedy', transformHeader:h=>h.trim() });
+15:   const result: ImportResult = { events:[], issues:[], headers:parsed.meta.fields ?? [] };
+16:   for (const err of parsed.errors) result.issues.push({code:'CSV',message:`CSV invalide (${err.code})`,ref:options.fileId,blocking:true});
+17:   // Extra classification columns cannot be silently discarded by a v1 mapping.
+18:   parsed.data.forEach((row,i)=>{
+19:     const metadata=Object.entries(row).some(([key,value])=>{
+20:       const header=key.toLowerCase().replace(/[^a-z0-9]/g,'');
+21:       if(['tokenid','nftid'].includes(header)&&value.trim())return true;
+22:       if(/soulte|cashadjustment|balancingpayment/.test(header)&&value.trim()){let nonzero=true;try{nonzero=!new Decimal(value.replace(',','.')).isZero();}catch{/* unknown cash amount must block */}const m=options.mapping;if(nonzero&&(options.platform!=='Generic'||(key!==m?.soulte_received_eur&&key!==m?.soulte_paid_eur)))return true;}
+23:       return ['assettype','counterassettype','tokentype','tokenstandard','operationtype','transactiontype','type','operation',options.mapping?.type?.toLowerCase().replace(/[^a-z0-9]/g,'')].includes(header)&&/nft|non.?fungible|erc.?721|erc.?1155|mining|minage|gift|donation|inheritance|staking|airdrop|reward/i.test(value);
+24:     });
+25:     if(metadata)result.issues.push({code:'FISCAL_SCOPE',message:'NFT, revenu, acquisition gratuite ou soulte non mappée signalé dans le CSV : hors calcul ordinaire / avis spécialisé requis. Ceci n’est pas un conseil fiscal.',ref:`${options.fileId}:${i+header+2}`,blocking:true});
+26:   });
+27:   const used = new Set<number>();
+28:   function base(_r: Row, i: number, timestamp: string, type: Event['type'], asset: string, quantity: string): Event {
+29:     return { version:1,id:`${options.fileId}:${i+header+2}`,raw_row_ref:`${options.fileId}:${i+header+2}`,sequence:i,
+30:       timestamp:utc(timestamp),type,asset:assetName(asset),quantity:num(quantity),counter_asset:null,counter_quantity:null,fee:[],source:options.platform,account:options.account };
+31:   }
+32:   function fee(e: Event, a: string, q: string) { if (q && !new Decimal(q.replace(',','.')).isZero()) e.fee.push({asset:assetName(a),quantity:num(q)}); }
+33:   function exchange(e: Event, a: string, q: string) { e.counter_asset=assetName(a); e.counter_quantity=num(q); e.type=fiat.has(e.counter_asset)?'disposal':'trade'; }
+34:   parsed.data.forEach((r,i)=>{
+35:     if(used.has(i)) return;
+36:     try {
+37:       let e: Event;
+38:       if(options.platform==='Generic') {
+39:         const m=options.mapping; if(!m) throw Error('Mapping requis');
+40:         const t=m.types?.[r[m.type]] ?? r[m.type];
+41:         e=base(r,i,r[m.timestamp],t as Event['type'],r[m.asset],r[m.quantity]);
+42:         if(m.counter_asset && r[m.counter_asset]) e.counter_asset=assetName(r[m.counter_asset]);
+43:         if(m.counter_quantity && r[m.counter_quantity]) e.counter_quantity=num(r[m.counter_quantity]);
+44:         if(m.fee_quantity) fee(e,m.fee_asset?r[m.fee_asset]:e.asset,r[m.fee_quantity]);
+45:         if(m.txid && r[m.txid]) e.txid=r[m.txid];
+46:         if(m.acquisition_eur && r[m.acquisition_eur]) e.acquisition_eur=num(r[m.acquisition_eur]);
+47:         if(m.proceeds_eur && r[m.proceeds_eur]) e.proceeds_eur=num(r[m.proceeds_eur]);
+48:         for(const key of ['soulte_received_eur','soulte_paid_eur'] as const){const column=m[key];if(column&&r[column]){if(new Decimal(r[column].replace(',','.')).isNegative())throw Error('Soulte négative ambiguë');e[key]=num(r[column]);}}
+49:       } else if(options.platform==='Coinbase') {
+50:         const types:Record<string,Event['type']>={Buy:'deposit',Sell:'disposal',Send:'withdrawal',Receive:'deposit','Staking Income':'staking_reward','Learning Reward':'airdrop','Rewards Income':'staking_reward'};
+51:         const t=types[r['Transaction Type']]; if(!t) throw Error('Type Coinbase non pris en charge : utiliser le mapping');
+52:         e=base(r,i,r.Timestamp,t,r.Asset,r['Quantity Transacted']);
+53:         const currency=r['Spot Price Currency'];
+54:         if(r['Transaction Type']==='Buy') { if(currency!=='EUR') throw Error('Acquisition non EUR : conversion manuelle requise'); e.acquisition_eur=num(r['Total (inclusive of fees and/or spread)']); }
+55:         if(t==='disposal') {exchange(e,currency,r.Subtotal);fee(e,currency,r['Fees and/or Spread']);}
+56:         if(r.ID) e.txid=r.ID;
+57:       } else if(options.platform==='Ledger Live') {
+58:         const t=({IN:'deposit',OUT:'withdrawal',FEES:'fee'} as Record<string,Event['type']>)[r['Operation Type']];
+59:         if(!t) throw Error('Opération Ledger non prise en charge');
+60:         e=base(r,i,r['Operation Date'],t,r['Currency Ticker'],r['Operation Amount']);
+61:         if(t==='withdrawal') fee(e,e.asset,r['Operation Fees']);
+62:         if(r['Operation Hash']) e.txid=r['Operation Hash'];
+63:       } else if(options.platform==='Kraken') {
+64:         const type=r.type;
+65:         if(['trade','spend','receive'].includes(type)) {
+66:           const group=parsed.data.map((row,j)=>({row,j})).filter(x=>x.row.refid===r.refid && ['trade','spend','receive'].includes(x.row.type));
+67:           if(!r.refid || group.length!==2) throw Error('Deux jambes Kraken avec refid requis');
+68:           const out=group.find(x=>new Decimal(x.row.amount).isNegative()); const inc=group.find(x=>new Decimal(x.row.amount).isPositive());
+69:           if(!out || !inc) throw Error('Jambes Kraken ambiguës');
+70:           const a=assetName(out.row.asset), b=assetName(inc.row.asset);
+71:           if(fiat.has(a)) {
+72:             if(a!=='EUR' || fiat.has(b)) throw Error('Conversion fiat manuelle requise');
+73:             e=base(r,i,r.time,'deposit',b,inc.row.amount);e.acquisition_eur=new Decimal(out.row.amount).abs().plus(out.row.fee || 0).toFixed();
+74:             fee(e,b,inc.row.fee);
+75:           } else { e=base(r,i,r.time,'trade',a,out.row.amount);exchange(e,b,inc.row.amount);fee(e,a,out.row.fee);fee(e,b,inc.row.fee); }
+76:           e.linked_refs=group.map(x=>`${options.fileId}:${x.j+2}`);group.forEach(x=>used.add(x.j));
+77:         } else {
+78:           const t=({deposit:'deposit',withdrawal:'withdrawal',staking:'staking_reward',earn:'staking_reward'} as Record<string,Event['type']>)[type];
+79:           if(!t || (type==='earn' && r.subtype!=='reward')) throw Error('Type Kraken non pris en charge');
+80:           e=base(r,i,r.time,t,r.asset,r.amount);fee(e,e.asset,r.fee);
+81:         }
+82:         if(r.refid) e.txid=r.refid;
+83:       } else {
+84:         // Binance transaction-history ledger; exactly two trade legs at one UTC/account/group.
+85:         const op=r.Operation;
+86:         if(['Buy','Sell','Transaction Buy','Transaction Sold','Transaction Spend','Transaction Revenue'].includes(op)) {
+87:           const group=parsed.data.map((row,j)=>({row,j})).filter(x=>x.row.UTC_Time===r.UTC_Time && x.row.Account===r.Account && ['Buy','Sell','Transaction Buy','Transaction Sold','Transaction Spend','Transaction Revenue','Transaction Fee'].includes(x.row.Operation));
+88:           const legs=group.filter(x=>x.row.Operation!=='Transaction Fee');
+89:           if(legs.length!==2) throw Error('Jambes Binance ambiguës à la même seconde');
+90:           const out=legs.find(x=>new Decimal(x.row.Change).isNegative());const inc=legs.find(x=>new Decimal(x.row.Change).isPositive());
+91:           if(!out || !inc) throw Error('Jambes Binance manquantes');
+92:           const a=assetName(out.row.Coin), b=assetName(inc.row.Coin);
+93:           if(fiat.has(a)) { if(a!=='EUR' || fiat.has(b)) throw Error('Conversion fiat manuelle requise');e=base(r,i,r.UTC_Time,'deposit',b,inc.row.Change);e.acquisition_eur=num(out.row.Change); }
+94:           else {e=base(r,i,r.UTC_Time,'trade',a,out.row.Change);exchange(e,b,inc.row.Change);}
+95:           group.filter(x=>x.row.Operation==='Transaction Fee').forEach(x=>{fee(e,x.row.Coin,x.row.Change);if(e.acquisition_eur!==undefined && assetName(x.row.Coin)==='EUR')e.acquisition_eur=new Decimal(e.acquisition_eur).plus(num(x.row.Change)).toFixed();});
+96:           e.linked_refs=group.map(x=>`${options.fileId}:${x.j+2}`);group.forEach(x=>used.add(x.j));
+97:         } else {
+98:           const t=({Deposit:'deposit',Withdraw:'withdrawal','Staking Rewards':'staking_reward',Airdrop:'airdrop',Fee:'fee'} as Record<string,Event['type']>)[op];
+99:           if(!t) throw Error('Opération Binance non prise en charge');e=base(r,i,r.UTC_Time,t,r.Coin,r.Change);
+100:         }
+101:       }
+102:       result.events.push(eventSchema.parse(e));
+103:       if(['staking_reward','airdrop'].includes(e.type)&&!result.issues.some(issue=>issue.code==='FISCAL_SCOPE'&&issue.ref===e.raw_row_ref))result.issues.push({code:'FISCAL_SCOPE',message:`${e.type} identifié dans la source : revenu et base hors calcul, avis spécialisé requis. Ceci n’est pas un conseil fiscal.`,ref:e.raw_row_ref,blocking:true});
+104:     } catch { result.issues.push({code:'ROW',message:'Ligne non reconnue ou invalide : corriger le CSV ou le mapping.',ref:`${options.fileId}:${i+header+2}`,blocking:true}); }
+105:   });
+106:   return result;
+107: }
+
+SOURCE /home/corio/TAXLOT/src/domain/events.ts SHA256 5743d43098db20e80081e7ac6fc4cd68ebf96f34a3cb5fcc912f3f68a192147d
+1: import { z } from 'zod';
+2: export const kinds = ['deposit','withdrawal','trade','disposal','purchase_with_crypto','staking_reward','airdrop','fee','transfer_internal'] as const;
+3: export const decimal = z.string().regex(/^(0|[1-9]\d*)(\.\d+)?$/);
+4: export const eventSchema = z.object({
+5:   version: z.literal(1), id: z.string().min(1), type: z.enum(kinds),
+6:   timestamp: z.string().datetime(), sequence: z.number().int().nonnegative(),
+7:   asset: z.string().min(1), quantity: decimal,
+8:   counter_asset: z.string().nullable(), counter_quantity: decimal.nullable(),
+9:   fee: z.array(z.object({ asset: z.string().min(1), quantity: decimal }).strict()),
+10:   source: z.string().min(1), account: z.string().min(1), raw_row_ref: z.string().min(1),
+11:   txid: z.string().optional(), destination: z.string().optional(), linked_refs: z.array(z.string()).optional(),
+12:   acquisition_eur: decimal.optional(), proceeds_eur: decimal.optional(), portfolio_eur: decimal.optional(),
+13:   basis_confirmed: z.boolean().optional(), valuation_note: z.string().optional(),
+14:   soulte_received_eur: decimal.optional(), soulte_paid_eur: decimal.optional(),
+15: }).strict();
+16: export type Event = z.infer<typeof eventSchema>;
+17: export interface Issue { code: string; message: string; ref?: string; blocking: boolean }
+18: export interface ImportResult { events: Event[]; issues: Issue[]; headers: string[] }
+19: export const fiat = new Set(['EUR','USD','GBP','CHF','CAD','AUD','JPY']);
+20: export function assetName(s: string) { return ({XXBT:'BTC',XBT:'BTC',XETH:'ETH',ZEUR:'EUR',ZUSD:'USD'} as Record<string,string>)[s.toUpperCase()] ?? s.toUpperCase(); }
+
+SOURCE /home/corio/TAXLOT/src/tax/engine.ts SHA256 c92b53331fce2cc68b0e5e7f2eec696b6b2563b6d544e443856fcc61307b78f5
+1: import Decimal from 'decimal.js';
+2: import {lookupPrice,completeHoldings,historyError,valuationFailure,type Valuation} from '../prices/lookup';
+3: import { eventSchema, fiat, type Event, type Issue } from '../domain/events';
+4: import type { PriceBook } from '../prices/loader';
+5: import { rulesForYear } from './rules';
+6: import {validateScope,type ScopeContext,type ScopeResult} from './scope';
+7: const D=Decimal.clone({precision:40,rounding:Decimal.ROUND_HALF_UP});
+8: export interface TaxRow { id:string; ref:string; timestamp:string; fields:Record<string,string>; gain:string; capitalConsumed:string; evidence:string[] }
+9: export interface TaxResult {valuations:Valuation[]; scope:ScopeResult; year:number; rows:TaxRow[]; issues:Issue[]; balances:Record<string,string>; ptaNet:string; netGain:string; totalDisposals:string; exempt:boolean; tax:string; declarationLine:'3AN'|'3BN'|null; declarationAmount:string; rate:string; valid:boolean }
+10: export function fiscalYear(timestamp:string):number {return Number(new Intl.DateTimeFormat('en',{timeZone:'Europe/Paris',year:'numeric'}).format(new Date(timestamp)));}
+11: export function scopeFailure(year:number,scope:ScopeResult):TaxResult {return {valuations:[],scope,year,rows:[],issues:scope.findings.map(f=>({code:f.code,message:f.message,ref:f.ref,blocking:true})),balances:{},ptaNet:'0',netGain:'0',totalDisposals:'0',exempt:false,tax:'0',declarationLine:null,declarationAmount:'0',rate:rulesForYear(year).flatTax,valid:false};}
+12: export function compute(input:Event[],prices:PriceBook,year=2026,progress:(n:number)=>void=()=>{},scopeContext?:ScopeContext):TaxResult {
+13:   const rules=rulesForYear(year);
+14:   const validated=input.map(e=>eventSchema.parse(e));const scope=validateScope(validated,year,scopeContext);
+15:   if(scope.status!=='supported')return scopeFailure(year,scope);
+16:   const valuations:Valuation[]=[];const issues:Issue[]=[];const rows:TaxRow[]=[];const balances:Record<string,Decimal>={};
+17:   let currentTimestamp='',currentId='';
+18:   let acquired=new D(0),consumed=new D(0),pastSoultes=new D(0);
+19:   const events=validated.sort((a,b)=>Date.parse(a.timestamp)-Date.parse(b.timestamp)||a.sequence-b.sequence||a.id.localeCompare(b.id));
+20:   function move(asset:string,q:Decimal.Value) {if(fiat.has(asset))return;balances[asset]=(balances[asset]??new D(0)).plus(q);if(balances[asset].lt(0))throw historyError(asset,currentTimestamp,currentId);}
+21:   function price(asset:string,e:Event,evidence:Set<string>):Decimal {
+22:     if(asset==='EUR')return new D(1);
+23:     const p=lookupPrice(prices,asset,e.timestamp,scopeContext?.identities??{},e.id);
+24:     evidence.add(`${p.source==='manual'?'MANUEL':'JOURNALIER'} ${asset} ${e.timestamp.slice(0,10)} ${p.note??''} ${p.provenance??''}`.trim());
+25:     return new D(p.eur);
+26:   }
+27:   function sell(e:Event) {
+28:     valuations.push(...completeHoldings(balances,prices,e.timestamp,scopeContext?.identities??{},e.id));
+29:     const evidence=new Set<string>();let value=new D(0);
+30:     if(e.portfolio_eur!==undefined) {value=new D(e.portfolio_eur);if(!e.valuation_note?.trim())throw Error('Justificatif de valorisation requis');evidence.add(`MANUEL portefeuille : ${e.valuation_note}`);}
+31:     else for(const [asset,q] of Object.entries(balances)) if(q.gt(0))value=value.plus(q.mul(price(asset,e,evidence)));
+32:     if(value.lte(0))throw Error('Valeur globale nulle');
+33:     let consideration:Decimal;
+34:     if(e.proceeds_eur!==undefined)consideration=new D(e.proceeds_eur);
+35:     else if(e.type==='fee')consideration=new D(e.quantity).mul(price(e.asset,e,evidence));
+36:     else if(e.counter_asset==='EUR' && e.counter_quantity!==null)consideration=new D(e.counter_quantity);
+37:     else throw Error('Contrepartie EUR requise');
+38:     const received=new D(e.soulte_received_eur??0),paid=new D(e.soulte_paid_eur??0);
+39:     if(received.gt(0)&&paid.gt(0))throw Error('Soultes incompatibles');
+40:     const gross=consideration.plus(received).minus(paid);
+41:     const fees=e.fee.reduce((sum,f)=>sum.plus(new D(f.quantity).mul(price(f.asset,e,evidence))),new D(0));
+42:     if(gross.lt(0)||gross.gt(value)||fees.gt(gross))throw Error('Cession ou frais incompatibles avec le portefeuille');
+43:     const pta=acquired.minus(consumed).minus(pastSoultes);
+44:     const fraction=pta.mul(gross).div(value);const gain=gross.minus(fees).minus(fraction);
+45:     const fields:Record<string,string>={ '211':new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris'}).format(new Date(e.timestamp)),'212':value.toFixed(),'213':consideration.toFixed(),'214':fees.toFixed(),'215':consideration.minus(fees).toFixed(),'216':received.minus(paid).toFixed(),'217':gross.toFixed(),'218':gross.minus(fees).toFixed(),'220':acquired.toFixed(),'221':consumed.toFixed(),'222':pastSoultes.toFixed(),'223':pta.toFixed() };
+46:     if(fiscalYear(e.timestamp)===year)rows.push({id:e.id,ref:e.raw_row_ref,timestamp:e.timestamp,fields,gain:gain.toFixed(),capitalConsumed:fraction.toFixed(),evidence:[...evidence]});
+47:     consumed=consumed.plus(fraction);pastSoultes=pastSoultes.plus(received);
+48:     move(e.asset,new D(e.quantity).neg());
+49:     if(e.type!=='purchase_with_crypto' && e.counter_asset && !fiat.has(e.counter_asset) && e.counter_quantity!==null) {move(e.counter_asset,e.counter_quantity);acquired=acquired.plus(consideration).plus(received);}
+50:     for(const f of e.fee)move(f.asset,new D(f.quantity).neg());
+51:   }
+52:   for(let i=0;i<events.length;i++) {
+53:     const e=events[i];currentTimestamp=e.timestamp;currentId=e.id;if(fiscalYear(e.timestamp)>year)continue;
+54:     try {
+55:       if(e.timestamp<'2019-01-01T00:00:00.000Z')throw Error('Historique avant 2019 : reconstitution du solde initial requise');
+56:       if(i>0 && Date.parse(events[i-1].timestamp)===Date.parse(e.timestamp) && events[i-1].sequence===e.sequence)throw Error('Ordre simultané ambigu : modifier la séquence');
+57:       if(new D(e.quantity).lte(0))throw Error('Quantité positive requise');
+58:       if(e.type==='fee' && fiat.has(e.asset)) { /* Paying fiat fees is not a crypto disposal. */ }
+59:       else if(['disposal','purchase_with_crypto','fee'].includes(e.type)) {if(fiat.has(e.asset))throw Error('Actif cédé non numérique');sell(e);}
+60:       else {
+61:         if(e.type==='withdrawal')throw Error('Retrait non rapproché : préciser sa nature');
+62:         if(e.type==='trade') {
+63:           if(fiat.has(e.asset) || !e.counter_asset || e.counter_quantity===null || new D(e.counter_quantity).lte(0) || fiat.has(e.counter_asset) || new D(e.soulte_received_eur??0).gt(0)||new D(e.soulte_paid_eur??0).gt(0))throw Error('Échange invalide : utiliser une cession pour une soulte');
+64:           move(e.asset,new D(e.quantity).neg());move(e.counter_asset,e.counter_quantity);
+65:         } else if(e.type==='transfer_internal') {if(!e.destination || e.destination===e.account)throw Error('Compte destinataire distinct requis');if((balances[e.asset]??new D(0)).lt(e.quantity))throw Error('Solde insuffisant pour le transfert');}
+66:         else if(!fiat.has(e.asset)) {
+67:           if(e.acquisition_eur===undefined)throw Error('Prix d’acquisition documenté requis (zéro explicite si justifié)');
+68:           acquired=acquired.plus(e.acquisition_eur);move(e.asset,e.quantity);
+69:         }
+70:         for(const f of e.fee) {
+71:           if(e.type==='trade'||fiat.has(f.asset))move(f.asset,new D(f.quantity).neg());
+72:           else sell({...e,id:`${e.id}:fee`,type:'fee',asset:f.asset,quantity:f.quantity,fee:[],portfolio_eur:undefined,proceeds_eur:undefined,counter_asset:null,counter_quantity:null,soulte_received_eur:undefined,soulte_paid_eur:undefined});
+73:         }
+74:       }
+75:       progress(Math.round((i+1)/Math.max(events.length,1)*100));
+76:     } catch(err) {valuations.push(...valuationFailure(err));issues.push({code:'CALCULATION',message:(err as Error).message,ref:e.raw_row_ref,blocking:true});break;}
+77:   }
+78:   const valid=!issues.some(x=>x.blocking);
+79:   const net=rows.reduce((n,r)=>n.plus(r.gain),new D(0));
+80:   const total=rows.reduce((n,r)=>n.plus(r.fields['218']),new D(0));
+81:   const exempt=total.lte(rules.exemption);
+82:   const taxable=exempt?new D(0):D.max(0,net);
+83:   return {valuations,scope,year,rows:valid?rows:[],issues,balances:Object.fromEntries(Object.entries(balances).map(([a,n])=>[a,n.toFixed()])),ptaNet:acquired.minus(consumed).minus(pastSoultes).toFixed(),netGain:valid?net.toFixed():'0',totalDisposals:valid?total.toFixed():'0',exempt,tax:valid?taxable.mul(rules.flatTax).toFixed(2):'0',declarationLine:!valid||exempt?null:net.lt(0)?'3BN':'3AN',declarationAmount:valid&&!exempt?net.abs().toFixed(0):'0',rate:rules.flatTax,valid};
+84: }
+
+SOURCE /home/corio/TAXLOT/src/tax/scope.ts SHA256 564c1519f554a7b6625593d54f96b664dac0357c74f5c18217e8f6daf6463740
+1: import {fiat,type Event} from '../domain/events';
+2: import {rules2026} from './rules/2026';
+3: export type ScopeStatus='supported'|'unsupported'|'requires_review';
+4: export type AssetScope='eligible'|'nft'|'outside'|'unknown';
+5: export type EventScope='ordinary'|'nft'|'mining'|'staking'|'airdrop'|'gift'|'unknown';
+6: export interface ScopeContext {identities?:import('../prices/identity').Bindings;profile?:'private_fr'|'professional'|'nonresident'|'entity'|'unknown';option?:'flat'|'progressive';social?:'ordinary_fr'|'other';history?:'ordinary'|'review';assets?:Record<string,AssetScope>;events?:Record<string,EventScope>;noSoulteTrades?:boolean}
+7: export interface ScopeFinding {status:Exclude<ScopeStatus,'supported'>;code:string;year:number;eventId?:string;ref?:string;message:string}
+8: export interface ScopeResult {status:ScopeStatus;year:number;findings:ScopeFinding[]}
+9: export function portfolioAssets(e:Event):string[]{return [...new Set([e.asset,...(e.type==='trade'||e.type==='disposal'?[e.counter_asset??'']:[]),...e.fee.map(f=>f.asset)])].filter(a=>a&&!fiat.has(a));}
+10: /** Eligibility is an explicit local declaration, never inferred from a ticker or a licence. */
+11: export function validateScope(events:Event[],year:number,context:ScopeContext={}):ScopeResult {
+12:  const findings:ScopeFinding[]=[];
+13:  const add=(status:ScopeFinding['status'],code:string,message:string,e?:Event)=>findings.push({status,code,year,eventId:e?.id,ref:e?.raw_row_ref,message:`${year} · ${e?e.id+' · ':''}${message} Avis spécialisé requis ; ceci n’est pas un conseil fiscal.`});
+14:  if(year!==rules2026.year)add('unsupported','YEAR','Année fiscale non prise en charge ; aucun taux de repli.');
+15:  if(context.profile!=='private_fr')add(context.profile===undefined||context.profile==='unknown'?'requires_review':'unsupported','PROFILE','Réservé aux personnes physiques résidentes fiscales françaises, en gestion privée hors BNC/BIC.');
+16:  if(context.option!=='flat')add(context.option==='progressive'?'unsupported':'requires_review','OPTION','Seule l’estimation forfaitaire est calculée ; option 3CN non simulée.');
+17:  if(context.social!=='ordinary_fr')add('requires_review','SOCIAL_PROFILE','Confirmer le régime social français ordinaire ; affiliation étrangère ou exception à faire examiner (CSS L136-6 I ter).');
+18:  if(context.history!=='ordinary')add('requires_review','HISTORY','Confirmer un historique de crypto-actifs acquis à titre onéreux et de transferts propres, sans revenus, dons ni régime particulier.');
+19:  for(const e of events){
+20:   if(Number(new Intl.DateTimeFormat('en',{timeZone:'Europe/Paris',year:'numeric'}).format(new Date(e.timestamp)))>year)continue;
+21:   const fact=context.events?.[e.id];
+22:   if(fact&&fact!=='ordinary')add(fact==='nft'?'unsupported':'requires_review','EVENT_SCOPE',`Nature signalée : ${fact}. Aucun calcul ordinaire 150 VH bis.`,e);
+23:   if(e.type==='staking_reward'||e.type==='airdrop'||e.basis_confirmed===true)add('requires_review','INCOME_BASIS',`${e.type} : réception, revenu et base de cession non déterminés par TAXLOT, même avec basis_confirmed.`,e);
+24:   for(const asset of portfolioAssets(e)){
+25:    const classification=context.assets?.[asset];
+26:    // Explicitly labelled metadata is a blocker, never proof that unlabelled assets are fungible.
+27:    if(/(?:^|[^a-z0-9])(?:nft|erc[-_ ]?721|erc[-_ ]?1155)(?:$|[^a-z0-9])/i.test(asset)||classification==='nft')add('unsupported','NFT',`${asset} : NFT / actif potentiellement unique et non fongible, art. 150 VH ter hors périmètre.`,e);
+28:    else if(classification==='outside')add('unsupported','ASSET_SCOPE',`${asset} : actif hors périmètre 150 VH bis.`,e);
+29:    else if(classification!=='eligible')add('requires_review','ASSET_UNKNOWN',`${asset} : confirmer la fongibilité et l’éligibilité 150 VH bis / MiCA ; le symbole ne suffit pas.`,e);
+30:   }
+31:   const received=/[1-9]/.test(e.soulte_received_eur??'0'),paid=/[1-9]/.test(e.soulte_paid_eur??'0');
+32:   if(e.type==='trade'&&(received||paid))add('unsupported','SOULTE_TRADE','Un échange avec soulte ne peut pas être neutre : utiliser une cession documentée avec ses deux contreparties.',e);
+33:   else if(e.type==='trade'&&context.noSoulteTrades!==true)add('requires_review','SOULTE_UNKNOWN','Confirmer que chaque échange crypto/crypto est sans soulte ; le CSV peut omettre une jambe en monnaie.',e);
+34:   if(e.type==='disposal'&&e.counter_asset&&!fiat.has(e.counter_asset)&&!received&&!paid)add('requires_review','SOULTE_AMBIGUOUS','Cession contre crypto sans soulte documentée : qualification ambiguë.',e);
+35:  }
+36:  return {status:findings.some(f=>f.status==='unsupported')?'unsupported':findings.length?'requires_review':'supported',year,findings};
+37: }
+
+Protected files compared against accepted Phase H:
+$ git diff --exit-code a5830a1 -- src/lib/config.ts src/lib/cow.ts src/lib/hyperliquid.ts src/lib/storage-origins.ts src/lib/storage-policy.ts schemas/events.v1.json src/pages/legal.astro scripts/deploy.sh
+
+[exit_code=0]

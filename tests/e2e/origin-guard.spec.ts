@@ -4,7 +4,7 @@ let bundle: string;
 test.beforeAll(async () => {
   const result = await build({
     stdin: {
-      contents: `import * as events from './src/lib/events'; import * as policy from './src/lib/storage-policy'; window.audit={...events,...policy};`,
+      contents: `import * as events from './src/lib/events'; import * as policy from './src/lib/storage-policy'; import * as derivatives from './src/lib/derivative-evidence'; window.audit={...events,...policy,...derivatives};`,
       resolveDir: process.cwd(),
     },
     bundle: true,
@@ -158,4 +158,61 @@ test("unapproved production origin never creates PIT storage; approved stable IP
       async () => (await (window as any).audit.listEvents("fixture")).length,
     ),
   ).toBe(1);
+});
+
+test("dedicated-origin derivative evidence never enters Taxlot events and unsafe origins cannot open its store", async ({
+  page,
+}) => {
+  await harness(page, "https://pit.example/");
+  const result = await page.evaluate(async () => {
+    const a = (window as any).audit,
+      account = "0x4444444444444444444444444444444444444444";
+    const fill = {
+      tid: 1,
+      oid: 2,
+      time: 1790683200000,
+      coin: "ETH",
+      side: "B",
+      sz: "0.1",
+      px: "2000",
+      fee: "0.01",
+      feeToken: "USDC",
+      hash: "fixture",
+      closedPnl: "0",
+      dir: "Open Long",
+    };
+    await a.recordPerpFills([fill], account);
+    await a.recordPerpFills([fill], account);
+    await a.recordPerpFills([{ ...fill, fee: "0.02" }], account);
+    return {
+      evidence: await a.listDerivativeEvidence(account),
+      events: await a.listEvents(account),
+    };
+  });
+  expect(result.evidence).toHaveLength(2);
+  expect(result.events).toEqual([]);
+  expect(
+    result.evidence.every(
+      (e: any) => e.taxlot_status === "unsupported_derivative_v1",
+    ),
+  ).toBe(true);
+  await page.goto("https://unknown.example/");
+  await page.addScriptTag({ content: bundle });
+  const blocked = await page.evaluate(async () => {
+    try {
+      await (window as any).audit.recordPerpFills(
+        [],
+        "0x4444444444444444444444444444444444444444",
+      );
+      return false;
+    } catch {
+      return true;
+    }
+  });
+  expect(blocked).toBe(true);
+  expect(
+    await page.evaluate(async () =>
+      (await indexedDB.databases()).map((d) => d.name),
+    ),
+  ).not.toContain("pit-derivative-evidence-v1");
 });

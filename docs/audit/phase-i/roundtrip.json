@@ -1,0 +1,280 @@
+{
+  "fixture": true,
+  "live_execution": false,
+  "taxlotHead": "a4879aec7ecee5f0049ddfd4780000ae9a63b2e9",
+  "schemaSha256": "d8eb339ed7acd7da3b68ef09fe5c1b01c4cc3258cb401a4f2ba8805e7a3b07d7",
+  "importerPath": "/home/corio/TAXLOT/src/importers/index.ts",
+  "importerSha256": "6f5d5c9cea24b88e868b7bc8bb022a341aed3c23c6c41d761f133b4d1a0e4e55",
+  "options": {
+    "platform": "Generic",
+    "account": "0x3333333333333333333333333333333333333333",
+    "fileId": "pit-phase-i-fixture",
+    "mapping": {
+      "timestamp": "timestamp",
+      "type": "type",
+      "asset": "asset",
+      "quantity": "quantity",
+      "counter_asset": "counter_asset",
+      "counter_quantity": "counter_quantity",
+      "fee_asset": "fee_asset",
+      "fee_quantity": "fee_quantity",
+      "txid": "txid"
+    }
+  },
+  "sourceFills": [
+    {
+      "owner": "0x3333333333333333333333333333333333333333",
+      "orderUid": "synthetic-cow-one",
+      "blockNumber": 1,
+      "logIndex": 0,
+      "sellToken": "0x1111111111111111111111111111111111111111",
+      "buyToken": "0x2222222222222222222222222222222222222222",
+      "sellAmountBeforeFees": "1000000000000000001",
+      "sellAmount": "1000000000000000002",
+      "buyAmount": "3000000000",
+      "txHash": "fixture-tx-1"
+    },
+    {
+      "owner": "0x3333333333333333333333333333333333333333",
+      "orderUid": "synthetic-cow-two",
+      "blockNumber": 2,
+      "logIndex": 0,
+      "sellToken": "0x2222222222222222222222222222222222222222",
+      "buyToken": "0x1111111111111111111111111111111111111111",
+      "sellAmountBeforeFees": "1234567",
+      "sellAmount": "1234568",
+      "buyAmount": "617283500000000",
+      "txHash": "fixture-tx-2"
+    }
+  ],
+  "persisted": [
+    {
+      "version": 1,
+      "id": "cow:11155111:synthetic-cow-one:1:0",
+      "type": "trade",
+      "timestamp": "2026-09-29T12:00:01.000Z",
+      "sequence": 42,
+      "asset": "eip155:11155111/erc20:0x1111111111111111111111111111111111111111",
+      "quantity": "1.000000000000000001",
+      "counter_asset": "eip155:11155111/erc20:0x2222222222222222222222222222222222222222",
+      "counter_quantity": "3000",
+      "fee": [
+        {
+          "asset": "eip155:11155111/erc20:0x1111111111111111111111111111111111111111",
+          "quantity": "0.000000000000000001"
+        }
+      ],
+      "source": "pit:cow:11155111",
+      "account": "0x3333333333333333333333333333333333333333",
+      "raw_row_ref": "cow:11155111:synthetic-cow-one:1:0",
+      "txid": "fixture-tx-1",
+      "valuation_note": "Crypto-to-crypto trade, including stablecoins. Amounts from executed fill; no EUR valuation supplied."
+    },
+    {
+      "version": 1,
+      "id": "cow:11155111:synthetic-cow-two:2:0",
+      "type": "trade",
+      "timestamp": "2026-09-29T12:00:02.000Z",
+      "sequence": 43,
+      "asset": "eip155:11155111/erc20:0x2222222222222222222222222222222222222222",
+      "quantity": "1.234567",
+      "counter_asset": "eip155:11155111/erc20:0x1111111111111111111111111111111111111111",
+      "counter_quantity": "0.0006172835",
+      "fee": [
+        {
+          "asset": "eip155:11155111/erc20:0x2222222222222222222222222222222222222222",
+          "quantity": "0.000001"
+        }
+      ],
+      "source": "pit:cow:11155111",
+      "account": "0x3333333333333333333333333333333333333333",
+      "raw_row_ref": "cow:11155111:synthetic-cow-two:2:0",
+      "txid": "fixture-tx-2",
+      "valuation_note": "Crypto-to-crypto trade, including stablecoins. Amounts from executed fill; no EUR valuation supplied."
+    }
+  ],
+  "imported": {
+    "events": [
+      {
+        "version": 1,
+        "id": "pit-phase-i-fixture:2",
+        "type": "trade",
+        "timestamp": "2026-09-29T12:00:01.000Z",
+        "sequence": 0,
+        "asset": "EIP155:11155111/ERC20:0X1111111111111111111111111111111111111111",
+        "quantity": "1.000000000000000001",
+        "counter_asset": "EIP155:11155111/ERC20:0X2222222222222222222222222222222222222222",
+        "counter_quantity": "3000",
+        "fee": [
+          {
+            "asset": "EIP155:11155111/ERC20:0X1111111111111111111111111111111111111111",
+            "quantity": "0.000000000000000001"
+          }
+        ],
+        "source": "Generic",
+        "account": "0x3333333333333333333333333333333333333333",
+        "raw_row_ref": "pit-phase-i-fixture:2",
+        "txid": "fixture-tx-1"
+      },
+      {
+        "version": 1,
+        "id": "pit-phase-i-fixture:3",
+        "type": "trade",
+        "timestamp": "2026-09-29T12:00:02.000Z",
+        "sequence": 1,
+        "asset": "EIP155:11155111/ERC20:0X2222222222222222222222222222222222222222",
+        "quantity": "1.234567",
+        "counter_asset": "EIP155:11155111/ERC20:0X1111111111111111111111111111111111111111",
+        "counter_quantity": "0.0006172835",
+        "fee": [
+          {
+            "asset": "EIP155:11155111/ERC20:0X2222222222222222222222222222222222222222",
+            "quantity": "0.000001"
+          }
+        ],
+        "source": "Generic",
+        "account": "0x3333333333333333333333333333333333333333",
+        "raw_row_ref": "pit-phase-i-fixture:3",
+        "txid": "fixture-tx-2"
+      }
+    ],
+    "issues": [],
+    "headers": [
+      "version",
+      "id",
+      "type",
+      "timestamp",
+      "sequence",
+      "asset",
+      "quantity",
+      "counter_asset",
+      "counter_quantity",
+      "fee",
+      "fee_asset",
+      "fee_quantity",
+      "source",
+      "account",
+      "raw_row_ref",
+      "txid",
+      "valuation_note"
+    ]
+  },
+  "differences": [
+    {
+      "row": 1,
+      "field": "id",
+      "pit": "cow:11155111:synthetic-cow-one:1:0",
+      "taxlot": "pit-phase-i-fixture:2"
+    },
+    {
+      "row": 1,
+      "field": "sequence",
+      "pit": 42,
+      "taxlot": 0
+    },
+    {
+      "row": 1,
+      "field": "asset",
+      "pit": "eip155:11155111/erc20:0x1111111111111111111111111111111111111111",
+      "taxlot": "EIP155:11155111/ERC20:0X1111111111111111111111111111111111111111"
+    },
+    {
+      "row": 1,
+      "field": "counter_asset",
+      "pit": "eip155:11155111/erc20:0x2222222222222222222222222222222222222222",
+      "taxlot": "EIP155:11155111/ERC20:0X2222222222222222222222222222222222222222"
+    },
+    {
+      "row": 1,
+      "field": "fee",
+      "pit": [
+        {
+          "asset": "eip155:11155111/erc20:0x1111111111111111111111111111111111111111",
+          "quantity": "0.000000000000000001"
+        }
+      ],
+      "taxlot": [
+        {
+          "asset": "EIP155:11155111/ERC20:0X1111111111111111111111111111111111111111",
+          "quantity": "0.000000000000000001"
+        }
+      ]
+    },
+    {
+      "row": 1,
+      "field": "source",
+      "pit": "pit:cow:11155111",
+      "taxlot": "Generic"
+    },
+    {
+      "row": 1,
+      "field": "raw_row_ref",
+      "pit": "cow:11155111:synthetic-cow-one:1:0",
+      "taxlot": "pit-phase-i-fixture:2"
+    },
+    {
+      "row": 1,
+      "field": "valuation_note",
+      "pit": "Crypto-to-crypto trade, including stablecoins. Amounts from executed fill; no EUR valuation supplied.",
+      "taxlot": null
+    },
+    {
+      "row": 2,
+      "field": "id",
+      "pit": "cow:11155111:synthetic-cow-two:2:0",
+      "taxlot": "pit-phase-i-fixture:3"
+    },
+    {
+      "row": 2,
+      "field": "sequence",
+      "pit": 43,
+      "taxlot": 1
+    },
+    {
+      "row": 2,
+      "field": "asset",
+      "pit": "eip155:11155111/erc20:0x2222222222222222222222222222222222222222",
+      "taxlot": "EIP155:11155111/ERC20:0X2222222222222222222222222222222222222222"
+    },
+    {
+      "row": 2,
+      "field": "counter_asset",
+      "pit": "eip155:11155111/erc20:0x1111111111111111111111111111111111111111",
+      "taxlot": "EIP155:11155111/ERC20:0X1111111111111111111111111111111111111111"
+    },
+    {
+      "row": 2,
+      "field": "fee",
+      "pit": [
+        {
+          "asset": "eip155:11155111/erc20:0x2222222222222222222222222222222222222222",
+          "quantity": "0.000001"
+        }
+      ],
+      "taxlot": [
+        {
+          "asset": "EIP155:11155111/ERC20:0X2222222222222222222222222222222222222222",
+          "quantity": "0.000001"
+        }
+      ]
+    },
+    {
+      "row": 2,
+      "field": "source",
+      "pit": "pit:cow:11155111",
+      "taxlot": "Generic"
+    },
+    {
+      "row": 2,
+      "field": "raw_row_ref",
+      "pit": "cow:11155111:synthetic-cow-two:2:0",
+      "taxlot": "pit-phase-i-fixture:3"
+    },
+    {
+      "row": 2,
+      "field": "valuation_note",
+      "pit": "Crypto-to-crypto trade, including stablecoins. Amounts from executed fill; no EUR valuation supplied.",
+      "taxlot": null
+    }
+  ]
+}

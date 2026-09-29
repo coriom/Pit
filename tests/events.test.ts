@@ -12,7 +12,10 @@ import {
   downloadCSV,
   type TaxlotEvent,
 } from "../src/lib/events";
-import { recordPerpFills } from "../src/lib/record-fills";
+import {
+  recordPerpFills,
+  listDerivativeEvidence,
+} from "../src/lib/derivative-evidence";
 const event: TaxlotEvent = {
   version: 1,
   id: "cow:1",
@@ -72,18 +75,18 @@ it("retains raw derivative evidence without manufacturing Taxlot events or CSV",
     dir: "Open Long",
     closedPnl: "0",
   };
-  const account = "perp-only-fixture";
+  const account = "0x2222222222222222222222222222222222222222";
   const db = await eventDB();
   const sequence = await db.get("meta", "sequence");
   await recordPerpFills([fill as any], account);
   await recordPerpFills([fill as any], account);
   expect(await listEvents(account)).toEqual([]);
-  const raw = await db.get("raw", `hl:testnet:${account}:1`);
+  const [raw] = await listDerivativeEvidence(account);
   expect(raw.payload).toEqual(fill);
-  expect(raw.accounting).toBe("BLOCKED_PHASE_I");
+  expect(raw.taxlot_status).toBe("unsupported_derivative_v1");
   expect(await db.get("meta", "sequence")).toBe(sequence);
   await expect(downloadCSV(account, true)).rejects.toThrow(
-    "BLOCKED for Phase I",
+    "unsupported_derivative_v1",
   );
   const legacy = {
     ...event,
@@ -93,8 +96,8 @@ it("retains raw derivative evidence without manufacturing Taxlot events or CSV",
     counter_asset: "USDC-NOTIONAL",
   };
   await expect(appendEvent(legacy, fill)).rejects.toThrow(
-    "BLOCKED for Phase I",
+    "unsupported_derivative_v1",
   );
-  expect(() => eventsCSV([legacy])).toThrow("BLOCKED for Phase I");
+  expect(() => eventsCSV([legacy])).toThrow("unsupported_derivative_v1");
   db.close();
 });

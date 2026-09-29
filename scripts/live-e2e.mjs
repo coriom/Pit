@@ -224,27 +224,34 @@ input.close();
 await Promise.allSettled([...responses]);
 await page.screenshot({ path: `${dir}/operator-page.png`, fullPage: true });
 const snapshot = await page.evaluate(async (account) => {
-  if (!(await indexedDB.databases()).some((db) => db.name === "pit-taxlot-v1"))
-    return { databaseExists: false };
-  const db = await new Promise((resolve, reject) => {
-    const req = indexedDB.open("pit-taxlot-v1");
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-  const all = (store) =>
-    new Promise((resolve, reject) => {
-      const req = db.transaction(store).objectStore(store).getAll();
+  const names = (await indexedDB.databases()).map((db) => db.name);
+  async function all(name, store) {
+    if (!names.includes(name)) return [];
+    const db = await new Promise((resolve, reject) => {
+      const req = indexedDB.open(name);
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     });
-  const events = (await all("events")).filter(
-      (e) => e.account?.toLowerCase() === account,
-    ),
-    raw = (await all("raw")).filter(
-      (e) => (e.account ?? e.payload?.owner)?.toLowerCase() === account,
-    );
-  db.close();
-  return { databaseExists: true, events, raw };
+    try {
+      return await new Promise((resolve, reject) => {
+        const req = db.transaction(store).objectStore(store).getAll();
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    } finally {
+      db.close();
+    }
+  }
+  const mine = (e) =>
+    (e.account ?? e.payload?.owner)?.toLowerCase() === account;
+  return {
+    databaseExists: names.includes("pit-taxlot-v1"),
+    events: (await all("pit-taxlot-v1", "events")).filter(mine),
+    raw: (await all("pit-taxlot-v1", "raw")).filter(mine),
+    derivativeEvidence: (
+      await all("pit-derivative-evidence-v1", "observations")
+    ).filter(mine),
+  };
 }, evidence.account.toLowerCase());
 // Snapshot is public trade data, not wallet data; keep it local until reviewed for publication.
 await writeFile(

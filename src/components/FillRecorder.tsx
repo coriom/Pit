@@ -4,7 +4,8 @@ import { useWalletClient } from "wagmi";
 import { createPublicClient, custom } from "viem";
 import { orderbook } from "../lib/cow";
 import { hlInfo } from "../lib/hyperliquid";
-import { recordCowFill, recordPerpFills } from "../lib/record-fills";
+import { recordCowFill } from "../lib/record-fills";
+import { recordPerpFills, recordPerpFunding } from "../lib/derivative-evidence";
 import { eventDB } from "../lib/events";
 export function FillRecorder() {
   const { data: wallet } = useWalletClient();
@@ -45,6 +46,12 @@ export function FillRecorder() {
         },
         async () => {
           const db = await eventDB();
+          const funding = await hlInfo.userFunding({
+            user,
+            startTime: Date.now() - 30 * 86400000,
+          });
+          if (stopped) return;
+          await recordPerpFunding(funding, user);
           const key = `hl-cursor:${user.toLowerCase()}`;
           let cursor = (await db.get("meta", key)) ?? 0;
           while (!stopped) {
@@ -80,7 +87,7 @@ export function FillRecorder() {
         setStatus(
           failures.length
             ? `Sync needs attention: ${failures.join("; ")}`
-            : "CoW fills synced locally. Hyperliquid raw evidence only; derivative accounting BLOCKED for Phase I.",
+            : "CoW fills synced locally. Hyperliquid raw evidence only; taxlot_status: unsupported_derivative_v1.",
         );
         timer = setTimeout(sync, 20000);
       }
