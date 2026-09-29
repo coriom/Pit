@@ -200,6 +200,23 @@ test("IPFS-style subpath hydrates and links stay beneath the CID", async ({
     if (p.startsWith("/_astro/")) rootAssetRequests.push(p);
   });
   await page.goto("/ipfs/test-cid/");
+  await expect(page.getByRole("alert")).toContainText(
+    "Accounting storage and CSV export are disabled",
+  );
+  await expect(
+    page.getByRole("button", { name: "Export for Taxlot", exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Perps review CSV", exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByText("Filled trades stay in this browser", { exact: false }),
+  ).toHaveCount(0);
+  expect(
+    await page.evaluate(async () =>
+      (await indexedDB.databases()).map((x) => x.name),
+    ),
+  ).not.toContain("pit-taxlot-v1");
   await expect(
     page.getByRole("heading", { name: "Swap tokens" }),
   ).toBeVisible();

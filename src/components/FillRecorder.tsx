@@ -1,3 +1,4 @@
+import { storageEnabled, STORAGE_WARNING } from "../lib/storage-policy";
 import { useEffect, useState } from "react";
 import { useWalletClient } from "wagmi";
 import { createPublicClient, custom } from "viem";
@@ -11,6 +12,10 @@ export function FillRecorder() {
   useEffect(() => {
     let stopped = false;
     let timer: ReturnType<typeof setTimeout>;
+    if (!storageEnabled()) {
+      setStatus(STORAGE_WARNING);
+      return;
+    }
     if (!wallet?.account || !wallet.chain) {
       setStatus("Connect wallet to sync filled trades.");
       return;

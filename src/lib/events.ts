@@ -1,3 +1,4 @@
+import { assertStorageEnabled } from "./storage-policy";
 import { openDB } from "idb";
 import validate from "./validate-event";
 export interface TaxlotEvent {
@@ -24,6 +25,7 @@ export function assertEvent(event: unknown): asserts event is TaxlotEvent {
     );
 }
 export async function eventDB() {
+  assertStorageEnabled();
   return openDB("pit-taxlot-v1", 1, {
     upgrade(db) {
       db.createObjectStore("events", { keyPath: "id" });

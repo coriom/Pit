@@ -1,0 +1,39 @@
+$ pnpm test:e2e
+
+> pit@0.1.0 test:e2e /home/corio/PIT
+> playwright test
+
+[2m[WebServer] [22m(node:141319) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:141333) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 8 tests using 3 workers
+
+(node:141386) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:141387) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:141393) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:141386) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:141393) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:141387) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Attack reproduction: {"stolen":{"event":{"account":"fixture","quantity":"1"},"raw":{"fill":"original"},"sequence":1},"poisoned":{"account":"fixture","quantity":"999"},"deleted":true,"sequence":999,"origin":"http://127.0.0.1:4398"}
+  ✓  2 tests/e2e/storage-origin.spec.ts:2:1 › shared-origin attack reads, poisons and deletes events raw and meta (268ms)
+Dedicated origin https://pit.example: reload persistence and CSV passed; https://sibling.example: no PIT database.
+  ✓  1 tests/e2e/origin-guard.spec.ts:54:1 › approved dedicated HTTPS origin persists and exports; sibling origin cannot read records (434ms)
+Shared path: eventDB, appendEvent, listEvents, downloadCSV rejected; existing valid event preserved.
+  ✓  4 tests/e2e/origin-guard.spec.ts:93:1 › unsafe path denies open/write/read/download and preserves pre-existing valid records (214ms)
+  ✓  5 tests/e2e/origin-guard.spec.ts:133:1 › unapproved production origin never creates PIT storage; approved stable IPNS origin works (216ms)
+  ✓  3 tests/e2e/interface.spec.ts:10:1 › production swap, wallet dialog, navigation and CSP (1.3s)
+  ✓  6 tests/e2e/interface.spec.ts:47:1 › perps fields render against public info fixture and mobile does not overflow (590ms)
+  ✓  7 tests/e2e/interface.spec.ts:74:1 › injected test provider connects without secrets; invalid swaps cannot sign (1.8s)
+  ✓  8 tests/e2e/interface.spec.ts:170:1 › IPFS-style subpath hydrates and links stay beneath the CID (651ms)
+
+  8 passed (8.2s)
+
+[exit_code=0]

@@ -55,10 +55,6 @@ export default function TradingApp() {
           <div className="rule">
             <h3>A record you own</h3>
             <Export />
-            <p>
-              Filled trades stay in this browser, ready to export for your tax
-              workflow.
-            </p>
           </div>
         </aside>
       </div>
