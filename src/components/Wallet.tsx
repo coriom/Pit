@@ -6,7 +6,14 @@ import {
   useWalletClient,
 } from "wagmi";
 import { injected } from "wagmi/connectors";
-import { http, formatEther, createPublicClient, custom } from "viem";
+import {
+  http,
+  fallback,
+  type Transport,
+  formatEther,
+  createPublicClient,
+  custom,
+} from "viem";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ConnectKitProvider, ConnectKitButton } from "connectkit";
 import { useEffect, useState, type ReactNode } from "react";
@@ -15,8 +22,11 @@ const walletConfig = createConfig({
   chains,
   connectors: [injected()],
   transports: Object.fromEntries(
-    chains.map((c) => [c.id, http(publicRpc[c.id][0])]),
-  ) as any,
+    chains.map((c) => [
+      c.id,
+      fallback(publicRpc[c.id].map((url) => http(url))),
+    ]),
+  ) as Record<(typeof chains)[number]["id"], Transport>,
   ssr: true,
 });
 const query = new QueryClient();
@@ -24,7 +34,11 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <WagmiProvider config={walletConfig}>
       <QueryClientProvider client={query}>
-        <ConnectKitProvider>{children}</ConnectKitProvider>
+        <ConnectKitProvider
+          options={{ hideBalance: true, embedGoogleFonts: false }}
+        >
+          {children}
+        </ConnectKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );

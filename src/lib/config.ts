@@ -12,10 +12,16 @@ export const config = Object.freeze({
 });
 export const chains = [sepolia, mainnet, base, arbitrum] as const;
 export const publicRpc = {
-  11155111: ["https://ethereum-sepolia-rpc.publicnode.com"],
-  1: ["https://ethereum-rpc.publicnode.com"],
-  8453: ["https://base-rpc.publicnode.com"],
-  42161: ["https://arbitrum-one-rpc.publicnode.com"],
+  11155111: [
+    "https://ethereum-sepolia-rpc.publicnode.com",
+    sepolia.rpcUrls.default.http[0],
+  ],
+  1: ["https://ethereum-rpc.publicnode.com", mainnet.rpcUrls.default.http[0]],
+  8453: ["https://base-rpc.publicnode.com", base.rpcUrls.default.http[0]],
+  42161: [
+    "https://arbitrum-one-rpc.publicnode.com",
+    arbitrum.rpcUrls.default.http[0],
+  ],
 };
 export function assertTradingChain(id: number) {
   if (!chains.some((c) => c.id === id)) throw new Error("Unsupported chain");

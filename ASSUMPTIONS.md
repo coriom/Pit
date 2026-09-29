@@ -6,6 +6,6 @@
 - Fees are compile-time disabled by default; recipient addresses remain unset until configured. Mainnet requires a separate explicit flag in addition to FEES_ENABLED.
 - No WalletConnect project ID is available (and no client API keys are allowed). ConnectKit uses injected wallets only.
 - ERC20 swaps only in v1; native ETH must first be wrapped externally. Exact-amount approval is requested before signing an order.
-- Client-side country checks are advisory and user-reported, not authoritative geoblocking.
+- The client-side country helper is a non-enforcing stub, with US as an illustrative list entry. It does not look up location or provide authoritative geoblocking.
 - Stablecoins are crypto: crypto-to-stablecoin is a trade. Only a real fiat off-ramp is a disposal. Perpetual fills are derivative records, not fabricated spot acquisitions; the schema has no derivative type, so marked records export separately for review.
 - No external deployment, pinning, or ENS transaction occurs automatically. Scripts produce an artifact and document manual publication.

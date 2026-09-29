@@ -25,23 +25,17 @@ export function FillRecorder() {
           const provider = createPublicClient({
             transport: custom({ request: wallet!.request }),
           });
-          for (let offset = 0; !stopped; offset += 50) {
-            const orders = await book.getOrders({
+          for (let offset = 0; !stopped; offset += 100) {
+            const fills = await book.getTrades({
               owner: user,
               offset,
-              limit: 50,
+              limit: 100,
             });
-            for (const order of orders) {
+            for (const fill of fills) {
               if (stopped) return;
-              if (BigInt(order.executedBuyAmount) === 0n) continue;
-              for (const fill of await book.getTrades({
-                orderUid: order.uid,
-              })) {
-                if (stopped) return;
-                await recordCowFill(fill, chainId, provider);
-              }
+              await recordCowFill(fill, chainId, provider);
             }
-            if (orders.length < 50) break;
+            if (fills.length < 100) break;
           }
         },
         async () => {

@@ -1,0 +1,11 @@
+# Manual publication
+
+1. Run `scripts/deploy.sh build`, then `pnpm test:e2e`. Review `dist/build-manifest.json`, fee flags, legal pages, and evidence. Keep the artifact unchanged between verification and upload.
+2. Cloudflare: authenticate Wrangler locally (`pnpm dlx wrangler@4 login`), create a Pages project if needed, then run `PIT_CF_PROJECT=your-project scripts/deploy.sh cloudflare`. Credentials are operator-side only; never application env. Configure Node 22.22.3 / pnpm 10.17.1 for automated builds, command `pnpm build`, output `dist`.
+3. IPFS: install Kubo and run your own node. `scripts/deploy.sh ipfs` adds and pins the static directory locally, printing its CID. Local pinning requires the node to stay reachable. For durable public availability, replicate that CID to another operated node or a pinning service using its operator UI. Keep service credentials outside this repo/browser bundle.
+4. Visit both a CID subdomain gateway and `/ipfs/<CID>/`; verify wallet dialog, swap/perps tabs, styles, and legal links. Verify the manifest digest matches the reviewed artifact. A dedicated subdomain gateway isolates browser storage from other CIDs.
+5. ENS: `scripts/deploy.sh ens` prints instructions only. In a trusted ENS manager, connect the name owner's wallet and set the resolver's contenthash to `ipfs://<verified CID>`. Inspect and sign the transaction manually. Verify resolver readback and website resolution. Retain the prior CID for rollback.
+
+Never enable fees as a side effect of deployment. Fee recipients, builder approval behavior, mainnet guards and counsel's opinion require a separately reviewed release.
+
+References: [Cloudflare direct upload](https://developers.cloudflare.com/pages/get-started/direct-upload/), [Wrangler Pages commands](https://developers.cloudflare.com/workers/wrangler/commands/pages/), [IPFS pinning](https://docs.ipfs.tech/how-to/pin-files/), [ENS contenthash](https://docs.ens.domains/ensip/7/).

@@ -9,6 +9,8 @@ export async function recordCowFill(
 ) {
   const key = `cow:${chainId}:${fill.orderUid}:${fill.blockNumber}:${fill.logIndex}`;
   if (await (await eventDB()).get("events", key)) return false;
+  if ((await provider.getChainId()) !== chainId)
+    throw new Error("Wallet chain changed during fill sync");
   const [sellDecimals, buyDecimals, block] = await Promise.all([
     provider.readContract({
       address: fill.sellToken as `0x${string}`,
@@ -50,6 +52,8 @@ export async function recordCowFill(
     valuation_note:
       "Crypto-to-crypto trade, including stablecoins. Amounts from executed fill; no EUR valuation supplied.",
   };
+  if ((await provider.getChainId()) !== chainId)
+    throw new Error("Wallet chain changed during fill sync");
   return appendEvent(event, fill);
 }
 function multiply(a: string, b: string) {

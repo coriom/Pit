@@ -149,7 +149,7 @@ export function costsDisplay(
   buyDecimals: number,
 ) {
   return {
-    "Spot amounts (sell → buy)": `${formatUnits(a.beforeAllFees.sellAmount, sellDecimals)} → ${formatUnits(a.beforeAllFees.buyAmount, buyDecimals)}`,
+    "Spot price (buy / sell)": `${formatUnits(a.beforeAllFees.buyAmount, buyDecimals)} / ${formatUnits(a.beforeAllFees.sellAmount, sellDecimals)}`,
     "Protocol fee (buy token)": formatUnits(
       a.costs.protocolFee.amount,
       buyDecimals,

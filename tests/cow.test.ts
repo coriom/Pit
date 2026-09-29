@@ -55,12 +55,12 @@ describe("CoW appData and SDK math", () => {
     });
     const display = costsDisplay(amounts, 18, 18);
     expect(display["Network cost (sell token)"]).toBe("1");
+    expect(display["Partner fee (buy token)"]).toBe("0.404");
+    expect(display["Spot price (buy / sell)"]).toBe("202 / 101");
     expect(display["Protocol fee (buy token)"]).toBe("0");
     expect(amounts.afterSlippage.buyAmount).toBe(
       amounts.amountsToSign.buyAmount,
     );
-    expect(display["Minimum receive (buy token)"]).toBe(
-      (Number(amounts.afterSlippage.buyAmount) / 1e18).toString(),
-    );
+    expect(display["Minimum receive (buy token)"]).toBe("198.59802");
   });
 });

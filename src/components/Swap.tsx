@@ -178,7 +178,7 @@ export function Swap() {
           <p className="empty">No orders to display.</p>
         ) : (
           history.map((o) => (
-            <div className="row" key={o.uid}>
+            <div className="row" key={o.uid} data-order-id={o.uid}>
               <small title={o.uid}>{o.uid.slice(0, 18)}…</small>
               <span>{o.status}</span>
             </div>

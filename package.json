@@ -6,11 +6,13 @@
   "packageManager": "pnpm@10.17.1",
   "scripts": {
     "dev": "astro dev --host 127.0.0.1",
-    "build": "astro build && node scripts/build-manifest.mjs",
+    "build": "node scripts/generate-validator.mjs && astro build && node scripts/prepare-static.mjs && node scripts/build-manifest.mjs",
     "check": "astro check",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "preview": "astro preview --host 127.0.0.1"
+    "preview": "astro preview --host 127.0.0.1",
+    "format": "prettier --write src tests scripts",
+    "schema:generate": "node scripts/generate-validator.mjs"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.10",

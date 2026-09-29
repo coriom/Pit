@@ -1,3 +1,4 @@
+import { config } from "../lib/config";
 import { FillRecorder } from "./FillRecorder";
 import { Export } from "./Export";
 import { useState } from "react";
@@ -37,15 +38,19 @@ export default function TradingApp() {
           </p>
           <div className="rule row">
             <span>PIT integrator fees</span>
-            <span className="tag">OFF</span>
+            <span className="tag">{config.FEES_ENABLED ? "ON" : "OFF"}</span>
           </div>
           <div className="row">
             <small>Default swap fee when enabled</small>
-            <span>0.20%</span>
+            <span>{(config.partnerFeeBps / 100).toFixed(2)}%</span>
           </div>
           <div className="row">
             <small>Current network</small>
-            <span>Testnet only</span>
+            <span>
+              {config.FEES_ENABLED && config.MAINNET_ENABLED
+                ? "Mainnet swaps enabled"
+                : "Testnet only"}
+            </span>
           </div>
           <div className="rule">
             <h3>A record you own</h3>
