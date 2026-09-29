@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAccount, useWalletClient } from "wagmi";
 import {
+  inspectPerp,
   approveBuilder,
   builderRate,
   hlInfo,
@@ -8,6 +9,8 @@ import {
   readPerps,
 } from "../lib/hyperliquid";
 import { config } from "../lib/config";
+import { useExecutionPreflight } from "./useExecutionPreflight";
+import { preflightMessage } from "../lib/execution-preflight";
 export function Perps() {
   const { address } = useAccount();
   const { data: wallet } = useWalletClient();
@@ -60,6 +63,14 @@ export function Perps() {
       setBusy(false);
     }
   }
+  const check = useCallback(
+    () => inspectPerp(wallet, asset, buy, price, size, reduce),
+    [wallet, asset, buy, price, size, reduce],
+  );
+  const gate = useExecutionPreflight(
+    `${address}:${asset}:${buy}:${price}:${size}:${reduce}`,
+    check,
+  );
   return (
     <>
       <div className="row">
@@ -125,7 +136,7 @@ export function Perps() {
       </div>
       {config.FEES_ENABLED && (
         <button
-          disabled={!wallet || busy}
+          disabled={true}
           onClick={() => act(() => approveBuilder(wallet!))}
         >
           Approve builder fee
@@ -133,13 +144,16 @@ export function Perps() {
       )}
       <button
         className="primary"
-        disabled={!wallet || busy || !markets.length}
+        disabled={busy || gate !== "GREEN"}
         onClick={() =>
           act(() => placePerp(wallet!, asset, buy, price, size, reduce))
         }
       >
         {busy ? "Waiting…" : "Sign & place limit order"}
       </button>
+      <p data-testid="hl-preflight">
+        {gate}: {preflightMessage[gate]}
+      </p>
       {!wallet && (
         <p className="empty">Connect your wallet to trade test assets.</p>
       )}

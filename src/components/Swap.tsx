@@ -1,12 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAccount, useWalletClient } from "wagmi";
 import {
+  inspectCow,
+  inspectSwap,
+  submitSwap,
   approveSwap,
   costsDisplay,
   orderbook,
   quoteSwap,
   type SwapQuote,
 } from "../lib/cow";
+import { useExecutionPreflight } from "./useExecutionPreflight";
+import { preflightMessage, PreflightError } from "../lib/execution-preflight";
 export function Swap() {
   const { address, chainId } = useAccount();
   const { data: wallet } = useWalletClient();
@@ -64,23 +69,33 @@ export function Swap() {
       setBusy(false);
     }
   }
-  async function assertCurrent(q: SwapQuote) {
+  const check = useCallback(async () => {
+    if (!wallet) throw new PreflightError("DISCONNECTED");
+    if (!quote) {
+      await inspectCow(wallet, sell, buy, amount);
+      throw new PreflightError("QUOTE_EXPIRED");
+    }
     if (
-      !wallet ||
-      (await wallet.getChainId()) !== q.chainId ||
-      (await wallet.getAddresses())[0]?.toLowerCase() !== q.owner.toLowerCase()
+      wallet.account?.address.toLowerCase() !== quote.owner.toLowerCase() ||
+      wallet.chain?.id !== quote.chainId
     )
-      throw new Error("Wallet changed; request a new quote");
-    if (Date.now() - q.obtainedAt > 60000)
-      throw new Error("Quote expired; request a new quote");
-  }
+      throw new PreflightError("WALLET_CHANGED");
+    await inspectSwap(quote);
+  }, [wallet, quote, sell, buy, amount]);
+  const gate = useExecutionPreflight(
+    `${address}:${chainId}:${sell}:${buy}:${amount}:${quote?.obtainedAt}`,
+    check,
+  );
   return (
     <>
       <div className="row">
         <h2>Swap tokens</h2>
         <span className="tag">CoW Protocol</span>
       </div>
-      <p className="muted">MEV-protected execution · 0.50% slippage</p>
+      <p className="muted">
+        Ethereum Sepolia only (11155111), not Base Sepolia (84532) · 0.50%
+        slippage
+      </p>
       <label>
         Sell token address
         <input
@@ -123,6 +138,9 @@ export function Swap() {
         {busy ? "Working…" : "Get quote"}
       </button>
       {!wallet && <p className="empty">Connect your wallet to get started.</p>}
+      <p data-testid="cow-preflight">
+        {gate}: {preflightMessage[gate]}
+      </p>
       {quote && (
         <div className="rule">
           {Object.entries(
@@ -142,15 +160,15 @@ export function Swap() {
           </small>
           <button
             className="primary"
-            disabled={busy}
+            disabled={busy || gate !== "GREEN"}
             onClick={() =>
               act(async () => {
-                await assertCurrent(quote);
+                await check();
                 if (!approved) {
                   await approveSwap(quote);
                   setApproved(true);
                 } else {
-                  const result = await quote.postSwapOrderFromQuote();
+                  const result = await submitSwap(quote);
                   setStatus(`Submitted: ${result.orderId}`);
                   setQuote(undefined);
                 }

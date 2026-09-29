@@ -31,30 +31,11 @@ import { approveBuilder, placePerp } from "../src/lib/hyperliquid";
 const wallet = {
   account: { address: "0x2222222222222222222222222222222222222222" },
 } as never;
-it("audit: isolated enabled branch passes identical builder rate to approval and order; no SDK or network invoked", async () => {
-  await approveBuilder(wallet);
-  expect(mocks.approve).toHaveBeenCalledWith({
-    builder: "0x1111111111111111111111111111111111111111",
-    maxFeeRate: "0.01%",
-  });
-  await placePerp(wallet, 0, true, "2000", "0.01", false);
-  expect(mocks.order).toHaveBeenCalledWith({
-    orders: [
-      {
-        a: 0,
-        b: true,
-        p: "2000",
-        s: "0.01",
-        r: false,
-        t: { limit: { tif: "Gtc" } },
-      },
-    ],
-    grouping: "na",
-    builder: { b: "0x1111111111111111111111111111111111111111", f: 10 },
-  });
-  mocks.max.mockResolvedValueOnce(9);
+it("release: even the formerly enabled builder branch cannot approve or order", async () => {
+  await expect(approveBuilder(wallet)).rejects.toThrow("FEES_ENABLED");
   await expect(
     placePerp(wallet, 0, true, "2000", "0.01", false),
-  ).rejects.toThrow("Approve builder fee first");
-  expect(mocks.order).toHaveBeenCalledTimes(1);
+  ).rejects.toThrow("FEES_ENABLED");
+  expect(mocks.approve).not.toHaveBeenCalled();
+  expect(mocks.order).not.toHaveBeenCalled();
 });

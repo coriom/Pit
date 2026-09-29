@@ -1,0 +1,9 @@
+$ pnpm release:check
+
+> pit@0.1.0 release:check /home/corio/PIT
+> node scripts/release/check.mjs
+
+RELEASE CHECK FAILED: Release requires a clean Git working tree (including untracked files)
+ ELIFECYCLE  Command failed with exit code 1.
+
+[exit_code=1]

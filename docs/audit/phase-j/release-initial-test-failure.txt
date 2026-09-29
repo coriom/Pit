@@ -1,0 +1,93 @@
+$ pnpm release:check
+
+> pit@0.1.0 release:check /home/corio/PIT
+> node scripts/release/check.mjs
+
+Clean release source: ecbfa30cd6c9d3dbd7a73222c2203232bd94726f
+PASS protected fee/network configuration: FEES_ENABLED=false; MAINNET_ENABLED=false; recipients/rates unchanged
+PASS exact Taxlot v1 schema SHA256 d8eb339ed7acd7da3b68ef09fe5c1b01c4cc3258cb401a4f2ba8805e7a3b07d7
+PASS origin policy: default-deny; production allowlist empty; legal page unchanged
+PASS tracked-file credential patterns and environment-file policy (not a proof against encoded secrets)
+
+$ pnpm test
+
+> pit@0.1.0 test /home/corio/PIT
+> vitest run
+
+
+ RUN  v3.2.7 /home/corio/PIT
+
+ ✓ tests/release-invariants.test.ts (11 tests) 19ms
+ ✓ tests/schema-capabilities.test.ts (3 tests) 34ms
+ ✓ tests/storage-policy.test.ts (5 tests) 60ms
+ ✓ tests/events.test.ts (4 tests) 178ms
+ ✓ tests/audit-builder-path.test.ts (1 test) 21ms
+ ✓ tests/schema-provenance.test.ts (1 test) 9ms
+ ✓ tests/derivative-boundary.test.ts (6 tests) 111ms
+ ✓ tests/audit-taxlot.test.ts (1 test) 119ms
+ ✓ tests/hyperliquid-release-path.test.ts (3 tests) 30ms
+ ✓ tests/cow.test.ts (6 tests) 20ms
+ ✓ tests/execution-paths.test.ts (4 tests) 69ms
+ ✓ tests/hyperliquid.test.ts (2 tests) 6ms
+ ❯ tests/execution-preflight.test.ts (24 tests | 1 failed) 60ms
+   ✓ Ethereum Sepolia release facts accepted; Hyperliquid has its own exact transport gate 5ms
+   ✓ CoW chain 84532 rejected 2ms
+   ✓ CoW chain 1 rejected 0ms
+   ✓ CoW chain 8453 rejected 1ms
+   ✓ CoW chain 42161 rejected 1ms
+   ✓ CoW chain 999 rejected 0ms
+   ✓ CoW chain 0 rejected 0ms
+   ✓ release predicate {"connected":false} rejected as DISCONNECTED 0ms
+   ✓ release predicate {"feesEnabled":true} rejected as FEES_ENABLED 1ms
+   ✓ release predicate {"mainnetEnabled":true} rejected as MAINNET_ENABLED 0ms
+   ✓ release predicate {"storage":false} rejected as STORAGE_UNAVAILABLE 0ms
+   ✓ release predicate {"cow":{"chainId":11155111,"api":"https://api.cow.fi/mainnet","settlement":"0x9008D19f58AAbD9eD0D60971565AA8510560ab41","relayer":"0xC92E8bdf79f0507f65a392b0ab4667716BFE0110"}} rejected as COW_CONFIGURATION 0ms
+   ✓ release predicate {"cow":{"chainId":11155111,"api":"https://api.cow.fi/sepolia","settlement":"0x1111111111111111111111111111111111111111","relayer":"0xC92E8bdf79f0507f65a392b0ab4667716BFE0110"}} rejected as COW_CONFIGURATION 0ms
+   ✓ release predicate {"cow":{"chainId":11155111,"api":"https://api.cow.fi/sepolia","settlement":"0x9008D19f58AAbD9eD0D60971565AA8510560ab41","relayer":"0x1111111111111111111111111111111111111111"}} rejected as COW_CONFIGURATION 0ms
+   ✓ Hyperliquid wrong environment rejected ({"isTestnet":false,"apiUrl":"https://api.hyperliquid-testnet.xyz","rpcUrl":"https://rpc.hyperliquid-testnet.xyz"}) 0ms
+   ✓ Hyperliquid wrong environment rejected ({"isTestnet":true,"apiUrl":"https://api.hyperliquid.xyz","rpcUrl":"https://rpc.hyperliquid-testnet.xyz"}) 0ms
+   ✓ Hyperliquid wrong environment rejected ({"isTestnet":true,"apiUrl":"https://api.hyperliquid-testnet.xyz","rpcUrl":"https://rpc.hyperliquid.xyz"}) 0ms
+   ✓ Hyperliquid wrong environment rejected ({"isTestnet":true,"apiUrl":"https://api.hyperliquid-testnet.xyz.evil.example","rpcUrl":"https://rpc.hyperliquid-testnet.xyz"}) 0ms
+   ✓ direct execution with wrong chain or disconnected wallet never invokes provider/signing 6ms
+   ✓ actual wallet chain takes precedence over cached Sepolia chain 1ms
+   ✓ unsafe accounting origin blocks both protocol execution paths 1ms
+   × storage probe leaves no accounting records; unavailable IndexedDB fails closed 26ms
+     → promise resolved "undefined" instead of rejecting
+   ✓ Hyperliquid runtime mainnet transport is refused before reading wallet or signing 1ms
+   ✓ Sepolia provider ERC20 checks reject insufficient funds 11ms
+ ✓ tests/audit-fees.test.ts (4 tests) 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-preflight.test.ts > storage probe leaves no accounting records; unavailable IndexedDB fails closed
+AssertionError: promise resolved "undefined" instead of rejecting
+
+- Expected: 
+Error {
+  "message": "rejected promise",
+}
+
++ Received: 
+undefined
+
+ ❯ tests/execution-preflight.test.ts:111:41
+    109|     throw new DOMException("Storage unavailable", "QuotaExceededError"…
+    110|   });
+    111|   await expect(verifyAccountingStorage()).rejects.toThrow(
+       |                                         ^
+    112|     "STORAGE_UNAVAILABLE",
+    113|   );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 13 passed (14)
+      Tests  1 failed | 74 passed (75)
+   Start at  20:48:16
+   Duration  2.98s (transform 1.56s, setup 673ms, collect 13.88s, tests 744ms, environment 5ms, prepare 2.71s)
+
+ ELIFECYCLE  Test failed. See above for more details.
+RELEASE CHECK FAILED: Required command failed: pnpm test (exit 1)
+ ELIFECYCLE  Command failed with exit code 1.
+
+[exit_code=1]

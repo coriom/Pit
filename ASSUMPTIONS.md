@@ -1,4 +1,4 @@
-# Assumptions disposition — Phase I, 2026-09-29
+# Assumptions disposition — Phase J, 2026-09-29
 
 Each numbered entry corresponds to the same-position entry in the Phase E file. Evidence and exact command outputs are in [docs/VERIFICATION.md](docs/VERIFICATION.md) and [the audit record](docs/audit/phase-f/SECURITY.md).
 
@@ -17,3 +17,7 @@ Mainnet activation remains **BLOCKED** pending the user's MiCA/PSAN legal-opinio
 Phase G clarification: **assumption 8 remains OPEN** for accounting/import semantics. PIT-F-01 is mitigated in source by default-deny origin policy; public deployment acceptance and legacy shared-origin recovery remain OPEN. The production allowlist is intentionally empty. Tests of approved dedicated HTTPS origins use an explicit test-only policy fixture, not a public deployment.
 
 Phase I disposition changes: item 1 records the current upstream HEAD with unchanged schema bytes; item 8 now has verified fixture importer evidence and a proven unsupported-derivative boundary but remains OPEN. All other dispositions and legal gates are unchanged.
+
+Phase J: items 2 (live wallet acceptance BLOCKED) and 8 (accounting/public-origin acceptance OPEN) retain their dispositions. Item 4 additionally has a hard fee-disabled testnet release gate: Base Sepolia, all mainnets and unknown CoW chains are rejected; Hyperliquid endpoints are checked independently. Item 6 adds writable-storage, ERC20/contract and approval gas-balance checks before execution. Item 9 retains its default-deny origin policy and no deployment occurred. All other dispositions remain unchanged. See [release safety and network matrix](docs/audit/phase-j/RELEASE-SAFETY.md) and [operator prerequisites](docs/audit/phase-j/TESTNET-RUNBOOK.md).
+
+Phase J verification: `pnpm release:check` passed from a clean tree (75 unit tests, 14 Playwright tests, clean 52-file typecheck, 3-page production build). Exact output is in `docs/audit/phase-j/release-check.txt`; this does not change the BLOCKED/OPEN live and public-origin dispositions.

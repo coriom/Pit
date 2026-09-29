@@ -55,3 +55,9 @@ Production has a deny-by-default CSP, hashed Astro scripts, a protocol/RPC conne
 `scripts/deploy.sh build` only creates a reviewable artifact. Publication is manual: see [docs/DEPLOY.md](docs/DEPLOY.md). No Cloudflare upload, external IPFS pin, or ENS transaction was performed. The scripts contain no signing keys.
 
 Protocol reference: [CoW SDK integration](https://docs.cow.fi/cow-protocol/integrate/sdk), [Hyperliquid SDK](https://github.com/nktkas/hyperliquid), [builder approval](https://nktkas.gitbook.io/hyperliquid/api-reference/exchange-methods/approvebuilderfee).
+
+## Testnet release candidate
+
+Run `pnpm release:check` from a clean tree. It verifies pinned fee/network/schema/origin configuration, scans tracked files for credential patterns, and requires unit tests, typecheck, production build and offline Playwright tests to pass. It rejects environment-file and alternate-browser-target overrides; there is no force mode.
+
+CoW requires **Ethereum Sepolia (11155111), not Base Sepolia (84532)**. Hyperliquid uses its independently checked testnet API. Both require a connected external wallet and writable accounting storage; every signing action rechecks the shared preflight. See the [operator runbook](docs/audit/phase-j/TESTNET-RUNBOOK.md) and [release safety evidence](docs/audit/phase-j/RELEASE-SAFETY.md). A release pass does not establish live acceptance. Assumption 8 remains OPEN.

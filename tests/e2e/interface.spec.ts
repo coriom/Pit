@@ -127,7 +127,7 @@ test("injected test provider connects without secrets; invalid swaps cannot sign
   await page.getByLabel("Buy token address").fill("invalid");
   await page.getByLabel("You sell").fill("1");
   await page.getByRole("button", { name: "Get quote", exact: true }).click();
-  await expect(page.getByRole("alert")).toContainText("two different ERC20");
+  await expect(page.getByRole("alert")).toContainText("UNSUPPORTED_ASSETS");
   expect(await page.evaluate(() => (window as any).__signCalls)).toBe(0);
   await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
