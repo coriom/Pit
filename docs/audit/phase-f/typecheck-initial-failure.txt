@@ -1,0 +1,30 @@
+$ pnpm check
+
+> pit@0.1.0 check /home/corio/PIT
+> astro check
+
+19:18:59 [content] Syncing content
+19:18:59 [content] Synced content
+19:18:59 [types] Generated 84ms
+19:18:59 [check] Getting diagnostics for Astro files in /home/corio/PIT...
+[96mtests/cow.test.ts[0m:[93m94[0m:[93m7[0m - [91merror[0m[90m ts(2345): [0mArgument of type '{ sellToken: string; buyToken: string; slippageBps: number; partnerFee: { volumeBps: number; recipient: string; } | undefined; validTo: number; kind: OrderKind; sellAmount: string; buyAmount: string; feeAmount: string; }' is not assignable to parameter of type 'LimitTradeParameters'.
+  Type '{ sellToken: string; buyToken: string; slippageBps: number; partnerFee: { volumeBps: number; recipient: string; } | undefined; validTo: number; kind: OrderKind; sellAmount: string; buyAmount: string; feeAmount: string; }' is missing the following properties from type 'LimitTradeParameters': sellTokenDecimals, buyTokenDecimals
+
+[7m 94[0m       {
+[7m   [0m [91m      ~[0m
+[7m 95[0m         ...params,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m100[0m         validTo: 1900000000,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m101[0m       },
+[7m   [0m [91m~~~~~~~[0m
+
+Result (33 files): 
+- 1 error
+- 0 warnings
+- 0 hints
+
+ ELIFECYCLE  Command failed with exit code 1.
+
+[exit_code=1]

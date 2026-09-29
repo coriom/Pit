@@ -1,0 +1,8 @@
+$ python3 scripts/audit/compare-builds.py
+build-1 manifest hash: fa712013bdc5279ae30e617ae8e75c731b0bf446dcb09648bef8f2ffb1453216
+build-2 manifest hash: fa712013bdc5279ae30e617ae8e75c731b0bf446dcb09648bef8f2ffb1453216
+Complete manifests byte-identical: True
+Verified individual artifact digests: 122
+Regenerated validator equals phase-E validator: True
+
+[exit_code=0]

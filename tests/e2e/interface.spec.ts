@@ -1,4 +1,12 @@
 import { test, expect } from "@playwright/test";
+// Audit runs are offline: explicit per-test fixtures override this route.
+test.beforeEach(async ({ page }) => {
+  await page.route(/^https?:\/\//, (route) =>
+    new URL(route.request().url()).hostname === "127.0.0.1"
+      ? route.continue()
+      : route.abort("blockedbyclient"),
+  );
+});
 test("production swap, wallet dialog, navigation and CSP", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
@@ -21,7 +29,10 @@ test("production swap, wallet dialog, navigation and CSP", async ({ page }) => {
   await expect(
     page.getByText("Connect your wallet", { exact: false }).first(),
   ).toBeVisible();
-  await page.screenshot({ path: "docs/production-wallet.png", fullPage: true });
+  await page.screenshot({
+    path: "test-results/production-wallet.png",
+    fullPage: true,
+  });
   await page.goto("/fees/");
   await expect(
     page.getByRole("heading", { name: "What PIT earns." }),
@@ -56,7 +67,7 @@ test("perps fields render against public info fixture and mobile does not overfl
     ),
   ).toBe(true);
   await page.screenshot({
-    path: "docs/mobile-perps-fixture.png",
+    path: "test-results/mobile-perps-fixture.png",
     fullPage: true,
   });
 });

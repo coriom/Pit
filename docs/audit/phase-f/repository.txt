@@ -1,0 +1,33 @@
+$ python3 scripts/audit/repository.py
+$ git status --short
+?? docs/audit/
+?? scripts/audit/
+$ git log --oneline -8
+c65a14e feat(e): add trust pages reproducible deployment and browser verification
+a3d367d feat(d): validate and persist Taxlot fill events with CSV exports
+3bf7b19 feat(c): add Hyperliquid testnet perps and capped builder fee flow
+b7fb676 feat(b): integrate CoW quotes approvals signing and order history
+4a3084f feat(a): scaffold static Astro wallet interface and testnet configuration
+$ git rev-parse HEAD
+c65a14e76a09f4507e7669aed605996e71650d30
+$ git merge-base --is-ancestor 4a3084f HEAD
+4a3084f: REACHABLE
+$ git merge-base --is-ancestor b7fb676 HEAD
+b7fb676: REACHABLE
+$ git merge-base --is-ancestor 3bf7b19 HEAD
+3bf7b19: REACHABLE
+$ git merge-base --is-ancestor a3d367d HEAD
+a3d367d: REACHABLE
+$ git merge-base --is-ancestor c65a14e HEAD
+c65a14e: REACHABLE
+$ node --version
+v22.22.3
+$ pnpm --version
+10.17.1
+schemas/events.v1.json: d8eb339ed7acd7da3b68ef09fe5c1b01c4cc3258cb401a4f2ba8805e7a3b07d7
+/home/corio/TAXLOT/schemas/events.v1.json: d8eb339ed7acd7da3b68ef09fe5c1b01c4cc3258cb401a4f2ba8805e7a3b07d7
+Taxlot schemas byte-identical: true
+$ git -C /home/corio/TAXLOT rev-parse HEAD
+50b18a723917df1848ab5cd9808e0338046a86b7
+
+[exit_code=0]

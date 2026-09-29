@@ -1,0 +1,1685 @@
+$ python3 scripts/audit/source-evidence.py
+ASSUMPTIONS.md:6:- Fees are compile-time disabled by default; recipient addresses remain unset until configured. Mainnet requires a separate explicit flag in addition to FEES_ENABLED.
+README.md:5:**Testnet preview, not launch-ready. `FEES_ENABLED=false`. No funded trade execution has been verified.**
+tests/cow.test.ts:22:    expect(config.FEES_ENABLED).toBe(false);
+tests/audit-builder-path.test.ts:12:    FEES_ENABLED: true,
+tests/audit-fees.test.ts:14:  expect(config.FEES_ENABLED).toBe(false);
+src/lib/cow.ts:22:  enabled = config.FEES_ENABLED,
+src/lib/cow.ts:34:  enabled = config.FEES_ENABLED,
+scripts/audit/source-evidence.py:3:print('$ rg -n FEES_ENABLED src tests scripts README.md ASSUMPTIONS.md .env.example')
+scripts/audit/source-evidence.py:4:subprocess.run(['rg','-n','FEES_ENABLED','src','tests','scripts','README.md','ASSUMPTIONS.md','.env.example'])
+src/lib/config.ts:3:  FEES_ENABLED: false as boolean,
+src/lib/config.ts:28:  if (id !== sepolia.id && !(config.FEES_ENABLED && config.MAINNET_ENABLED))
+src/lib/hyperliquid.ts:30:export function builderConfig(enabled = config.FEES_ENABLED) {
+src/pages/fees.astro:6:<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width"/><title>PIT · Fee transparency</title></head><body><main class="shell"><header><a class="brand" href="../">pit<span>.</span></a><nav><a href="../">Trade</a><a href="../legal/">Legal</a></nav><span class="tag">{config.FEES_ENABLED ? "FEES ENABLED" : "FEES DISABLED"}</span></header><section class="hero"><div class="eyebrow">Nothing hidden</div><h1>What PIT earns.</h1><p>{config.FEES_ENABLED ? "Integrator fees are enabled. Review the configured rates below." : "Current integrator revenue: zero. FEES_ENABLED is false."}</p></section><div class="grid"><section class="panel"><h2>CoW swaps</h2><p>When enabled, the configured partner fee is {config.partnerFeeBps} basis points ({config.partnerFeeBps/100}%). It is included in signed appData under partnerFee with volumeBps and recipient. The quote shows the SDK's exact fee and minimum-receive amounts before signing.</p><p>Protocol fees and solver network costs are separate from PIT revenue. ERC20 approval gas is a separate wallet transaction. Unfilled orders do not earn PIT a partner fee.</p><p>Recipient: {config.feeRecipient||'Not configured — enabling fees will fail closed.'}</p>{config.feeRecipient&&explorers.map((url,i)=><p><a href={url+config.feeRecipient} rel="noreferrer">Recipient on {['Sepolia','Ethereum','Base','Arbitrum'][i]} ↗</a></p>)}</section><section class="panel"><h2>Hyperliquid perps</h2><p>When enabled, the default builder fee is {config.builderFeeTenthsBps} tenths of a basis point ({config.builderFeeTenthsBps/1000}%). The main wallet approves a maximum rate via EIP-712; each order includes its builder address and fee.</p><p>PIT enforces a perps cap of 100 tenths (10 bps). The helper caps spot at 1000 tenths (100 bps); spot trading is outside this release. Exchange fees and funding remain separate.</p><p>Builder: {config.builderAddress||'Not configured — no builder is sent while fees are off.'}</p>{config.builderAddress&&<a href={`https://app.hyperliquid-testnet.xyz/explorer/address/${config.builderAddress}`} rel="noreferrer">Builder address ↗</a>}</section></div><footer>No address analytics. Protocol APIs receive the account data required to quote and trade. <a href="../">Back to trading →</a></footer></main></body></html>
+src/components/TradingApp.tsx:41:            <span className="tag">{config.FEES_ENABLED ? "ON" : "OFF"}</span>
+src/components/TradingApp.tsx:50:              {config.FEES_ENABLED && config.MAINNET_ENABLED
+src/components/Perps.tsx:121:          {config.FEES_ENABLED
+src/components/Perps.tsx:126:      {config.FEES_ENABLED && (
+$ rg -n FEES_ENABLED src tests scripts README.md ASSUMPTIONS.md .env.example
+
+$ numbered source: src/lib/config.ts
+1: import { arbitrum, base, mainnet, sepolia } from "viem/chains";
+2: export const config = Object.freeze({
+3:   FEES_ENABLED: false as boolean,
+4:   MAINNET_ENABLED: false as boolean,
+5:   feeRecipient: "" as string,
+6:   cowAppCode: "PIT",
+7:   partnerFeeBps: 20,
+8:   builderAddress: "" as string,
+9:   builderFeeTenthsBps: 10,
+10:   agentSessions: false,
+11:   blockedCountries: ["US"],
+12: });
+13: export const chains = [sepolia, mainnet, base, arbitrum] as const;
+14: export const publicRpc = {
+15:   11155111: [
+16:     "https://ethereum-sepolia-rpc.publicnode.com",
+17:     sepolia.rpcUrls.default.http[0],
+18:   ],
+19:   1: ["https://ethereum-rpc.publicnode.com", mainnet.rpcUrls.default.http[0]],
+20:   8453: ["https://base-rpc.publicnode.com", base.rpcUrls.default.http[0]],
+21:   42161: [
+22:     "https://arbitrum-one-rpc.publicnode.com",
+23:     arbitrum.rpcUrls.default.http[0],
+24:   ],
+25: };
+26: export function assertTradingChain(id: number) {
+27:   if (!chains.some((c) => c.id === id)) throw new Error("Unsupported chain");
+28:   if (id !== sepolia.id && !(config.FEES_ENABLED && config.MAINNET_ENABLED))
+29:     throw new Error("Mainnet trading is disabled");
+30: }
+31: export function countryBlocked(country: string) {
+32:   return config.blockedCountries.includes(country.trim().toUpperCase());
+33: }
+
+$ numbered source: src/lib/cow.ts
+1: import {
+2:   TradingSdk,
+3:   OrderBookApi,
+4:   OrderKind,
+5:   buildAppData,
+6:   type SupportedChainId,
+7:   type QuoteAmountsAndCosts,
+8: } from "@cowprotocol/cow-sdk";
+9: import { ViemAdapter } from "@cowprotocol/sdk-viem-adapter";
+10: import {
+11:   createPublicClient,
+12:   custom,
+13:   erc20Abi,
+14:   formatUnits,
+15:   isAddress,
+16:   parseUnits,
+17:   zeroAddress,
+18:   type WalletClient,
+19: } from "viem";
+20: import { assertTradingChain, config } from "./config";
+21: export function partnerFee(
+22:   enabled = config.FEES_ENABLED,
+23:   recipient = config.feeRecipient,
+24:   bps: number = config.partnerFeeBps,
+25: ) {
+26:   if (!enabled) return undefined;
+27:   if (!isAddress(recipient) || recipient === zeroAddress)
+28:     throw new Error("Configure a nonzero fee recipient");
+29:   if (!Number.isInteger(bps) || bps < 0 || bps > 100)
+30:     throw new Error("PIT partner fee cap is 100 bps");
+31:   return { volumeBps: bps, recipient };
+32: }
+33: export function cowAppData(
+34:   enabled = config.FEES_ENABLED,
+35:   recipient = config.feeRecipient,
+36: ) {
+37:   return buildAppData({
+38:     appCode: config.cowAppCode,
+39:     slippageBps: 50,
+40:     orderClass: "market",
+41:     partnerFee: partnerFee(enabled, recipient),
+42:   });
+43: }
+44: export function cowClient(wallet: WalletClient) {
+45:   if (!wallet.chain || !wallet.account) throw new Error("Connect wallet");
+46:   assertTradingChain(wallet.chain.id);
+47:   const provider = createPublicClient({
+48:     chain: wallet.chain,
+49:     transport: custom({ request: wallet.request }),
+50:   });
+51:   const sdk = new TradingSdk(
+52:     {
+53:       chainId: wallet.chain.id as SupportedChainId,
+54:       appCode: config.cowAppCode,
+55:     },
+56:     {},
+57:     new ViemAdapter({ provider, walletClient: wallet }),
+58:   );
+59:   return { sdk, provider };
+60: }
+61: export async function quoteSwap(
+62:   wallet: WalletClient,
+63:   sellToken: string,
+64:   buyToken: string,
+65:   amount: string,
+66: ) {
+67:   if (!wallet.account) throw new Error("Connect wallet");
+68:   if (
+69:     !isAddress(sellToken) ||
+70:     !isAddress(buyToken) ||
+71:     sellToken.toLowerCase() === buyToken.toLowerCase()
+72:   )
+73:     throw new Error("Enter two different ERC20 addresses");
+74:   const { sdk, provider } = cowClient(wallet);
+75:   const [sellDecimals, buyDecimals, balance] = await Promise.all([
+76:     provider.readContract({
+77:       address: sellToken,
+78:       abi: erc20Abi,
+79:       functionName: "decimals",
+80:     }),
+81:     provider.readContract({
+82:       address: buyToken,
+83:       abi: erc20Abi,
+84:       functionName: "decimals",
+85:     }),
+86:     provider.readContract({
+87:       address: sellToken,
+88:       abi: erc20Abi,
+89:       functionName: "balanceOf",
+90:       args: [wallet.account.address],
+91:     }),
+92:   ]);
+93:   if (
+94:     !/^\d+(\.\d+)?$/.test(amount) ||
+95:     (amount.split(".")[1]?.length ?? 0) > sellDecimals
+96:   )
+97:     throw new Error("Invalid amount or excess token precision");
+98:   const units = parseUnits(amount, sellDecimals);
+99:   if (units <= 0n || units > balance)
+100:     throw new Error("Insufficient token balance or invalid amount");
+101:   const quote = await sdk.getQuote({
+102:     kind: OrderKind.SELL,
+103:     sellToken,
+104:     buyToken,
+105:     sellTokenDecimals: sellDecimals,
+106:     buyTokenDecimals: buyDecimals,
+107:     amount: units.toString(),
+108:     slippageBps: 50,
+109:     validFor: 1200,
+110:     partnerFee: partnerFee(),
+111:   });
+112:   return {
+113:     ...quote,
+114:     sdk,
+115:     provider,
+116:     units,
+117:     sellDecimals,
+118:     buyDecimals,
+119:     sellToken,
+120:     buyToken,
+121:     owner: wallet.account.address,
+122:     chainId: wallet.chain!.id,
+123:     obtainedAt: Date.now(),
+124:   };
+125: }
+126: export type SwapQuote = Awaited<ReturnType<typeof quoteSwap>>;
+127: export async function approveSwap(q: SwapQuote) {
+128:   const allowance = await q.sdk.getCowProtocolAllowance({
+129:     tokenAddress: q.sellToken,
+130:     owner: q.owner,
+131:   });
+132:   if (allowance >= q.units) return;
+133:   const hash = await q.sdk.approveCowProtocol({
+134:     tokenAddress: q.sellToken,
+135:     amount: q.units,
+136:   });
+137:   const receipt = await q.provider.waitForTransactionReceipt({
+138:     hash: hash as `0x${string}`,
+139:   });
+140:   if (receipt.status !== "success") throw new Error("Token approval reverted");
+141: }
+142: export function orderbook(chainId: number) {
+143:   assertTradingChain(chainId);
+144:   return new OrderBookApi({ chainId: chainId as SupportedChainId });
+145: }
+146: export function costsDisplay(
+147:   a: QuoteAmountsAndCosts,
+148:   sellDecimals: number,
+149:   buyDecimals: number,
+150: ) {
+151:   return {
+152:     "Spot price (buy / sell)": `${formatUnits(a.beforeAllFees.buyAmount, buyDecimals)} / ${formatUnits(a.beforeAllFees.sellAmount, sellDecimals)}`,
+153:     "Protocol fee (buy token)": formatUnits(
+154:       a.costs.protocolFee.amount,
+155:       buyDecimals,
+156:     ),
+157:     "Network cost (sell token)": formatUnits(
+158:       a.costs.networkFee.amountInSellCurrency,
+159:       sellDecimals,
+160:     ),
+161:     "Partner fee (buy token)": formatUnits(
+162:       a.costs.partnerFee.amount,
+163:       buyDecimals,
+164:     ),
+165:     "Minimum receive (buy token)": formatUnits(
+166:       a.afterSlippage.buyAmount,
+167:       buyDecimals,
+168:     ),
+169:   };
+170: }
+
+$ numbered source: src/lib/hyperliquid.ts
+1: import { ExchangeClient, HttpTransport, InfoClient } from "@nktkas/hyperliquid";
+2: import {
+3:   isAddress,
+4:   zeroAddress,
+5:   type WalletClient,
+6:   type Account,
+7:   type Transport,
+8:   type Chain,
+9: } from "viem";
+10: import { config } from "./config";
+11: // Testnet is intentional, independent of wallet EVM network and fee settings.
+12: export const hlTransport = new HttpTransport({ isTestnet: true });
+13: export const hlInfo = new InfoClient({ transport: hlTransport });
+14: export function bpsToTenths(bps: string, kind: "perps" | "spot" = "perps") {
+15:   if (!/^\d+(\.\d)?$/.test(bps))
+16:     throw new Error("Use nonnegative bps with at most one decimal");
+17:   const [whole, fraction = "0"] = bps.split(".");
+18:   const n = Number(whole) * 10 + Number(fraction);
+19:   return capBuilderFee(n, kind);
+20: }
+21: export function capBuilderFee(f: number, kind: "perps" | "spot" = "perps") {
+22:   if (!Number.isSafeInteger(f) || f < 0 || f > (kind === "perps" ? 100 : 1000))
+23:     throw new Error("Builder fee exceeds hard cap");
+24:   return f;
+25: }
+26: export function builderRate(f: number) {
+27:   capBuilderFee(f);
+28:   return `${f / 1000}%`;
+29: }
+30: export function builderConfig(enabled = config.FEES_ENABLED) {
+31:   if (!enabled) return undefined;
+32:   if (
+33:     !isAddress(config.builderAddress) ||
+34:     config.builderAddress === zeroAddress
+35:   )
+36:     throw new Error("Configure a nonzero builder address");
+37:   return {
+38:     b: config.builderAddress.toLowerCase() as `0x${string}`,
+39:     f: capBuilderFee(config.builderFeeTenthsBps),
+40:   };
+41: }
+42: function exchange(wallet: WalletClient) {
+43:   if (!wallet.account) throw new Error("Connect main wallet");
+44:   return new ExchangeClient({
+45:     transport: hlTransport,
+46:     wallet: wallet as WalletClient<Transport, Chain, Account>,
+47:   });
+48: }
+49: export async function approveBuilder(wallet: WalletClient) {
+50:   const builder = builderConfig();
+51:   if (!builder) throw new Error("Fees are disabled; approval is unnecessary");
+52:   return exchange(wallet).approveBuilderFee({
+53:     builder: builder.b,
+54:     maxFeeRate: builderRate(builder.f),
+55:   });
+56: }
+57: export function validateOrderNumbers(
+58:   price: string,
+59:   size: string,
+60:   szDecimals: number,
+61: ) {
+62:   if (
+63:     !/^\d+(\.\d+)?$/.test(price) ||
+64:     !/^\d+(\.\d+)?$/.test(size) ||
+65:     Number(price) <= 0 ||
+66:     Number(size) <= 0 ||
+67:     !Number.isFinite(Number(price)) ||
+68:     !Number.isFinite(Number(size))
+69:   )
+70:     throw new Error("Enter positive decimal price and size");
+71:   if ((size.split(".")[1]?.length ?? 0) > szDecimals)
+72:     throw new Error(`Size supports ${szDecimals} decimal places`);
+73:   const normalized = price.replace(/\.0+$/, "");
+74:   const significant = normalized.replace(".", "").replace(/^0+/, "").length;
+75:   if (
+76:     normalized.includes(".") &&
+77:     (significant > 5 ||
+78:       (normalized.split(".")[1]?.length ?? 0) > 6 - szDecimals)
+79:   )
+80:     throw new Error("Price exceeds Hyperliquid precision limits");
+81: }
+82: export async function placePerp(
+83:   wallet: WalletClient,
+84:   asset: number,
+85:   isBuy: boolean,
+86:   price: string,
+87:   size: string,
+88:   reduceOnly: boolean,
+89: ) {
+90:   if (!wallet.account) throw new Error("Connect main wallet");
+91:   const meta = await hlInfo.meta();
+92:   const market = meta.universe[asset];
+93:   if (!market || market.isDelisted) throw new Error("Market unavailable");
+94:   validateOrderNumbers(price, size, market.szDecimals);
+95:   const builder = builderConfig();
+96:   if (
+97:     builder &&
+98:     (await hlInfo.maxBuilderFee({
+99:       user: wallet.account.address,
+100:       builder: builder.b,
+101:     })) < builder.f
+102:   )
+103:     throw new Error("Approve builder fee first");
+104:   const result = await exchange(wallet).order({
+105:     orders: [
+106:       {
+107:         a: asset,
+108:         b: isBuy,
+109:         p: price,
+110:         s: size,
+111:         r: reduceOnly,
+112:         t: { limit: { tif: "Gtc" } },
+113:       },
+114:     ],
+115:     grouping: "na",
+116:     ...(builder ? { builder } : {}),
+117:   });
+118:   const failure = result.response.data.statuses.find(
+119:     (s) => typeof s === "object" && "error" in s,
+120:   );
+121:   if (failure && typeof failure === "object" && "error" in failure)
+122:     throw new Error(String(failure.error));
+123:   return result;
+124: }
+125: export async function readPerps(user: `0x${string}`) {
+126:   const [positions, orders, fills, funding] = await Promise.all([
+127:     hlInfo.clearinghouseState({ user }),
+128:     hlInfo.openOrders({ user }),
+129:     hlInfo.userFills({ user }),
+130:     hlInfo.userFunding({ user, startTime: Date.now() - 30 * 86400000 }),
+131:   ]);
+132:   return { positions, orders, fills, funding };
+133: }
+
+$ numbered source: src/lib/events.ts
+1: import { openDB } from "idb";
+2: import validate from "./validate-event";
+3: export interface TaxlotEvent {
+4:   version: 1;
+5:   id: string;
+6:   type: "trade";
+7:   timestamp: string;
+8:   sequence: number;
+9:   asset: string;
+10:   quantity: string;
+11:   counter_asset: string | null;
+12:   counter_quantity: string | null;
+13:   fee: { asset: string; quantity: string }[];
+14:   source: string;
+15:   account: string;
+16:   raw_row_ref: string;
+17:   txid?: string;
+18:   valuation_note?: string;
+19: }
+20: export function assertEvent(event: unknown): asserts event is TaxlotEvent {
+21:   if (!validate(event))
+22:     throw new Error(
+23:       `Taxlot schema validation failed: ${JSON.stringify(validate.errors)}`,
+24:     );
+25: }
+26: export async function eventDB() {
+27:   return openDB("pit-taxlot-v1", 1, {
+28:     upgrade(db) {
+29:       db.createObjectStore("events", { keyPath: "id" });
+30:       db.createObjectStore("raw", { keyPath: "id" });
+31:       db.createObjectStore("meta");
+32:     },
+33:   });
+34: }
+35: // Validate before every write, including duplicates. ID check and sequence allocation share a transaction.
+36: export async function appendEvent(event: TaxlotEvent, raw: unknown) {
+37:   assertEvent(event);
+38:   const db = await eventDB();
+39:   const tx = db.transaction(["events", "raw", "meta"], "readwrite");
+40:   if (await tx.objectStore("events").get(event.id)) {
+41:     await tx.done;
+42:     return false;
+43:   }
+44:   const sequence = ((await tx.objectStore("meta").get("sequence")) ??
+45:     0) as number;
+46:   const next = { ...event, sequence };
+47:   assertEvent(next);
+48:   await tx.objectStore("events").add(next);
+49:   await tx.objectStore("raw").add({ id: event.id, payload: raw });
+50:   await tx.objectStore("meta").put(sequence + 1, "sequence");
+51:   await tx.done;
+52:   return true;
+53: }
+54: export async function listEvents(account: string) {
+55:   const db = await eventDB();
+56:   return ((await db.getAll("events")) as TaxlotEvent[])
+57:     .filter((e) => e.account.toLowerCase() === account.toLowerCase())
+58:     .sort(
+59:       (a, b) =>
+60:         a.timestamp.localeCompare(b.timestamp) || a.sequence - b.sequence,
+61:     );
+62: }
+63: export function csvCell(value: unknown) {
+64:   let s =
+65:     value == null
+66:       ? ""
+67:       : typeof value === "object"
+68:         ? JSON.stringify(value)
+69:         : String(value);
+70:   if (/^[\s]*[=+@-]/.test(s)) s = "'" + s;
+71:   return `"${s.replaceAll('"', '""')}"`;
+72: }
+73: export function eventsCSV(events: TaxlotEvent[]) {
+74:   const columns = [
+75:     "version",
+76:     "id",
+77:     "type",
+78:     "timestamp",
+79:     "sequence",
+80:     "asset",
+81:     "quantity",
+82:     "counter_asset",
+83:     "counter_quantity",
+84:     "fee",
+85:     "fee_asset",
+86:     "fee_quantity",
+87:     "source",
+88:     "account",
+89:     "raw_row_ref",
+90:     "txid",
+91:     "valuation_note",
+92:   ];
+93:   return (
+94:     [
+95:       columns.map(csvCell).join(","),
+96:       ...events.map((e) => {
+97:         assertEvent(e);
+98:         const row = {
+99:           ...e,
+100:           fee_asset: e.fee[0]?.asset ?? "",
+101:           fee_quantity: e.fee[0]?.quantity ?? "",
+102:         };
+103:         return columns
+104:           .map((k) => csvCell(row[k as keyof typeof row]))
+105:           .join(",");
+106:       }),
+107:     ].join("\r\n") + "\r\n"
+108:   );
+109: }
+110: export async function downloadCSV(account: string, derivatives = false) {
+111:   const events = (await listEvents(account)).filter(
+112:     (e) => e.source.includes("hyperliquid") === derivatives,
+113:   );
+114:   const url = URL.createObjectURL(
+115:     new Blob([eventsCSV(events)], { type: "text/csv;charset=utf-8" }),
+116:   );
+117:   const a = document.createElement("a");
+118:   a.href = url;
+119:   a.download = derivatives ? "pit-perps-review.csv" : "pit-taxlot.csv";
+120:   a.click();
+121:   setTimeout(() => URL.revokeObjectURL(url), 1000);
+122:   return events.length;
+123: }
+
+$ numbered source: src/lib/record-fills.ts
+1: import type { Trade } from "@cowprotocol/cow-sdk";
+2: import { erc20Abi, formatUnits, type PublicClient } from "viem";
+3: import { appendEvent, eventDB, type TaxlotEvent } from "./events";
+4: import type { readPerps } from "./hyperliquid";
+5: export async function recordCowFill(
+6:   fill: Trade,
+7:   chainId: number,
+8:   provider: PublicClient,
+9: ) {
+10:   const key = `cow:${chainId}:${fill.orderUid}:${fill.blockNumber}:${fill.logIndex}`;
+11:   if (await (await eventDB()).get("events", key)) return false;
+12:   if ((await provider.getChainId()) !== chainId)
+13:     throw new Error("Wallet chain changed during fill sync");
+14:   const [sellDecimals, buyDecimals, block] = await Promise.all([
+15:     provider.readContract({
+16:       address: fill.sellToken as `0x${string}`,
+17:       abi: erc20Abi,
+18:       functionName: "decimals",
+19:     }),
+20:     provider.readContract({
+21:       address: fill.buyToken as `0x${string}`,
+22:       abi: erc20Abi,
+23:       functionName: "decimals",
+24:     }),
+25:     provider.getBlock({ blockNumber: BigInt(fill.blockNumber) }),
+26:   ]);
+27:   const id = `cow:${chainId}:${fill.orderUid}:${fill.blockNumber}:${fill.logIndex}`;
+28:   const asset = `eip155:${chainId}/erc20:${fill.sellToken.toLowerCase()}`;
+29:   const event: TaxlotEvent = {
+30:     version: 1,
+31:     id,
+32:     type: "trade",
+33:     timestamp: new Date(Number(block.timestamp) * 1000).toISOString(),
+34:     sequence: 0,
+35:     asset,
+36:     quantity: formatUnits(BigInt(fill.sellAmountBeforeFees), sellDecimals),
+37:     counter_asset: `eip155:${chainId}/erc20:${fill.buyToken.toLowerCase()}`,
+38:     counter_quantity: formatUnits(BigInt(fill.buyAmount), buyDecimals),
+39:     fee: [
+40:       {
+41:         asset,
+42:         quantity: formatUnits(
+43:           BigInt(fill.sellAmount) - BigInt(fill.sellAmountBeforeFees),
+44:           sellDecimals,
+45:         ),
+46:       },
+47:     ],
+48:     source: `pit:cow:${chainId}`,
+49:     account: fill.owner.toLowerCase(),
+50:     raw_row_ref: id,
+51:     ...(fill.txHash ? { txid: fill.txHash } : {}),
+52:     valuation_note:
+53:       "Crypto-to-crypto trade, including stablecoins. Amounts from executed fill; no EUR valuation supplied.",
+54:   };
+55:   if ((await provider.getChainId()) !== chainId)
+56:     throw new Error("Wallet chain changed during fill sync");
+57:   return appendEvent(event, fill);
+58: }
+59: function multiply(a: string, b: string) {
+60:   const da = a.split(".")[1]?.length ?? 0,
+61:     db = b.split(".")[1]?.length ?? 0;
+62:   return formatUnits(
+63:     BigInt(a.replace(".", "")) * BigInt(b.replace(".", "")),
+64:     da + db,
+65:   );
+66: }
+67: type HlFill = Awaited<ReturnType<typeof readPerps>>["fills"][number];
+68: export function perpEvent(fill: HlFill, account: string): TaxlotEvent {
+69:   const id = `hl:testnet:${account.toLowerCase()}:${fill.tid}`;
+70:   return {
+71:     version: 1,
+72:     id,
+73:     type: "trade",
+74:     timestamp: new Date(fill.time).toISOString(),
+75:     sequence: 0,
+76:     asset: `HL-PERP:${fill.coin}:${fill.side}`,
+77:     quantity: fill.sz,
+78:     counter_asset: "USDC-NOTIONAL",
+79:     counter_quantity: multiply(fill.px, fill.sz),
+80:     fee:
+81:       Number(fill.fee) >= 0
+82:         ? [{ asset: fill.feeToken, quantity: fill.fee }]
+83:         : [],
+84:     source: "pit:hyperliquid:testnet:derivative-review",
+85:     account: account.toLowerCase(),
+86:     raw_row_ref: id,
+87:     txid: fill.hash,
+88:     valuation_note: `DERIVATIVE REVIEW ONLY; not a spot acquisition or disposal. Direction=${fill.dir}; closedPnl=${fill.closedPnl}; signed fee=${fill.fee}. Raw fill preserved. Do not import into spot tax calculation.`,
+89:   };
+90: }
+91: export async function recordPerpFills(fills: HlFill[], account: string) {
+92:   for (const fill of fills) await appendEvent(perpEvent(fill, account), fill);
+93: }
+
+$ numbered source: src/components/Swap.tsx
+1: import { useEffect, useRef, useState } from "react";
+2: import { useAccount, useWalletClient } from "wagmi";
+3: import {
+4:   approveSwap,
+5:   costsDisplay,
+6:   orderbook,
+7:   quoteSwap,
+8:   type SwapQuote,
+9: } from "../lib/cow";
+10: export function Swap() {
+11:   const { address, chainId } = useAccount();
+12:   const { data: wallet } = useWalletClient();
+13:   const [sell, setSell] = useState("");
+14:   const [buy, setBuy] = useState("");
+15:   const [amount, setAmount] = useState("");
+16:   const [quote, setQuote] = useState<SwapQuote>();
+17:   const [approved, setApproved] = useState(false);
+18:   const [busy, setBusy] = useState(false);
+19:   const [error, setError] = useState("");
+20:   const [status, setStatus] = useState("");
+21:   const [history, setHistory] = useState<{ uid: string; status: string }[]>([]);
+22:   const revision = useRef(0);
+23:   useEffect(() => {
+24:     revision.current++;
+25:     setQuote(undefined);
+26:     setApproved(false);
+27:     setError("");
+28:     setStatus("");
+29:   }, [address, chainId, sell, buy, amount]);
+30:   useEffect(() => {
+31:     let stopped = false;
+32:     setHistory([]);
+33:     if (!address || !chainId) return;
+34:     const poll = async () => {
+35:       try {
+36:         const orders = await orderbook(chainId).getOrders({
+37:           owner: address,
+38:           limit: 50,
+39:           offset: 0,
+40:         });
+41:         if (!stopped) setHistory(orders);
+42:       } catch (e) {
+43:         if (!stopped)
+44:           setStatus(
+45:             `History unavailable: ${e instanceof Error ? e.message : String(e)}`,
+46:           );
+47:       }
+48:     };
+49:     void poll();
+50:     const id = setInterval(poll, 15000);
+51:     return () => {
+52:       stopped = true;
+53:       clearInterval(id);
+54:     };
+55:   }, [address, chainId, wallet]);
+56:   async function act(fn: () => Promise<void>) {
+57:     setBusy(true);
+58:     setError("");
+59:     try {
+60:       await fn();
+61:     } catch (e) {
+62:       setError(e instanceof Error ? e.message : String(e));
+63:     } finally {
+64:       setBusy(false);
+65:     }
+66:   }
+67:   async function assertCurrent(q: SwapQuote) {
+68:     if (
+69:       !wallet ||
+70:       (await wallet.getChainId()) !== q.chainId ||
+71:       (await wallet.getAddresses())[0]?.toLowerCase() !== q.owner.toLowerCase()
+72:     )
+73:       throw new Error("Wallet changed; request a new quote");
+74:     if (Date.now() - q.obtainedAt > 60000)
+75:       throw new Error("Quote expired; request a new quote");
+76:   }
+77:   return (
+78:     <>
+79:       <div className="row">
+80:         <h2>Swap tokens</h2>
+81:         <span className="tag">CoW Protocol</span>
+82:       </div>
+83:       <p className="muted">MEV-protected execution · 0.50% slippage</p>
+84:       <label>
+85:         Sell token address
+86:         <input
+87:           value={sell}
+88:           onChange={(e) => setSell(e.target.value)}
+89:           placeholder="ERC20 address on selected network"
+90:         />
+91:       </label>
+92:       <label>
+93:         You sell
+94:         <input
+95:           value={amount}
+96:           onChange={(e) => setAmount(e.target.value)}
+97:           placeholder="0.00"
+98:           inputMode="decimal"
+99:         />
+100:       </label>
+101:       <label>
+102:         Buy token address
+103:         <input
+104:           value={buy}
+105:           onChange={(e) => setBuy(e.target.value)}
+106:           placeholder="ERC20 address on selected network"
+107:         />
+108:       </label>
+109:       <button
+110:         className="primary"
+111:         disabled={!wallet || busy}
+112:         onClick={() =>
+113:           act(async () => {
+114:             const r = revision.current;
+115:             const q = await quoteSwap(wallet!, sell, buy, amount);
+116:             if (r === revision.current) {
+117:               setQuote(q);
+118:               setApproved(false);
+119:             }
+120:           })
+121:         }
+122:       >
+123:         {busy ? "Working…" : "Get quote"}
+124:       </button>
+125:       {!wallet && <p className="empty">Connect your wallet to get started.</p>}
+126:       {quote && (
+127:         <div className="rule">
+128:           {Object.entries(
+129:             costsDisplay(
+130:               quote.quoteResults.amountsAndCosts,
+131:               quote.sellDecimals,
+132:               quote.buyDecimals,
+133:             ),
+134:           ).map(([k, v]) => (
+135:             <div className="row" key={k}>
+136:               <small>{k}</small>
+137:               <strong>{v}</strong>
+138:             </div>
+139:           ))}
+140:           <small>
+141:             Quote expires after 60 seconds. Token approval uses gas separately.
+142:           </small>
+143:           <button
+144:             className="primary"
+145:             disabled={busy}
+146:             onClick={() =>
+147:               act(async () => {
+148:                 await assertCurrent(quote);
+149:                 if (!approved) {
+150:                   await approveSwap(quote);
+151:                   setApproved(true);
+152:                 } else {
+153:                   const result = await quote.postSwapOrderFromQuote();
+154:                   setStatus(`Submitted: ${result.orderId}`);
+155:                   setQuote(undefined);
+156:                 }
+157:               })
+158:             }
+159:           >
+160:             {approved ? "Sign & submit order" : "Approve exact sell amount"}
+161:           </button>
+162:           <details>
+163:             <summary>Signed appData</summary>
+164:             <pre>{quote.quoteResults.appDataInfo.fullAppData}</pre>
+165:           </details>
+166:         </div>
+167:       )}
+168:       {error && (
+169:         <p role="alert" className="error">
+170:           {error}
+171:         </p>
+172:       )}
+173:       <p role="status">{status}</p>
+174:       <div className="rule">
+175:         <h3>Order history</h3>
+176:         <small>From the orderbook · refreshes every 15 seconds</small>
+177:         {history.length === 0 ? (
+178:           <p className="empty">No orders to display.</p>
+179:         ) : (
+180:           history.map((o) => (
+181:             <div className="row" key={o.uid} data-order-id={o.uid}>
+182:               <small title={o.uid}>{o.uid.slice(0, 18)}…</small>
+183:               <span>{o.status}</span>
+184:             </div>
+185:           ))
+186:         )}
+187:       </div>
+188:     </>
+189:   );
+190: }
+
+$ numbered source: src/components/Perps.tsx
+1: import { useEffect, useState } from "react";
+2: import { useAccount, useWalletClient } from "wagmi";
+3: import {
+4:   approveBuilder,
+5:   builderRate,
+6:   hlInfo,
+7:   placePerp,
+8:   readPerps,
+9: } from "../lib/hyperliquid";
+10: import { config } from "../lib/config";
+11: export function Perps() {
+12:   const { address } = useAccount();
+13:   const { data: wallet } = useWalletClient();
+14:   const [markets, setMarkets] = useState<
+15:     { name: string; szDecimals: number }[]
+16:   >([]);
+17:   const [asset, setAsset] = useState(0);
+18:   const [buy, setBuy] = useState(true);
+19:   const [price, setPrice] = useState("");
+20:   const [size, setSize] = useState("");
+21:   const [reduce, setReduce] = useState(false);
+22:   const [busy, setBusy] = useState(false);
+23:   const [error, setError] = useState("");
+24:   const [status, setStatus] = useState("");
+25:   const [data, setData] = useState<Awaited<ReturnType<typeof readPerps>>>();
+26:   useEffect(() => {
+27:     hlInfo
+28:       .meta()
+29:       .then((m) => setMarkets(m.universe))
+30:       .catch((e) => setError(String(e)));
+31:   }, []);
+32:   useEffect(() => {
+33:     let stopped = false;
+34:     setData(undefined);
+35:     setStatus("");
+36:     if (!address) return;
+37:     const poll = async () => {
+38:       try {
+39:         const next = await readPerps(address);
+40:         if (!stopped) setData(next);
+41:       } catch (e) {
+42:         if (!stopped) setError(String(e));
+43:       }
+44:     };
+45:     void poll();
+46:     const id = setInterval(poll, 15000);
+47:     return () => {
+48:       stopped = true;
+49:       clearInterval(id);
+50:     };
+51:   }, [address]);
+52:   async function act(fn: () => Promise<unknown>) {
+53:     setBusy(true);
+54:     setError("");
+55:     try {
+56:       setStatus(JSON.stringify(await fn()));
+57:     } catch (e) {
+58:       setError(e instanceof Error ? e.message : String(e));
+59:     } finally {
+60:       setBusy(false);
+61:     }
+62:   }
+63:   return (
+64:     <>
+65:       <div className="row">
+66:         <h2>Perpetuals</h2>
+67:         <span className="tag">Hyperliquid testnet</span>
+68:       </div>
+69:       <p>Limit orders · Main wallet signatures · No agent keys</p>
+70:       <label>
+71:         Market
+72:         <select
+73:           value={asset}
+74:           onChange={(e) => setAsset(Number(e.target.value))}
+75:         >
+76:           {markets.map((m, i) => (
+77:             <option value={i} key={m.name}>
+78:               {m.name} / USDC
+79:             </option>
+80:           ))}
+81:         </select>
+82:       </label>
+83:       <div className="tabs">
+84:         <button className={buy ? "active" : ""} onClick={() => setBuy(true)}>
+85:           Buy / Long
+86:         </button>
+87:         <button className={!buy ? "active" : ""} onClick={() => setBuy(false)}>
+88:           Sell / Short
+89:         </button>
+90:       </div>
+91:       <label>
+92:         Limit price (USDC)
+93:         <input
+94:           inputMode="decimal"
+95:           value={price}
+96:           onChange={(e) => setPrice(e.target.value)}
+97:           placeholder="0.00"
+98:         />
+99:       </label>
+100:       <label>
+101:         Size ({markets[asset]?.name ?? "base asset"})
+102:         <input
+103:           inputMode="decimal"
+104:           value={size}
+105:           onChange={(e) => setSize(e.target.value)}
+106:           placeholder="0.00"
+107:         />
+108:       </label>
+109:       <label>
+110:         <input
+111:           style={{ width: "auto", marginRight: 10 }}
+112:           type="checkbox"
+113:           checked={reduce}
+114:           onChange={(e) => setReduce(e.target.checked)}
+115:         />
+116:         Reduce only
+117:       </label>
+118:       <div className="row">
+119:         <small>PIT builder fee</small>
+120:         <strong>
+121:           {config.FEES_ENABLED
+122:             ? builderRate(config.builderFeeTenthsBps)
+123:             : "0% · disabled"}
+124:         </strong>
+125:       </div>
+126:       {config.FEES_ENABLED && (
+127:         <button
+128:           disabled={!wallet || busy}
+129:           onClick={() => act(() => approveBuilder(wallet!))}
+130:         >
+131:           Approve builder fee
+132:         </button>
+133:       )}
+134:       <button
+135:         className="primary"
+136:         disabled={!wallet || busy || !markets.length}
+137:         onClick={() =>
+138:           act(() => placePerp(wallet!, asset, buy, price, size, reduce))
+139:         }
+140:       >
+141:         {busy ? "Waiting…" : "Sign & place limit order"}
+142:       </button>
+143:       {!wallet && (
+144:         <p className="empty">Connect your wallet to trade test assets.</p>
+145:       )}
+146:       {error && (
+147:         <p role="alert" className="error">
+148:           {error}
+149:         </p>
+150:       )}
+151:       {status && <pre role="status">{status}</pre>}
+152:       <div className="rule">
+153:         {(["positions", "orders", "fills", "funding"] as const).map((k) => (
+154:           <details key={k}>
+155:             <summary>
+156:               {k === "orders"
+157:                 ? "Open orders"
+158:                 : k === "funding"
+159:                   ? "Funding · last 30 days"
+160:                   : k}
+161:             </summary>
+162:             <pre>
+163:               {data
+164:                 ? JSON.stringify(data[k], null, 2)
+165:                 : "Connect wallet to load public account data."}
+166:             </pre>
+167:           </details>
+168:         ))}
+169:       </div>
+170:     </>
+171:   );
+172: }
+
+$ numbered source: src/components/Wallet.tsx
+1: import {
+2:   WagmiProvider,
+3:   createConfig,
+4:   useAccount,
+5:   useSwitchChain,
+6:   useWalletClient,
+7: } from "wagmi";
+8: import { injected } from "wagmi/connectors";
+9: import {
+10:   http,
+11:   fallback,
+12:   type Transport,
+13:   formatEther,
+14:   createPublicClient,
+15:   custom,
+16: } from "viem";
+17: import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+18: import { ConnectKitProvider, ConnectKitButton } from "connectkit";
+19: import { useEffect, useState, type ReactNode } from "react";
+20: import { chains, publicRpc } from "../lib/config";
+21: const walletConfig = createConfig({
+22:   chains,
+23:   connectors: [injected()],
+24:   transports: Object.fromEntries(
+25:     chains.map((c) => [
+26:       c.id,
+27:       fallback(publicRpc[c.id].map((url) => http(url))),
+28:     ]),
+29:   ) as Record<(typeof chains)[number]["id"], Transport>,
+30:   ssr: true,
+31: });
+32: const query = new QueryClient();
+33: export function Providers({ children }: { children: ReactNode }) {
+34:   return (
+35:     <WagmiProvider config={walletConfig}>
+36:       <QueryClientProvider client={query}>
+37:         <ConnectKitProvider
+38:           options={{ hideBalance: true, embedGoogleFonts: false }}
+39:         >
+40:           {children}
+41:         </ConnectKitProvider>
+42:       </QueryClientProvider>
+43:     </WagmiProvider>
+44:   );
+45: }
+46: export function Wallet() {
+47:   const { address, chainId } = useAccount();
+48:   const { data: wallet } = useWalletClient();
+49:   const { switchChain } = useSwitchChain();
+50:   const [balance, setBalance] = useState("");
+51:   useEffect(() => {
+52:     setBalance("");
+53:     let active = true;
+54:     if (wallet && address)
+55:       createPublicClient({ transport: custom({ request: wallet.request }) })
+56:         .getBalance({ address })
+57:         .then((v) => {
+58:           if (active) setBalance(formatEther(BigInt(v)));
+59:         })
+60:         .catch(() => {
+61:           if (active) setBalance("unavailable");
+62:         });
+63:     return () => {
+64:       active = false;
+65:     };
+66:   }, [wallet, address, chainId]);
+67:   return (
+68:     <div className="wallet">
+69:       <select
+70:         aria-label="Wallet network"
+71:         value={chainId ?? 11155111}
+72:         onChange={(e) =>
+73:           switchChain({ chainId: Number(e.target.value) as 11155111 })
+74:         }
+75:       >
+76:         {chains.map((c) => (
+77:           <option key={c.id} value={c.id}>
+78:             {c.name}
+79:           </option>
+80:         ))}
+81:       </select>
+82:       <ConnectKitButton />
+83:       {address && <small>{balance} ETH · wallet RPC</small>}
+84:     </div>
+85:   );
+86: }
+
+$ numbered source: src/components/FillRecorder.tsx
+1: import { useEffect, useState } from "react";
+2: import { useWalletClient } from "wagmi";
+3: import { createPublicClient, custom } from "viem";
+4: import { orderbook } from "../lib/cow";
+5: import { hlInfo } from "../lib/hyperliquid";
+6: import { recordCowFill, recordPerpFills } from "../lib/record-fills";
+7: import { eventDB } from "../lib/events";
+8: export function FillRecorder() {
+9:   const { data: wallet } = useWalletClient();
+10:   const [status, setStatus] = useState("Connect wallet to sync filled trades.");
+11:   useEffect(() => {
+12:     let stopped = false;
+13:     let timer: ReturnType<typeof setTimeout>;
+14:     if (!wallet?.account || !wallet.chain) {
+15:       setStatus("Connect wallet to sync filled trades.");
+16:       return;
+17:     }
+18:     const user = wallet.account.address,
+19:       chainId = wallet.chain.id;
+20:     async function sync() {
+21:       const failures: string[] = [];
+22:       const tasks = [
+23:         async () => {
+24:           const book = orderbook(chainId);
+25:           const provider = createPublicClient({
+26:             transport: custom({ request: wallet!.request }),
+27:           });
+28:           for (let offset = 0; !stopped; offset += 100) {
+29:             const fills = await book.getTrades({
+30:               owner: user,
+31:               offset,
+32:               limit: 100,
+33:             });
+34:             for (const fill of fills) {
+35:               if (stopped) return;
+36:               await recordCowFill(fill, chainId, provider);
+37:             }
+38:             if (fills.length < 100) break;
+39:           }
+40:         },
+41:         async () => {
+42:           const db = await eventDB();
+43:           const key = `hl-cursor:${user.toLowerCase()}`;
+44:           let cursor = (await db.get("meta", key)) ?? 0;
+45:           while (!stopped) {
+46:             const fills = await hlInfo.userFillsByTime({
+47:               user,
+48:               startTime: cursor,
+49:               aggregateByTime: false,
+50:             });
+51:             if (stopped) return;
+52:             await recordPerpFills(fills, user);
+53:             if (!fills.length) break;
+54:             const last = Math.max(...fills.map((f) => f.time));
+55:             if (fills.length >= 2000 && last === cursor)
+56:               throw new Error(
+57:                 "Fill pagination saturated; manual reconciliation required",
+58:               );
+59:             await db.put("meta", last, key);
+60:             if (fills.length < 2000) break;
+61:             cursor = last;
+62:           }
+63:         },
+64:       ];
+65:       await Promise.all(
+66:         tasks.map(async (task) => {
+67:           try {
+68:             await task();
+69:           } catch (e) {
+70:             failures.push(e instanceof Error ? e.message : String(e));
+71:           }
+72:         }),
+73:       );
+74:       if (!stopped) {
+75:         setStatus(
+76:           failures.length
+77:             ? `Sync needs attention: ${failures.join("; ")}`
+78:             : "Filled trades synced locally.",
+79:         );
+80:         timer = setTimeout(sync, 20000);
+81:       }
+82:     }
+83:     void sync();
+84:     return () => {
+85:       stopped = true;
+86:       clearTimeout(timer);
+87:     };
+88:   }, [wallet]);
+89:   return (
+90:     <p className="notice" role="status">
+91:       {status}
+92:     </p>
+93:   );
+94: }
+
+$ numbered source: scripts/generate-validator.mjs
+1: import Ajv from "ajv";
+2: import addFormats from "ajv-formats";
+3: import standaloneCode from "ajv/dist/standalone/index.js";
+4: import { readFileSync } from "node:fs";
+5: import { build } from "esbuild";
+6: const ajv = new Ajv({ allErrors: true, code: { source: true, esm: true } });
+7: addFormats(ajv);
+8: const validate = ajv.compile(
+9:   JSON.parse(readFileSync("schemas/events.v1.json", "utf8")),
+10: );
+11: await build({
+12:   stdin: {
+13:     contents: standaloneCode(ajv, validate),
+14:     resolveDir: process.cwd(),
+15:     loader: "js",
+16:   },
+17:   bundle: true,
+18:   platform: "browser",
+19:   format: "esm",
+20:   outfile: "src/lib/validate-event.js",
+21:   banner: { js: "// @ts-nocheck -- generated by AJV; do not edit" },
+22: });
+
+$ numbered source: docs/DEPLOY.md
+1: # Manual publication
+2: 
+3: 1. Run `scripts/deploy.sh build`, then `pnpm test:e2e`. Review `dist/build-manifest.json`, fee flags, legal pages, and evidence. Keep the artifact unchanged between verification and upload.
+4: 2. Cloudflare: authenticate Wrangler locally (`pnpm dlx wrangler@4 login`), create a Pages project if needed, then run `PIT_CF_PROJECT=your-project scripts/deploy.sh cloudflare`. Credentials are operator-side only; never application env. Configure Node 22.22.3 / pnpm 10.17.1 for automated builds, command `pnpm build`, output `dist`.
+5: 3. IPFS: install Kubo and run your own node. `scripts/deploy.sh ipfs` adds and pins the static directory locally, printing its CID. Local pinning requires the node to stay reachable. For durable public availability, replicate that CID to another operated node or a pinning service using its operator UI. Keep service credentials outside this repo/browser bundle.
+6: 4. Visit both a CID subdomain gateway and `/ipfs/<CID>/`; verify wallet dialog, swap/perps tabs, styles, and legal links. Verify the manifest digest matches the reviewed artifact. A dedicated subdomain gateway isolates browser storage from other CIDs.
+7: 5. ENS: `scripts/deploy.sh ens` prints instructions only. In a trusted ENS manager, connect the name owner's wallet and set the resolver's contenthash to `ipfs://<verified CID>`. Inspect and sign the transaction manually. Verify resolver readback and website resolution. Retain the prior CID for rollback.
+8: 
+9: Never enable fees as a side effect of deployment. Fee recipients, builder approval behavior, mainnet guards and counsel's opinion require a separately reviewed release.
+10: 
+11: References: [Cloudflare direct upload](https://developers.cloudflare.com/pages/get-started/direct-upload/), [Wrangler Pages commands](https://developers.cloudflare.com/workers/wrangler/commands/pages/), [IPFS pinning](https://docs.ipfs.tech/how-to/pin-files/), [ENS contenthash](https://docs.ens.domains/ensip/7/).
+
+$ numbered source: astro.config.mjs
+1: import { defineConfig } from "astro/config";
+2: import react from "@astrojs/react";
+3: import tailwindcss from "@tailwindcss/vite";
+4: export default defineConfig({
+5:   output: "static",
+6:   devToolbar: { enabled: false },
+7:   integrations: [react()],
+8:   vite: {
+9:     experimental: { renderBuiltUrl: () => ({ relative: true }) },
+10:     cacheDir: "node_modules/.vite-pit",
+11:     plugins: [tailwindcss()],
+12:     resolve: {
+13:       dedupe: ["react", "react-dom", "wagmi", "@tanstack/react-query"],
+14:     },
+15:     optimizeDeps: { include: ["wagmi", "connectkit", "@tanstack/react-query"] },
+16:   },
+17:   experimental: {
+18:     csp: {
+19:       styleDirective: { resources: ["'self'", "'unsafe-inline'"] },
+20:       directives: [
+21:         "connect-src 'self' https://*.cow.fi https://api.hyperliquid-testnet.xyz https://api.hyperliquid.xyz https://ethereum-sepolia-rpc.publicnode.com https://ethereum-rpc.publicnode.com https://base-rpc.publicnode.com https://arbitrum-one-rpc.publicnode.com https://11155111.rpc.thirdweb.com https://ethereum.reth.rs https://mainnet.base.org https://arb1.arbitrum.io",
+22:         "default-src 'none'",
+23:         "font-src 'self' data:",
+24:         "img-src 'self' data:",
+25:         "object-src 'none'",
+26:         "base-uri 'self'",
+27:         "form-action 'self'",
+28:       ],
+29:     },
+30:   },
+31: });
+
+$ numbered source: public/_headers
+1: /*
+2:   X-Content-Type-Options: nosniff
+3:   Referrer-Policy: no-referrer
+4:   Permissions-Policy: camera=(), microphone=(), geolocation=()
+5:   X-Frame-Options: DENY
+
+$ numbered SDK source: node_modules/.pnpm/@cowprotocol+sdk-trading@2.7.2_ajv@8.20.0_multiformats@9.9.0/node_modules/@cowprotocol/sdk-trading/dist/index.mjs:66-128
+66: function getOrderToSign({
+67:   chainId,
+68:   from,
+69:   networkCostsAmount = "0",
+70:   isEthFlow,
+71:   applyCostsSlippageAndFees = true,
+72:   protocolFeeBps
+73: }, limitOrderParams, appDataKeccak256) {
+74:   const {
+75:     sellAmount,
+76:     buyAmount,
+77:     sellToken,
+78:     buyToken,
+79:     kind,
+80:     partiallyFillable = false,
+81:     slippageBps = getDefaultSlippageBps(chainId, isEthFlow),
+82:     partnerFee,
+83:     validFor = DEFAULT_QUOTE_VALIDITY
+84:   } = limitOrderParams;
+85:   const receiver = limitOrderParams.receiver || from;
+86:   const validTo = limitOrderParams.validTo || Number(getOrderDeadlineFromNow(validFor));
+87:   const orderParams = {
+88:     sellToken,
+89:     buyToken,
+90:     sellAmount,
+91:     buyAmount,
+92:     receiver,
+93:     validTo,
+94:     kind,
+95:     feeAmount: networkCostsAmount,
+96:     appData: appDataKeccak256,
+97:     partiallyFillable,
+98:     // Quote-only gas/price metadata: not known when building an order to sign and
+99:     // unused by getQuoteAmountsAndCosts. Set to zero placeholders to satisfy OrderParameters.
+100:     gasAmount: "0",
+101:     gasPrice: "0",
+102:     sellTokenPrice: "0"
+103:   };
+104:   let sellAmountToUse = sellAmount;
+105:   let buyAmountToUse = buyAmount;
+106:   if (applyCostsSlippageAndFees) {
+107:     const { isSell, beforeAllFees, afterSlippage } = getQuoteAmountsAndCosts({
+108:       orderParams,
+109:       slippagePercentBps: slippageBps,
+110:       partnerFeeBps: getPartnerFeeBps(partnerFee),
+111:       protocolFeeBps
+112:     });
+113:     sellAmountToUse = isSell ? beforeAllFees.sellAmount.toString() : afterSlippage.sellAmount.toString();
+114:     buyAmountToUse = isSell ? afterSlippage.buyAmount.toString() : beforeAllFees.buyAmount.toString();
+115:   }
+116:   return {
+117:     sellToken,
+118:     buyToken,
+119:     sellAmount: sellAmountToUse,
+120:     buyAmount: buyAmountToUse,
+121:     validTo,
+122:     kind,
+123:     partiallyFillable,
+124:     appData: appDataKeccak256,
+125:     receiver,
+126:     feeAmount: "0",
+127:     sellTokenBalance: SellTokenSource.ERC20,
+128:     buyTokenBalance: BuyTokenDestination.ERC20
+
+$ numbered SDK source: node_modules/.pnpm/@cowprotocol+sdk-trading@2.7.2_ajv@8.20.0_multiformats@9.9.0/node_modules/@cowprotocol/sdk-trading/dist/index.mjs:183-192
+183: function swapParamsToLimitOrderParams(params, quoteResponse) {
+184:   return {
+185:     ...params,
+186:     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+187:     quoteId: quoteResponse.id,
+188:     sellAmount: quoteResponse.quote.sellAmount,
+189:     buyAmount: quoteResponse.quote.buyAmount
+190:   };
+191: }
+192: function getIsEthFlowOrder(params) {
+
+$ numbered SDK source: node_modules/.pnpm/@cowprotocol+sdk-trading@2.7.2_ajv@8.20.0_multiformats@9.9.0/node_modules/@cowprotocol/sdk-trading/dist/index.mjs:236-241
+236: function getTradeParametersAfterQuote({
+237:   quoteParameters,
+238:   sellToken
+239: }) {
+240:   return { ...quoteParameters, sellToken };
+241: }
+
+$ numbered SDK source: node_modules/.pnpm/@cowprotocol+sdk-trading@2.7.2_ajv@8.20.0_multiformats@9.9.0/node_modules/@cowprotocol/sdk-trading/dist/index.mjs:343-412
+343: async function postCoWProtocolTrade(orderBookApi, appData, params, additionalParams = {}, paramSigner) {
+344:   const signer = resolveSigner(paramSigner);
+345:   const {
+346:     networkCostsAmount = "0",
+347:     signingScheme: _signingScheme = SigningScheme3.EIP712,
+348:     customEIP1271Signature,
+349:     applyCostsSlippageAndFees,
+350:     protocolFeeBps
+351:   } = additionalParams;
+352:   const isEthFlow = getIsEthFlowOrder(params);
+353:   if (isEthFlow) {
+354:     const quoteId2 = params.quoteId;
+355:     if (typeof quoteId2 === "number") {
+356:       return postSellNativeCurrencyOrder(orderBookApi, appData, { ...params, quoteId: quoteId2 }, additionalParams, paramSigner);
+357:     } else {
+358:       throw new Error("quoteId is required for EthFlow orders");
+359:     }
+360:   }
+361:   const { quoteId = null, owner } = params;
+362:   const { appDataKeccak256, fullAppData } = appData;
+363:   const env = params.env ?? orderBookApi.context.env;
+364:   const settlementContractOverride = params.settlementContractOverride;
+365:   const chainId = orderBookApi.context.chainId;
+366:   const from = owner || await signer.getAddress();
+367:   const orderToSign = getOrderToSign(
+368:     { chainId, from, networkCostsAmount, isEthFlow, applyCostsSlippageAndFees, protocolFeeBps },
+369:     params,
+370:     appData.appDataKeccak256
+371:   );
+372:   log2("Uploading app-data");
+373:   await orderBookApi.uploadAppData(appDataKeccak256, fullAppData);
+374:   log2("Signing order...");
+375:   const { signature, signingScheme } = await (async () => {
+376:     if (_signingScheme === SigningScheme3.PRESIGN) {
+377:       return { signature: from, signingScheme: SigningScheme3.PRESIGN };
+378:     } else {
+379:       const isEip1271 = _signingScheme === SigningScheme3.EIP1271;
+380:       if (isEip1271 && customEIP1271Signature) {
+381:         return {
+382:           signature: await customEIP1271Signature(orderToSign, signer),
+383:           signingScheme: _signingScheme
+384:         };
+385:       }
+386:       const signingResult = await OrderSigningUtils2.signOrder(orderToSign, chainId, signer, {
+387:         env,
+388:         settlementContractOverride
+389:       });
+390:       if (isEip1271) {
+391:         return {
+392:           signature: OrderSigningUtils2.getEip1271Signature(orderToSign, signingResult.signature),
+393:           signingScheme: _signingScheme
+394:         };
+395:       }
+396:       return { signature: signingResult.signature, signingScheme: SIGN_SCHEME_MAP[signingResult.signingScheme] };
+397:     }
+398:   })();
+399:   const orderBody = {
+400:     ...orderToSign,
+401:     from,
+402:     signature,
+403:     signingScheme,
+404:     quoteId,
+405:     appData: fullAppData,
+406:     appDataHash: appDataKeccak256
+407:   };
+408:   log2("Posting order...");
+409:   const orderId = await orderBookApi.sendOrder(orderBody);
+410:   log2(`Order created, id: ${orderId}`);
+411:   return { orderId, signature, signingScheme, orderToSign };
+412: }
+
+$ numbered SDK source: node_modules/.pnpm/@cowprotocol+sdk-trading@2.7.2_ajv@8.20.0_multiformats@9.9.0/node_modules/@cowprotocol/sdk-trading/dist/index.mjs:787-825
+787: async function getQuote(_tradeParameters, trader, advancedSettings, _orderBookApi) {
+788:   const { quote, orderBookApi, tradeParameters, slippageBps, suggestedSlippageBps, appDataInfo, isEthFlow } = await getQuoteRaw(_tradeParameters, trader, advancedSettings, _orderBookApi);
+789:   const { partnerFee } = tradeParameters;
+790:   const { chainId, account: from } = trader;
+791:   const env = _tradeParameters.env ?? trader.env;
+792:   const settlementContractOverride = _tradeParameters.settlementContractOverride ?? trader.settlementContractOverride;
+793:   const amountsAndCosts = getQuoteAmountsAndCosts4({
+794:     orderParams: quote.quote,
+795:     slippagePercentBps: slippageBps,
+796:     partnerFeeBps: getPartnerFeeBps(partnerFee),
+797:     protocolFeeBps: quote.protocolFeeBps ? Number(quote.protocolFeeBps) : void 0
+798:   });
+799:   const orderToSign = getOrderToSign(
+800:     {
+801:       chainId,
+802:       from,
+803:       networkCostsAmount: quote.quote.feeAmount,
+804:       isEthFlow,
+805:       protocolFeeBps: quote.protocolFeeBps ? Number(quote.protocolFeeBps) : void 0
+806:     },
+807:     swapParamsToLimitOrderParams(tradeParameters, quote),
+808:     appDataInfo.appDataKeccak256
+809:   );
+810:   const orderTypedData = await getOrderTypedData(chainId, orderToSign, { env, settlementContractOverride });
+811:   return {
+812:     result: {
+813:       tradeParameters,
+814:       suggestedSlippageBps,
+815:       amountsAndCosts,
+816:       orderToSign,
+817:       quoteResponse: quote,
+818:       appDataInfo,
+819:       orderTypedData
+820:     },
+821:     orderBookApi
+822:   };
+823: }
+824: async function getTrader(swapParameters) {
+825:   const signer = getGlobalAdapter4().signerOrNull();
+
+$ numbered SDK source: node_modules/.pnpm/@cowprotocol+sdk-trading@2.7.2_ajv@8.20.0_multiformats@9.9.0/node_modules/@cowprotocol/sdk-trading/dist/index.mjs:882-909
+882: async function postSwapOrderFromQuote({
+883:   orderBookApi,
+884:   result: { signer, appDataInfo: _appDataInfo, quoteResponse, tradeParameters }
+885: }, advancedSettings) {
+886:   const appDataOverride = advancedSettings?.appData;
+887:   const appDataInfo = appDataOverride ? await mergeAppDataDoc(_appDataInfo.doc, appDataOverride) : _appDataInfo;
+888:   const params = applySettingsToLimitTradeParameters(
+889:     swapParamsToLimitOrderParams(tradeParameters, quoteResponse),
+890:     advancedSettings
+891:   );
+892:   return postCoWProtocolTrade(
+893:     orderBookApi,
+894:     appDataInfo,
+895:     params,
+896:     {
+897:       signingScheme: advancedSettings?.quoteRequest?.signingScheme,
+898:       networkCostsAmount: quoteResponse.quote.feeAmount,
+899:       protocolFeeBps: advancedSettings?.additionalParams?.protocolFeeBps ?? (quoteResponse.protocolFeeBps ? Number(quoteResponse.protocolFeeBps) : void 0),
+900:       ...advancedSettings?.additionalParams
+901:     },
+902:     signer
+903:   );
+904: }
+905: 
+906: // src/postLimitOrder.ts
+907: import { OrderBookApi as OrderBookApi4 } from "@cowprotocol/sdk-order-book";
+908: import { log as log5 } from "@cowprotocol/sdk-common";
+909: async function postLimitOrder(_params, advancedSettings, _orderBookApi) {
+
+$ numbered SDK source: node_modules/.pnpm/@cowprotocol+sdk-trading@2.7.2_ajv@8.20.0_multiformats@9.9.0/node_modules/@cowprotocol/sdk-trading/dist/index.mjs:1127-1160
+1127:   async getQuote(params, advancedSettings) {
+1128:     const quoteResults = await getQuoteWithSigner(
+1129:       this.mergeParams(params),
+1130:       advancedSettings,
+1131:       this.resolveOrderBookApi(params)
+1132:     );
+1133:     return {
+1134:       quoteResults: quoteResults.result,
+1135:       postSwapOrderFromQuote: async (advancedSettings2, signingStepManager) => {
+1136:         await signingStepManager?.beforeOrderSign?.();
+1137:         return postSwapOrderFromQuote(
+1138:           {
+1139:             ...quoteResults,
+1140:             result: {
+1141:               ...quoteResults.result,
+1142:               tradeParameters: getTradeParametersAfterQuote({
+1143:                 quoteParameters: quoteResults.result.tradeParameters,
+1144:                 sellToken: params.sellToken
+1145:               }),
+1146:               // It's important to get a fresh instance of the signer
+1147:               // Because quote might be called with another signer
+1148:               signer: getGlobalAdapter6().signer
+1149:             }
+1150:           },
+1151:           advancedSettings2
+1152:         ).catch((error) => {
+1153:           signingStepManager?.onOrderSignError?.();
+1154:           throw error;
+1155:         }).then((result) => {
+1156:           signingStepManager?.afterOrderSign?.();
+1157:           return result;
+1158:         });
+1159:       }
+1160:     };
+
+$ numbered SDK source: node_modules/.pnpm/@cowprotocol+sdk-order-book@4.2.0/node_modules/@cowprotocol/sdk-order-book/dist/index.mjs:130-139
+130: var PROD_BASE_URL = "https://api.cow.fi";
+131: var STAGING_BASE_URL = "https://barn.api.cow.fi";
+132: var PARTNER_PROD_BASE_URL = "https://partners.cow.fi";
+133: var PARTNER_STAGING_BASE_URL = "https://partners.barn.cow.fi";
+134: var ORDER_BOOK_PROD_CONFIG = {
+135:   [SupportedChainId.MAINNET]: `${PROD_BASE_URL}/mainnet`,
+136:   [SupportedChainId.GNOSIS_CHAIN]: `${PROD_BASE_URL}/xdai`,
+137:   [SupportedChainId.ARBITRUM_ONE]: `${PROD_BASE_URL}/arbitrum_one`,
+138:   [SupportedChainId.BASE]: `${PROD_BASE_URL}/base`,
+139:   [SupportedChainId.SEPOLIA]: `${PROD_BASE_URL}/sepolia`,
+
+$ numbered SDK source: node_modules/.pnpm/@cowprotocol+sdk-order-book@4.2.0/node_modules/@cowprotocol/sdk-order-book/dist/index.mjs:456-481
+456:   getApiBaseUrls(context) {
+457:     if (context.baseUrls)
+458:       return context.baseUrls;
+459:     if (context.apiKey) {
+460:       return context.env === "prod" ? ORDER_BOOK_PARTNER_PROD_CONFIG : ORDER_BOOK_PARTNER_STAGING_CONFIG;
+461:     }
+462:     return context.env === "prod" ? ORDER_BOOK_PROD_CONFIG : ORDER_BOOK_STAGING_CONFIG;
+463:   }
+464:   /**
+465:    * Make a request to the API.
+466:    * @param params The parameters for the request.
+467:    * @param contextOverride Optional context override for this request.
+468:    * @returns The response from the API.
+469:    */
+470:   fetch(params, contextOverride = {}) {
+471:     const context = this.getContextWithOverride(contextOverride);
+472:     const { chainId, backoffOpts: _backoffOpts, apiKey, bearerToken } = context;
+473:     const baseUrl = this.getApiBaseUrls(context)[chainId];
+474:     const backoffOpts = _backoffOpts || DEFAULT_BACKOFF_OPTIONS;
+475:     const rateLimiter = contextOverride.limiterOpts ? new RateLimiter(contextOverride.limiterOpts) : this.rateLimiter;
+476:     const additionalHeaders = {
+477:       ...bearerToken ? { Authorization: `Bearer ${bearerToken}` } : void 0,
+478:       ...apiKey ? { "X-API-Key": apiKey } : void 0
+479:     };
+480:     log(`Fetching OrderBook API: ${baseUrl}${params.path}. Params: ${JSON.stringify(params, jsonWithBigintReplacer)}`);
+481:     return request(baseUrl, params, rateLimiter, backoffOpts, additionalHeaders);
+
+$ numbered SDK source: node_modules/@nktkas/hyperliquid/esm/api/exchange/_methods/approveBuilderFee.js:8-23
+8:  * @see https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/exchange-endpoint#approve-a-builder-fee
+9:  */ export const ApproveBuilderFeeRequest = /* @__PURE__ */ (()=>{
+10:   return v.object({
+11:     /** Action to perform. */ action: v.object({
+12:       /** Type of action. */ type: v.literal("approveBuilderFee"),
+13:       /** Chain ID in hex format for EIP-712 signing. */ signatureChainId: Hex,
+14:       /** Hyperliquid network type. */ hyperliquidChain: v.picklist([
+15:         "Mainnet",
+16:         "Testnet"
+17:       ]),
+18:       /** Max fee rate (e.g., "0.01%"). */ maxFeeRate: Percent,
+19:       /** Builder address. */ builder: Address,
+20:       /** Nonce (timestamp in ms) used to prevent replay attacks. */ nonce: UnsignedInteger
+21:     }),
+22:     /** Nonce (timestamp in ms) used to prevent replay attacks. */ nonce: UnsignedInteger,
+23:     /** ECDSA signature components. */ signature: v.object({
+
+$ numbered SDK source: node_modules/@nktkas/hyperliquid/esm/api/exchange/_methods/approveBuilderFee.js:49-71
+49:       name: "hyperliquidChain",
+50:       type: "string"
+51:     },
+52:     {
+53:       name: "maxFeeRate",
+54:       type: "string"
+55:     },
+56:     {
+57:       name: "builder",
+58:       type: "address"
+59:     },
+60:     {
+61:       name: "nonce",
+62:       type: "uint64"
+63:     }
+64:   ]
+65: };
+66: /**
+67:  * Approve a maximum fee rate for a builder.
+68:  *
+69:  * Signing: User-Signed EIP-712.
+70:  *
+71:  * @param config General configuration for Exchange API requests.
+
+$ numbered SDK source: node_modules/@nktkas/hyperliquid/esm/api/exchange/_methods/approveBuilderFee.js:108-116
+
+$ numbered SDK source: node_modules/@nktkas/hyperliquid/esm/signing/_userSigned.js:75-90
+75:     primaryType: Object.keys(types)[0],
+76:     message: action
+77:   });
+78: }
+79: /**
+80:  * Signs an inner per-signer contribution to a multi-sig user-signed action.
+81:  *
+82:  * Signs the action with `payloadMultiSigUser` and `outerSigner` fields injected
+83:  * (using a type extended after its first field); the returned signature is
+84:  * trimmed for inclusion in the multi-sig wrapper.
+85:  *
+86:  * @param args The signer, action, types, and signing parameters.
+87:  * @return The trimmed ECDSA signature.
+88:  *
+89:  * @throws {AbstractWalletError} If signing fails.
+90:  */ export async function signUserSignedInner(args) {
+
+$ numbered SDK source: node_modules/@nktkas/hyperliquid/esm/transport/http/mod.js:29-32
+29: /** Mainnet API URL. */ export const MAINNET_API_URL = "https://api.hyperliquid.xyz";
+30: /** Testnet API URL. */ export const TESTNET_API_URL = "https://api.hyperliquid-testnet.xyz";
+31: /** Mainnet RPC URL. */ export const MAINNET_RPC_URL = "https://rpc.hyperliquid.xyz";
+32: /** Testnet RPC URL. */ export const TESTNET_RPC_URL = "https://rpc.hyperliquid-testnet.xyz";
+
+$ numbered SDK source: node_modules/@nktkas/hyperliquid/esm/transport/http/mod.js:95-100
+95:   constructor(options){
+96:     this.isTestnet = options?.isTestnet ?? false;
+97:     this.timeout = options?.timeout === undefined ? 10_000 : options.timeout;
+98:     this.apiUrl = options?.apiUrl ?? (this.isTestnet ? TESTNET_API_URL : MAINNET_API_URL);
+99:     this.rpcUrl = options?.rpcUrl ?? (this.isTestnet ? TESTNET_RPC_URL : MAINNET_RPC_URL);
+100:     this.fetchOptions = options?.fetchOptions ?? {};
+
+$ numbered SDK source: node_modules/@nktkas/hyperliquid/esm/transport/http/mod.js:133-144
+133:       const url = buildEndpointUrl(endpoint === "explorer" ? this.rpcUrl : this.apiUrl, endpoint);
+134:       const init = mergeRequestInit({
+135:         body: JSON.stringify(payload),
+136:         headers: {
+137:           "Content-Type": "application/json"
+138:         },
+139:         method: "POST"
+140:       }, this.fetchOptions, {
+141:         signal: controller.signal
+142:       });
+143:       // --- Send and validate -------------------------------------------------
+144:       const response = await fetch(url, init);
+
+$ numbered SDK source: node_modules/viem/_esm/chains/definitions/mainnet.js:1-18
+1: import { defineChain } from '../../utils/chain/defineChain.js';
+2: export const mainnet = /*#__PURE__*/ defineChain({
+3:     id: 1,
+4:     name: 'Ethereum',
+5:     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+6:     blockTime: 12_000,
+7:     rpcUrls: {
+8:         default: {
+9:             http: ['https://ethereum.reth.rs/rpc'],
+10:         },
+11:     },
+12:     blockExplorers: {
+13:         default: {
+14:             name: 'Etherscan',
+15:             url: 'https://etherscan.io',
+16:             apiUrl: 'https://api.etherscan.io/api',
+17:         },
+18:     },
+
+$ numbered SDK source: node_modules/viem/_esm/chains/definitions/sepolia.js:1-18
+1: import { defineChain } from '../../utils/chain/defineChain.js';
+2: export const sepolia = /*#__PURE__*/ defineChain({
+3:     id: 11_155_111,
+4:     name: 'Sepolia',
+5:     nativeCurrency: { name: 'Sepolia Ether', symbol: 'ETH', decimals: 18 },
+6:     rpcUrls: {
+7:         default: {
+8:             http: ['https://11155111.rpc.thirdweb.com'],
+9:         },
+10:     },
+11:     blockExplorers: {
+12:         default: {
+13:             name: 'Etherscan',
+14:             url: 'https://sepolia.etherscan.io',
+15:             apiUrl: 'https://api-sepolia.etherscan.io/api',
+16:         },
+17:     },
+18:     contracts: {
+
+$ numbered SDK source: node_modules/viem/_esm/chains/definitions/base.js:1-18
+1: import { chainConfig } from '../../op-stack/chainConfig.js';
+2: import { defineChain } from '../../utils/chain/defineChain.js';
+3: const sourceId = 1; // mainnet
+4: export const base = /*#__PURE__*/ defineChain({
+5:     ...chainConfig,
+6:     id: 8453,
+7:     name: 'Base',
+8:     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+9:     rpcUrls: {
+10:         default: {
+11:             http: ['https://mainnet.base.org'],
+12:         },
+13:     },
+14:     blockExplorers: {
+15:         default: {
+16:             name: 'Basescan',
+17:             url: 'https://basescan.org',
+18:             apiUrl: 'https://api.basescan.org/api',
+
+$ numbered SDK source: node_modules/viem/_esm/chains/definitions/arbitrum.js:1-18
+1: import { defineChain } from '../../utils/chain/defineChain.js';
+2: export const arbitrum = /*#__PURE__*/ defineChain({
+3:     id: 42_161,
+4:     name: 'Arbitrum One',
+5:     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+6:     blockTime: 250,
+7:     rpcUrls: {
+8:         default: {
+9:             http: ['https://arb1.arbitrum.io/rpc'],
+10:         },
+11:     },
+12:     blockExplorers: {
+13:         default: {
+14:             name: 'Arbiscan',
+15:             url: 'https://arbiscan.io',
+16:             apiUrl: 'https://api.arbiscan.io/api',
+17:         },
+18:     },
+
+[exit_code=0]

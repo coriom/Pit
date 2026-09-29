@@ -12,6 +12,7 @@ import {
   buildAppData,
   getQuoteAmountsAndCosts,
   OrderKind,
+  getOrderToSign,
 } from "@cowprotocol/cow-sdk";
 import { cowAppData, costsDisplay, partnerFee } from "../src/lib/cow";
 import { assertTradingChain, config } from "../src/lib/config";
@@ -64,3 +65,51 @@ describe("CoW appData and SDK math", () => {
     expect(display["Minimum receive (buy token)"]).toBe("198.59802");
   });
 });
+
+it.each([0, 20])(
+  "audit: displayed minimum equals SDK execution helper with partner fee %i",
+  async (bps) => {
+    const fee = bps ? { volumeBps: bps, recipient } : undefined;
+    const app = await cowAppData(bps > 0, recipient);
+    const params = {
+      kind: OrderKind.SELL,
+      sellAmount: "100000000000000000000",
+      buyAmount: "200000000000000000000",
+      feeAmount: "1000000000000000000",
+    };
+    const amounts = getQuoteAmountsAndCosts({
+      orderParams: params as any,
+      slippagePercentBps: 50,
+      partnerFeeBps: bps,
+      protocolFeeBps: 15,
+    });
+    const order = getOrderToSign(
+      {
+        chainId: 11155111,
+        from: recipient,
+        networkCostsAmount: params.feeAmount,
+        isEthFlow: false,
+        protocolFeeBps: 15,
+      },
+      {
+        ...params,
+        sellToken: recipient,
+        buyToken: "0x2222222222222222222222222222222222222222",
+        slippageBps: 50,
+        partnerFee: fee,
+        validTo: 1900000000,
+        sellTokenDecimals: 18,
+        buyTokenDecimals: 18,
+      },
+      app.appDataKeccak256,
+    );
+    expect(BigInt(order.buyAmount)).toBe(amounts.afterSlippage.buyAmount);
+    expect(BigInt(order.sellAmount)).toBe(amounts.beforeAllFees.sellAmount);
+    expect(order.appData).toBe(app.appDataKeccak256);
+    expect(costsDisplay(amounts, 18, 18)["Minimum receive (buy token)"]).toBe(
+      (await import("viem")).formatUnits(BigInt(order.buyAmount), 18),
+    );
+    if (!bps)
+      expect(JSON.parse(app.fullAppData).metadata.partnerFee).toBeUndefined();
+  },
+);
