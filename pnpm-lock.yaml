@@ -16,7 +16,7 @@ importers:
         version: 4.4.2(@types/node@26.6.3)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(jiti@2.7.0)(lightningcss@1.33.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(yaml@2.9.1)
       '@cowprotocol/cow-sdk':
         specifier: ^9.2.15
-        version: 9.2.15(ajv@8.20.0)(cross-fetch@4.1.0)(multiformats@9.9.0)
+        version: 9.2.15(ajv@8.20.0)(cross-fetch@3.2.0)(multiformats@9.9.0)
       '@cowprotocol/sdk-viem-adapter':
         specifier: ^0.3.32
         version: 0.3.32(viem@2.57.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.6.5))
@@ -32,12 +32,18 @@ importers:
       ajv:
         specifier: ^8.20.0
         version: 8.20.0
+      ajv-formats:
+        specifier: ^3.0.1
+        version: 3.0.1(ajv@8.20.0)
       astro:
         specifier: ^5.18.2
         version: 5.18.2(@types/node@26.6.3)(idb-keyval@6.3.0)(jiti@2.7.0)(lightningcss@1.33.0)(rollup@4.63.5)(typescript@5.9.3)(yaml@2.9.1)
       connectkit:
         specifier: ^1.9.2
         version: 1.9.2(@babel/core@7.29.7)(@tanstack/react-query@5.104.0(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react-is@16.13.1)(react@18.3.1)(viem@2.57.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.6.5))(wagmi@2.19.5(@tanstack/query-core@5.104.0)(@tanstack/react-query@5.104.0(react@18.3.1))(@types/react@18.3.31)(bufferutil@4.1.0)(react@18.3.1)(typescript@5.9.3)(utf-8-validate@5.0.10)(viem@2.57.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.6.5))(zod@4.6.5))
+      cross-fetch:
+        specifier: ^3.2.0
+        version: 3.2.0
       idb:
         specifier: ^8.0.3
         version: 8.0.3
@@ -72,6 +78,18 @@ importers:
       '@types/react-dom':
         specifier: ^18.3.7
         version: 18.3.7(@types/react@18.3.31)
+      agent-browser:
+        specifier: ^0.38.1
+        version: 0.38.1
+      esbuild:
+        specifier: ^0.28.2
+        version: 0.28.2
+      fake-indexeddb:
+        specifier: ^6.2.5
+        version: 6.2.5
+      prettier:
+        specifier: ^3.9.9
+        version: 3.9.9
       vitest:
         specifier: ^3.2.7
         version: 3.2.7(@types/debug@4.1.13)(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.33.0)(yaml@2.9.1)
@@ -2276,10 +2294,23 @@ packages:
     resolution: {integrity: sha512-RZNwNclF7+MS/8bDg70amg32dyeZGZxiDuQmZxKLAlQjr3jGyLx+4Kkk58UO7D2QdgFIQCovuSuZESne6RG6XQ==}
     engines: {node: '>= 6.0.0'}
 
+  agent-browser@0.38.1:
+    resolution: {integrity: sha512-k58FCz0yUOCANoNkMiqJe+H2y6r6sUZazqXsWF+MYq1iRC42PjtLcBoag6SSTOD/FRQppvPDvE5HDYEhclvnhw==}
+    engines: {node: '>=24.0.0', pnpm: '>=11.0.0'}
+    hasBin: true
+
   ajv-draft-04@1.0.0:
     resolution: {integrity: sha512-mv00Te6nmYbRp5DCwclxtt7yV/joXJPGS7nM+97GdxvuttCOfgI3K4U25zboyeX0O+myI8ERluxQe5wljMmVIw==}
     peerDependencies:
       ajv: ^8.5.0
+    peerDependenciesMeta:
+      ajv:
+        optional: true
+
+  ajv-formats@3.0.1:
+    resolution: {integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==}
+    peerDependencies:
+      ajv: ^8.0.0
     peerDependenciesMeta:
       ajv:
         optional: true
@@ -2857,6 +2888,10 @@ packages:
   extension-port-stream@3.0.0:
     resolution: {integrity: sha512-an2S5quJMiy5bnZKEf6AkfH/7r8CzHvhchU40gxN+OM6HPhe7Z9T1FUychcf2M9PpPOO0Hf7BAEfJkw2TDIBDw==}
     engines: {node: '>=12.0.0'}
+
+  fake-indexeddb@6.2.5:
+    resolution: {integrity: sha512-CGnyrvbhPlWYMngksqrSSUT1BAVP49dZocrHuK0SvtR0D5TMs5wP0o3j7jexDJW01KSadjBp1M/71o/KR3nD1w==}
+    engines: {node: '>=18'}
 
   fast-deep-equal@3.1.3:
     resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
@@ -5246,7 +5281,7 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@cowprotocol/cow-sdk@9.2.15(ajv@8.20.0)(cross-fetch@4.1.0)(multiformats@9.9.0)':
+  '@cowprotocol/cow-sdk@9.2.15(ajv@8.20.0)(cross-fetch@3.2.0)(multiformats@9.9.0)':
     dependencies:
       '@cowprotocol/sdk-app-data': 6.0.7(ajv@8.20.0)(multiformats@9.9.0)
       '@cowprotocol/sdk-common': 0.14.1
@@ -5255,7 +5290,7 @@ snapshots:
       '@cowprotocol/sdk-order-book': 4.2.0
       '@cowprotocol/sdk-order-signing': 1.1.14
       '@cowprotocol/sdk-trading': 2.7.2(ajv@8.20.0)(multiformats@9.9.0)
-      cross-fetch: 4.1.0
+      cross-fetch: 3.2.0
     optionalDependencies:
       multiformats: 9.9.0
     transitivePeerDependencies:
@@ -7871,7 +7906,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  agent-browser@0.38.1: {}
+
   ajv-draft-04@1.0.0(ajv@8.20.0):
+    optionalDependencies:
+      ajv: 8.20.0
+
+  ajv-formats@3.0.1(ajv@8.20.0):
     optionalDependencies:
       ajv: 8.20.0
 
@@ -8537,7 +8578,6 @@ snapshots:
       '@esbuild/win32-arm64': 0.28.2
       '@esbuild/win32-ia32': 0.28.2
       '@esbuild/win32-x64': 0.28.2
-    optional: true
 
   escalade@3.2.0: {}
 
@@ -8601,6 +8641,8 @@ snapshots:
     dependencies:
       readable-stream: 3.6.2
       webextension-polyfill: 0.10.0
+
+  fake-indexeddb@6.2.5: {}
 
   fast-deep-equal@3.1.3: {}
 

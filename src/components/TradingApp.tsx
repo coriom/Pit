@@ -1,5 +1,62 @@
-import { useState } from 'react';
-import { Perps } from './Perps';
-import { Providers, Wallet } from './Wallet';
-import { Swap } from './Swap';
-export default function TradingApp(){const [tab,setTab]=useState('swap');return <Providers><Wallet/><div className="grid" style={{marginTop:24}}><section className="panel"><div className="tabs"><button className={tab==='swap'?'active':''} onClick={()=>setTab('swap')}>Swap</button><button className={tab==='perps'?'active':''} onClick={()=>setTab('perps')}>Perpetuals</button></div>{tab==='swap'?<Swap/>:<Perps/>}</section><aside className="panel"><div className="eyebrow">Execution, explained</div><h2 style={{marginTop:20}}>Every cost. Up front.</h2><p>Your wallet signs. The protocol settles. PIT never holds your assets.</p><div className="rule row"><span>PIT integrator fees</span><span className="tag">OFF</span></div><div className="row"><small>Default swap fee when enabled</small><span>0.20%</span></div><div className="row"><small>Current network</small><span>Testnet only</span></div><div className="rule"><h3>A record you own</h3><p>Filled trades stay in this browser, ready to export for your tax workflow.</p></div></aside></div></Providers>}
+import { FillRecorder } from "./FillRecorder";
+import { Export } from "./Export";
+import { useState } from "react";
+import { Perps } from "./Perps";
+import { Providers, Wallet } from "./Wallet";
+import { Swap } from "./Swap";
+export default function TradingApp() {
+  const [tab, setTab] = useState("swap");
+  return (
+    <Providers>
+      <Wallet />
+      <FillRecorder />
+      <div className="grid" style={{ marginTop: 24 }}>
+        <section className="panel">
+          <div className="tabs">
+            <button
+              className={tab === "swap" ? "active" : ""}
+              onClick={() => setTab("swap")}
+            >
+              Swap
+            </button>
+            <button
+              className={tab === "perps" ? "active" : ""}
+              onClick={() => setTab("perps")}
+            >
+              Perpetuals
+            </button>
+          </div>
+          {tab === "swap" ? <Swap /> : <Perps />}
+        </section>
+        <aside className="panel">
+          <div className="eyebrow">Execution, explained</div>
+          <h2 style={{ marginTop: 20 }}>Every cost. Up front.</h2>
+          <p>
+            Your wallet signs. The protocol settles. PIT never holds your
+            assets.
+          </p>
+          <div className="rule row">
+            <span>PIT integrator fees</span>
+            <span className="tag">OFF</span>
+          </div>
+          <div className="row">
+            <small>Default swap fee when enabled</small>
+            <span>0.20%</span>
+          </div>
+          <div className="row">
+            <small>Current network</small>
+            <span>Testnet only</span>
+          </div>
+          <div className="rule">
+            <h3>A record you own</h3>
+            <Export />
+            <p>
+              Filled trades stay in this browser, ready to export for your tax
+              workflow.
+            </p>
+          </div>
+        </aside>
+      </div>
+    </Providers>
+  );
+}

@@ -1,0 +1,5 @@
+node_modules
+dist
+pnpm-lock.yaml
+src/lib/validate-event.js
+schemas/events.v1.json

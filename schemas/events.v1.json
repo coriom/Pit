@@ -1,0 +1,146 @@
+{
+  "$ref": "#/definitions/EventV1",
+  "definitions": {
+    "EventV1": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "number",
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "deposit",
+            "withdrawal",
+            "trade",
+            "disposal",
+            "purchase_with_crypto",
+            "staking_reward",
+            "airdrop",
+            "fee",
+            "transfer_internal"
+          ]
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "asset": {
+          "type": "string",
+          "minLength": 1
+        },
+        "quantity": {
+          "type": "string",
+          "pattern": "^(0|[1-9]\\d*)(\\.\\d+)?$"
+        },
+        "counter_asset": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "counter_quantity": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EventV1/properties/quantity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fee": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "asset": {
+                "type": "string",
+                "minLength": 1
+              },
+              "quantity": {
+                "$ref": "#/definitions/EventV1/properties/quantity"
+              }
+            },
+            "required": [
+              "asset",
+              "quantity"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "account": {
+          "type": "string",
+          "minLength": 1
+        },
+        "raw_row_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "txid": {
+          "type": "string"
+        },
+        "destination": {
+          "type": "string"
+        },
+        "linked_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "acquisition_eur": {
+          "$ref": "#/definitions/EventV1/properties/quantity"
+        },
+        "proceeds_eur": {
+          "$ref": "#/definitions/EventV1/properties/quantity"
+        },
+        "portfolio_eur": {
+          "$ref": "#/definitions/EventV1/properties/quantity"
+        },
+        "basis_confirmed": {
+          "type": "boolean"
+        },
+        "valuation_note": {
+          "type": "string"
+        },
+        "soulte_received_eur": {
+          "$ref": "#/definitions/EventV1/properties/quantity"
+        },
+        "soulte_paid_eur": {
+          "$ref": "#/definitions/EventV1/properties/quantity"
+        }
+      },
+      "required": [
+        "version",
+        "id",
+        "type",
+        "timestamp",
+        "sequence",
+        "asset",
+        "quantity",
+        "counter_asset",
+        "counter_quantity",
+        "fee",
+        "source",
+        "account",
+        "raw_row_ref"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
