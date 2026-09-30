@@ -216,3 +216,45 @@ test("dedicated-origin derivative evidence never enters Taxlot events and unsafe
     ),
   ).not.toContain("pit-derivative-evidence-v1");
 });
+
+test("shared-origin query, encoded path and reload cannot enable accounting", async ({
+  page,
+}) => {
+  for (const url of [
+    "https://pit.example/ipfs/untrusted/?pit_origin=https%3A%2F%2Fpit.example",
+    "https://pit.example/ipns/name/?fees=false",
+    "https://pit.example/%69pfs/untrusted/?allow=1",
+  ]) {
+    await harness(page, url);
+    for (let i = 0; i < 2; i++) {
+      if (i) {
+        await page.reload();
+        await page.addScriptTag({ content: bundle });
+      }
+      const result = await page.evaluate(async () => {
+        const a = (window as any).audit;
+        const denied = [];
+        for (const fn of [
+          () => a.eventDB(),
+          () => a.listEvents("fixture"),
+          () => a.downloadCSV("fixture"),
+        ]) {
+          try {
+            await fn();
+            denied.push(false);
+          } catch {
+            denied.push(true);
+          }
+        }
+        return {
+          allowed: a.storageEnabled(),
+          denied,
+          databases: (await indexedDB.databases()).map((x) => x.name),
+        };
+      });
+      expect(result.allowed).toBe(false);
+      expect(result.denied).toEqual([true, true, true]);
+      expect(result.databases).not.toContain("pit-taxlot-v1");
+    }
+  }
+});

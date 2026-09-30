@@ -9,3 +9,8 @@
 Never enable fees as a side effect of deployment. Fee recipients, builder approval behavior, mainnet guards and counsel's opinion require a separately reviewed release.
 
 References: [Cloudflare direct upload](https://developers.cloudflare.com/pages/get-started/direct-upload/), [Wrangler Pages commands](https://developers.cloudflare.com/workers/wrangler/commands/pages/), [IPFS pinning](https://docs.ipfs.tech/how-to/pin-files/), [ENS contenthash](https://docs.ens.domains/ensip/7/).
+
+
+## Dedicated testnet staging gate
+
+Use a new PIT-controlled Cloudflare Pages project and its exact assigned `https://…pages.dev` origin. [Phase K's origin runbook and acceptance criteria](audit/phase-k/DEDICATED-ORIGIN.md) require actual HTTPS response headers, not only the generated meta CSP. The static build now derives an HTTP `Content-Security-Policy` rule in `dist/_headers` from Astro's page CSP and includes `frame-ancestors 'none'`. No origin is auto-approved: verify project ownership and isolation, then add the one exact host to `accountingOrigins`, review the protected release hash, build/test and upload to that staging project. `pnpm staging:smoke` requires both a reviewed Pages origin and a real shared IPFS/IPNS path URL for negative evidence. Keep production domains, ENS and other projects untouched.

@@ -231,3 +231,20 @@ test("IPFS-style subpath hydrates and links stay beneath the CID", async ({
   ).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test("Cloudflare static artifact emits a response CSP alongside Astro meta CSP", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const html = await readFile("dist/index.html", "utf8");
+  const headers = await readFile("dist/_headers", "utf8");
+  const match = html.match(
+    /<meta\s+http-equiv="content-security-policy"\s+content="([^"]+)"\s*\/?\s*>/i,
+  );
+  expect(match).toBeTruthy();
+  const meta = match![1].replaceAll("&amp;", "&").replace(/;+$/, "");
+  expect(headers).toContain(
+    `Content-Security-Policy: ${meta}; frame-ancestors 'none'`,
+  );
+  expect(headers).toContain("X-Content-Type-Options: nosniff");
+  expect(headers).toContain("Referrer-Policy: no-referrer");
+  expect(headers).toContain("X-Frame-Options: DENY");
+});

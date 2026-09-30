@@ -1,0 +1,15 @@
+$ PIT_STAGING_ORIGIN=https://pit-testnet-stage-k-229cad0.pages.dev/ PIT_STAGING_SHARED_GATEWAY_URL=https://gateway.example/ipfs/cid/ node scripts/audit/staging-smoke.mjs
+file:///home/corio/PIT/scripts/audit/staging-smoke.mjs:10
+  throw Error(`BLOCKED — ${reason}`);
+        ^
+
+Error: BLOCKED — the exact staging origin has not been reviewed and compiled into the accounting allowlist
+    at blocked (file:///home/corio/PIT/scripts/audit/staging-smoke.mjs:10:9)
+    at file:///home/corio/PIT/scripts/audit/staging-smoke.mjs:26:3
+    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.22.3
+
+[exit_code=1]
