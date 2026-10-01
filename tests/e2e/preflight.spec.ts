@@ -49,14 +49,8 @@ for (const chainId of [84532, 1, 8453, 42161, 999]) {
       .fill("0x2222222222222222222222222222222222222222");
     await page.getByLabel("You sell").fill("1");
     const quote = page.getByRole("button", { name: "Get quote", exact: true });
-    // Unsupported connectors may refuse wallet-client creation altogether, also closed.
-    if ([1, 8453, 42161].includes(chainId)) await expect(quote).toBeEnabled();
-    if (await quote.isEnabled()) {
-      await quote.click();
-      await expect(page.getByRole("alert")).toContainText("WRONG_CHAIN");
-    } else {
-      await expect(quote).toBeDisabled();
-    }
+    // The Sepolia-only connector fails closed before a quote is requested.
+    await expect(quote).toBeDisabled();
     await expect(
       page.getByRole("button", { name: "Sign & submit order" }),
     ).toHaveCount(0);

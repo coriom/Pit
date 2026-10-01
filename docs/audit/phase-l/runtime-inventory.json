@@ -1,0 +1,83 @@
+{
+  "origin": "http://127.0.0.1:4398",
+  "requests": [
+    {
+      "phase": "first load",
+      "type": "document",
+      "url": "http://127.0.0.1:4398/"
+    },
+    {
+      "phase": "first load",
+      "type": "stylesheet",
+      "url": "http://127.0.0.1:4398/_astro/fees.DQsdHM4L.css"
+    },
+    {
+      "phase": "first load",
+      "type": "script",
+      "url": "http://127.0.0.1:4398/_astro/TradingApp.CmsRjMWF.js"
+    },
+    {
+      "phase": "first load",
+      "type": "script",
+      "url": "http://127.0.0.1:4398/_astro/client.BHjpRL8Y.js"
+    },
+    {
+      "phase": "first load",
+      "type": "script",
+      "url": "http://127.0.0.1:4398/_astro/TradingApp.psgEthuH.js"
+    },
+    {
+      "phase": "first load",
+      "type": "script",
+      "url": "http://127.0.0.1:4398/_astro/index.BKL_-_Dm.js"
+    },
+    {
+      "phase": "connected wallet",
+      "type": "fetch",
+      "url": "https://api.cow.fi/sepolia/api/v1/account/0x1111111111111111111111111111111111111111/orders?offset=0&limit=50"
+    },
+    {
+      "phase": "connected wallet",
+      "type": "fetch",
+      "url": "https://api.cow.fi/sepolia/api/v2/trades?owner=0x1111111111111111111111111111111111111111&offset=0&limit=100"
+    },
+    {
+      "phase": "connected wallet",
+      "type": "fetch",
+      "url": "https://api.hyperliquid-testnet.xyz/info"
+    },
+    {
+      "phase": "perps info",
+      "type": "fetch",
+      "url": "https://api.hyperliquid-testnet.xyz/info"
+    },
+    {
+      "phase": "perps info",
+      "type": "fetch",
+      "url": "https://api.cow.fi/sepolia/api/v1/account/0x1111111111111111111111111111111111111111/orders?offset=0&limit=50"
+    },
+    {
+      "phase": "perps info",
+      "type": "fetch",
+      "url": "https://api.cow.fi/sepolia/api/v2/trades?owner=0x1111111111111111111111111111111111111111&offset=0&limit=100"
+    }
+  ],
+  "externalOrigins": [
+    "https://api.cow.fi",
+    "https://api.hyperliquid-testnet.xyz"
+  ],
+  "inlineStyles": 2,
+  "styleKinds": [
+    {
+      "styledComponents": true,
+      "astro": false,
+      "length": 0
+    },
+    {
+      "styledComponents": false,
+      "astro": false,
+      "length": 59
+    }
+  ],
+  "violations": []
+}

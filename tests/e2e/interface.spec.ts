@@ -77,7 +77,16 @@ test("perps fields render against public info fixture and mobile does not overfl
 test("injected test provider connects without secrets; invalid swaps cannot sign", async ({
   page,
 }) => {
+  const externalOrigins = new Set<string>();
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.hostname !== "127.0.0.1") externalOrigins.add(url.origin);
+  });
   await page.addInitScript(() => {
+    (window as any).__violations = [];
+    document.addEventListener("securitypolicyviolation", (event) =>
+      (window as any).__violations.push(event.blockedURI),
+    );
     let chain = "0xaa36a7";
     let authorized = false;
     const listeners: Record<string, Function[]> = {};
@@ -168,6 +177,11 @@ test("injected test provider connects without secrets; invalid swaps cannot sign
   for await (const chunk of stream!) csv += chunk.toString();
   expect(csv).toContain("0.123456789012345678");
   expect(csv).toContain('"trade"');
+  expect([...externalOrigins].sort()).toEqual([
+    "https://api.cow.fi",
+    "https://api.hyperliquid-testnet.xyz",
+  ]);
+  expect(await page.evaluate(() => (window as any).__violations)).toEqual([]);
 });
 
 test("IPFS-style subpath hydrates and links stay beneath the CID", async ({

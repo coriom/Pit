@@ -18,10 +18,10 @@ export default defineConfig({
     csp: {
       styleDirective: { resources: ["'self'", "'unsafe-inline'"] },
       directives: [
-        "connect-src 'self' https://*.cow.fi https://api.hyperliquid-testnet.xyz https://api.hyperliquid.xyz https://ethereum-sepolia-rpc.publicnode.com https://ethereum-rpc.publicnode.com https://base-rpc.publicnode.com https://arbitrum-one-rpc.publicnode.com https://11155111.rpc.thirdweb.com https://ethereum.reth.rs https://mainnet.base.org https://arb1.arbitrum.io",
+        "connect-src 'self' https://api.cow.fi https://api.hyperliquid-testnet.xyz https://rpc.hyperliquid-testnet.xyz https://ethereum-sepolia-rpc.publicnode.com https://11155111.rpc.thirdweb.com",
         "default-src 'none'",
-        "font-src 'self' data:",
-        "img-src 'self' data:",
+        "font-src 'self'",
+        "img-src 'self'",
         "object-src 'none'",
         "base-uri 'self'",
         "form-action 'self'",

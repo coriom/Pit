@@ -1,6 +1,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
 import { validateTrackedFiles } from "./invariants.mjs";
+import { validateAnalyticsDependencies } from "./artifacts.mjs";
 function git(...args) {
   return execFileSync("git", args, { encoding: "utf8" });
 }
@@ -43,6 +44,7 @@ try {
       .map((file) => [file, readFileSync(file)]),
   );
   validateTrackedFiles(files);
+  validateAnalyticsDependencies(files);
   console.log(
     "PASS protected fee/network configuration: FEES_ENABLED=false; MAINNET_ENABLED=false; recipients/rates unchanged",
   );
@@ -55,9 +57,13 @@ try {
   console.log(
     "PASS tracked-file credential patterns and environment-file policy (not a proof against encoded secrets)",
   );
+  console.log(
+    "PASS no direct analytics dependency or app-source analytics import",
+  );
   run("pnpm", ["test"]);
   run("pnpm", ["check"]);
   run("pnpm", ["build"]);
+  run("node", ["scripts/release/artifacts.mjs"]);
   // Browser tests exercise precisely the production build just created.
   run("pnpm", ["test:e2e"]);
   clean();

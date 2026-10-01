@@ -2435,3 +2435,50 @@ Regenerated validator equals phase-E validator: True
 [exit_code=0]
 ```
 
+## Phase L — static supply-chain and SRI gate
+
+[Full inventory, CSP before/after, SRI matrix and bounded telemetry findings](audit/phase-l/STATIC-SUPPLY-CHAIN.md) · [Complete production artifact manifest](audit/phase-l/artifact-inventory.json) · [Exact keyless browser request capture](audit/phase-l/runtime-inventory.json) · [Exact clean-tree release-check output](audit/phase-l/release-check.txt).
+
+Commands:
+
+```text
+pnpm build
+node scripts/release/artifacts.mjs
+pnpm preview --port 4398
+node scripts/audit/runtime-inventory.mjs
+pnpm release:check
+```
+
+The artifact guard output from the final local build is:
+
+```text
+PASS static artifacts: 123 files; 3 HTML pages; 0 external scripts/styles; CSP, SRI, telemetry, secret, source-map and mainnet endpoint guards
+```
+
+The request capture uses a synthetic injected provider, aborts external HTTP, and records only the exact attempted origins `https://api.cow.fi` and `https://api.hyperliquid-testnet.xyz` after connection. It records `violations: []`, no external executable/style/font/image and no address analytics request. The initial capture exposed blocked mainnet RPC attempts from wagmi and ConnectKit ENS fallback; the final `Wallet.tsx` configuration removes those request paths. The offline browser test asserts the same allowed origins and zero CSP violations. This is not evidence from a real wallet extension or a public origin.
+
+The static artifact gate runs **after** the production build in `pnpm release:check`. Its 18 focused unit tests include 16 negative mutations and two valid baselines; missing SRI/CORS, unquoted and protocol-relative remote scripts, external styles/CSS resources, `unsafe-eval`, wildcard/mainnet CSP, analytics packages/imports/endpoints, secret-like values, source maps and mainnet execution paths all fail. The actual artifact has 117 JS chunks, one CSS file, three HTML pages, a JSON manifest and `_headers`, with no source maps. No external runtime script, stylesheet or font dependency needed removal. `style-src 'unsafe-inline'` remains for generated/runtime styles; `script-src` uses hashes and has no `unsafe-eval`.
+
+The exact clean-tree `pnpm release:check` output is stored in the linked file. Its decisive lines are:
+
+```text
+Clean release source: 076a493aaa018f6e159fd679ddc9db0cff02c1e6
+PASS protected fee/network configuration: FEES_ENABLED=false; MAINNET_ENABLED=false; recipients/rates unchanged
+PASS exact Taxlot v1 schema SHA256 d8eb339ed7acd7da3b68ef09fe5c1b01c4cc3258cb401a4f2ba8805e7a3b07d7
+PASS origin policy: default-deny; production allowlist empty; legal page unchanged
+PASS tracked-file credential patterns and environment-file policy (not a proof against encoded secrets)
+PASS no direct analytics dependency or app-source analytics import
+ Test Files  15 passed (15)
+      Tests  93 passed (93)
+Result (57 files):
+- 0 errors
+- 0 warnings
+- 0 hints
+11:45:33 [build] 3 page(s) built in 31.56s
+Build SHA-256: eb4b07f82216d1f113678523841717bed6fb5045bd5d50f34ec5f25276f79257
+PASS static artifacts: 123 files; 3 HTML pages; 0 external scripts/styles; CSP, SRI, telemetry, secret, source-map and mainnet endpoint guards
+  16 passed (17.8s)
+RELEASE CHECK PASS — offline testnet candidate only; no live acceptance or deployment
+```
+
+The clean-tree run used the source commit shown in its output. This verification section and the full log are appended to that same phase commit afterward; no source or test code changes follow the run. Phase L changes neither the Phase H-live blocker nor Assumption 8's OPEN disposition: no dedicated public HTTPS origin or live transaction has been verified.

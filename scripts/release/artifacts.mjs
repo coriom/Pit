@@ -1,0 +1,166 @@
+import { readFileSync, readdirSync } from "node:fs";
+import { join, relative } from "node:path";
+
+const allowedConnect = new Set([
+  "'self'",
+  "https://api.cow.fi",
+  "https://api.hyperliquid-testnet.xyz",
+  "https://rpc.hyperliquid-testnet.xyz",
+  "https://ethereum-sepolia-rpc.publicnode.com",
+  "https://11155111.rpc.thirdweb.com",
+]);
+const analytics =
+  /google-analytics\.com|googletagmanager\.com|analytics\.google\.com|api\.segment\.io|cdn\.segment\.com|api\.mixpanel\.com|posthog\.com|hotjar\.com|fullstory\.com|sentry\.io/i;
+const secret =
+  /(?:PRIVATE[_-]?KEY|API[_-]?KEY|API[_-]?SECRET|MNEMONIC|SEED[_-]?PHRASE|ACCESS[_-]?TOKEN)\s*[=:]\s*["']?[A-Za-z0-9_./+\-=]{16,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|https?:\/\/[^\s"']+\/v[23]\/[^\s"']{20,}/i;
+const mainnetExecution =
+  /https:\/\/(?:api\.cow\.fi\/(?:mainnet|base|arbitrum)|api\.hyperliquid\.xyz\/(?:exchange|info)|rpc\.hyperliquid\.xyz\/[^"'\s]+)/i;
+const analyticsPackage =
+  /(?:analytics|telemetry|sentry|posthog|mixpanel|segment|hotjar|fullstory|react-ga)/i;
+
+export function validateAnalyticsDependencies(files) {
+  const pkg = JSON.parse(files.get("package.json")?.toString() || "{}");
+  for (const name of Object.keys({
+    ...pkg.dependencies,
+    ...pkg.devDependencies,
+  }))
+    if (analyticsPackage.test(name))
+      throw Error(`Direct analytics dependency: ${name}`);
+  for (const [name, body] of files) {
+    if (!/^src\/.*\.[cm]?[jt]sx?$/.test(name)) continue;
+    const source = body.toString();
+    if (
+      /(?:\bfrom\s*|\bimport\s*\(|\brequire\s*\()\s*["'][^"']*(?:@metamask\/sdk-analytics|@astrojs\/telemetry|@sentry\/|posthog-js|mixpanel-browser|@segment\/analytics-next|react-ga4|firebase\/analytics)/i.test(
+        source,
+      )
+    )
+      throw Error(`Analytics import in app source: ${name}`);
+  }
+}
+
+export function collectArtifacts(root = "dist") {
+  const files = new Map();
+  function visit(dir) {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) visit(path);
+      else
+        files.set(
+          relative(root, path).replaceAll("\\", "/"),
+          readFileSync(path, "utf8"),
+        );
+    }
+  }
+  visit(root);
+  return files;
+}
+
+export function validateArtifacts(files) {
+  const htmlFiles = [...files].filter(([name]) => name.endsWith(".html"));
+  if (htmlFiles.length !== 3) throw Error("Expected three static HTML pages");
+  const headers = files.get("_headers");
+  if (!headers) throw Error("Missing Cloudflare Pages response headers");
+  let externalExecutable = 0;
+  for (const [name, body] of files) {
+    if (
+      /\.map$/i.test(name) ||
+      /sourceMappingURL\s*=|sourcesContent\s*:/i.test(body)
+    )
+      throw Error(`Source map leakage: ${name}`);
+    if (analytics.test(body))
+      throw Error(`Analytics endpoint in artifact: ${name}`);
+    if (secret.test(body))
+      throw Error(`Secret-like value in artifact: ${name}`);
+    if (mainnetExecution.test(body))
+      throw Error(`Mainnet execution endpoint in artifact: ${name}`);
+    if (
+      name.endsWith(".css") &&
+      /(?:@import\s*(?:url\()?\s*["']?|url\(\s*["']?)\s*(?:https?:)?\/\//i.test(
+        body,
+      )
+    )
+      throw Error(`External CSS resource: ${name}`);
+  }
+  for (const [name, html] of htmlFiles) {
+    const meta = html.match(
+      /<meta\s+http-equiv="content-security-policy"\s+content="([^"]+)"/i,
+    );
+    if (!meta) throw Error(`Missing CSP meta: ${name}`);
+    const csp = meta[1].replaceAll("&amp;", "&").replace(/;+$/, "");
+    if (
+      !headers.includes(
+        `Content-Security-Policy: ${csp}; frame-ancestors 'none'`,
+      )
+    )
+      throw Error(`HTTP CSP does not match HTML: ${name}`);
+    if (/unsafe-eval|wasm-unsafe-eval|\bhttps?:\s|\*/i.test(csp))
+      throw Error(`Forbidden CSP directive/source: ${name}`);
+    const directives = new Map(
+      csp
+        .split(";")
+        .map((part) => part.trim().split(/\s+/, 2))
+        .filter((x) => x[0])
+        .map(([key]) => [
+          key,
+          csp.match(new RegExp(`(?:^|;)\\s*${key}\\s+([^;]+)`))?.[1]?.trim(),
+        ]),
+    );
+    const connect = new Set((directives.get("connect-src") || "").split(/\s+/));
+    if (
+      connect.size !== allowedConnect.size ||
+      [...connect].some((x) => !allowedConnect.has(x))
+    )
+      throw Error(`Unexpected connect-src: ${name}`);
+    if (
+      !/^'self'(?:\s+'sha(?:256|384|512)-[A-Za-z0-9+/=]+')+$/.test(
+        directives.get("script-src") || "",
+      )
+    )
+      throw Error(`Script CSP lacks self and inline hashes: ${name}`);
+    if (directives.get("style-src") !== "'self' 'unsafe-inline'")
+      throw Error(`Unexpected style-src: ${name}`);
+    const attribute = (tag, key) => {
+      const match = tag.match(
+        new RegExp(`\\b${key}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, "i"),
+      );
+      return match?.[1] ?? match?.[2] ?? match?.[3];
+    };
+    for (const tag of html.match(/<(?:script|link)\b[^>]*>/gi) || []) {
+      const rel = attribute(tag, "rel")?.toLowerCase();
+      const isStyle =
+        /^<link\b/i.test(tag) &&
+        (rel === "stylesheet" ||
+          rel === "modulepreload" ||
+          (rel === "preload" && attribute(tag, "as") === "script"));
+      if (!/^<script\b/i.test(tag) && !isStyle) continue;
+      const url = attribute(tag, /^<script\b/i.test(tag) ? "src" : "href");
+      if (!url || !/^(?:https?:)?\/\//i.test(url)) continue;
+      externalExecutable++;
+      if (
+        !/^sha(?:256|384|512)-[A-Za-z0-9+/=]+$/i.test(
+          attribute(tag, "integrity") || "",
+        ) ||
+        attribute(tag, "crossorigin") !== "anonymous"
+      )
+        throw Error(`External executable/style lacks SRI and CORS: ${name}`);
+    }
+  }
+  if (
+    !headers.includes("X-Content-Type-Options: nosniff") ||
+    !headers.includes("Referrer-Policy: no-referrer")
+  )
+    throw Error("Missing static security headers");
+  return { html: htmlFiles.length, files: files.size, externalExecutable };
+}
+
+if (process.argv[1]?.endsWith("artifacts.mjs")) {
+  try {
+    const result = validateArtifacts(collectArtifacts());
+    console.log(
+      `PASS static artifacts: ${result.files} files; ${result.html} HTML pages; ${result.externalExecutable} external scripts/styles; CSP, SRI, telemetry, secret, source-map and mainnet endpoint guards`,
+    );
+  } catch (error) {
+    console.error(`STATIC ARTIFACT CHECK FAILED: ${error.message}`);
+    process.exitCode = 1;
+  }
+}

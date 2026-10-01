@@ -4,6 +4,7 @@ import {
   useAccount,
   useSwitchChain,
   useWalletClient,
+  useDisconnect,
 } from "wagmi";
 import { injected } from "wagmi/connectors";
 import {
@@ -16,8 +17,12 @@ import {
 } from "viem";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ConnectKitProvider, ConnectKitButton } from "connectkit";
+import { sepolia } from "viem/chains";
 import { useEffect, useState, type ReactNode } from "react";
-import { chains, publicRpc } from "../lib/config";
+import { publicRpc } from "../lib/config";
+// The release connector only mounts Sepolia. Keeping dormant mainnet chain
+// transports in wagmi caused background RPC attempts despite execution gates.
+const chains = [sepolia] as const;
 const walletConfig = createConfig({
   chains,
   connectors: [injected()],
@@ -45,6 +50,7 @@ export function Providers({ children }: { children: ReactNode }) {
 }
 export function Wallet() {
   const { address, chainId } = useAccount();
+  const { disconnect } = useDisconnect();
   const { data: wallet } = useWalletClient();
   const { switchChain } = useSwitchChain();
   const [balance, setBalance] = useState("");
@@ -79,7 +85,17 @@ export function Wallet() {
           </option>
         ))}
       </select>
-      <ConnectKitButton />
+      {address ? (
+        <button
+          type="button"
+          onClick={() => disconnect()}
+          aria-label="Disconnect wallet"
+        >
+          {`${address.slice(0, 6)}…${address.slice(-4)}`} · Disconnect
+        </button>
+      ) : (
+        <ConnectKitButton showAvatar={false} />
+      )}
       {address && <small>{balance} ETH · wallet RPC</small>}
     </div>
   );
