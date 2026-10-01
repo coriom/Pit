@@ -1,0 +1,76 @@
+---
+import { TOOL_CATEGORIES, TOOLS } from "../../lib/tool-registry";
+import "../../styles/global.css";
+---
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content="PIT toolbox: choose a precise local or testnet tool." />
+    <title>PIT Toolbox</title>
+  </head>
+  <body>
+    <main class="shell">
+      <header>
+        <a href="../" class="brand">pit<span>.</span></a>
+        <nav><a href="./" aria-current="page">Toolbox</a><a href="../">Trade</a><a href="../fees/">Fees</a><a href="../legal/">Legal</a></nav>
+        <span class="tag">TESTNET PREVIEW</span>
+      </header>
+      <section class="hero">
+        <div class="eyebrow">Task → tool → optional execution</div>
+        <h1>Choose a tool.</h1>
+        <p>Calculate locally, inspect wallet data, or review a testnet transaction before signing.</p>
+      </section>
+      <section aria-label="Find a tool">
+        <label>Search tools<input type="search" id="tool-search" placeholder="Search by task or tool" autocomplete="off" /></label>
+        <div class="category-list" role="group" aria-label="Tool categories">
+          <button type="button" data-category-filter="All" aria-pressed="true">All</button>
+          {TOOL_CATEGORIES.map((category) => <button type="button" data-category-filter={category} aria-pressed="false">{category}</button>)}
+        </div>
+        <p id="tool-count" role="status">{TOOLS.length} tools</p>
+        <div class="tool-grid">
+          {TOOLS.map((tool) => <a
+            class="panel tool-card"
+            href={`${tool.slug}/`}
+            data-tool-card
+            data-category={tool.category}
+            data-search={`${tool.title} ${tool.description} ${tool.category} ${tool.executionMode}`.toLowerCase()}
+          >
+            <div class="row"><span class="eyebrow">{tool.category}</span><span class="tag">{tool.status}</span></div>
+            <h2>{tool.title}</h2>
+            <p>{tool.description}</p>
+            <small>{tool.executionMode} · {tool.walletRequirement === "none" ? "no wallet" : "wallet required"} · {tool.networkRequirement}</small>
+          </a>)}
+        </div>
+        <p id="tool-empty" class="empty" hidden>No tools match this search and category.</p>
+      </section>
+      <footer>Local calculators have no wallet or network requirement. Execution tools retain their own preflight gates.</footer>
+    </main>
+    <script>
+      const search = document.querySelector<HTMLInputElement>("#tool-search")!;
+      const buttons = [...document.querySelectorAll<HTMLButtonElement>("[data-category-filter]")];
+      const cards = [...document.querySelectorAll<HTMLElement>("[data-tool-card]")];
+      const count = document.querySelector<HTMLElement>("#tool-count")!;
+      const empty = document.querySelector<HTMLElement>("#tool-empty")!;
+      let category = "All";
+      function filter() {
+        const term = search.value.trim().toLowerCase();
+        let visible = 0;
+        for (const card of cards) {
+          const show = (category === "All" || card.dataset.category === category) &&
+            (card.dataset.search ?? "").includes(term);
+          card.hidden = !show;
+          if (show) visible++;
+        }
+        count.textContent = `${visible} ${visible === 1 ? "tool" : "tools"}`;
+        empty.hidden = visible !== 0;
+      }
+      search.addEventListener("input", filter);
+      for (const button of buttons) button.addEventListener("click", () => {
+        category = button.dataset.categoryFilter ?? "All";
+        for (const item of buttons) item.setAttribute("aria-pressed", String(item === button));
+        filter();
+      });
+    </script>
+  </body>
+</html>

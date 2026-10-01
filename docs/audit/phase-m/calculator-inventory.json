@@ -1,0 +1,54 @@
+{
+  "origin": "http://127.0.0.1:4398",
+  "offlineAfterLoad": true,
+  "results": [
+    {
+      "tool": "pnl",
+      "initialRequests": [
+        {
+          "type": "document",
+          "url": "http://127.0.0.1:4398/tools/pnl/"
+        },
+        {
+          "type": "stylesheet",
+          "url": "http://127.0.0.1:4398/_astro/index.BQIfr2vA.css"
+        }
+      ],
+      "afterLoadRequests": [],
+      "websockets": [],
+      "result": "Entry notional: 200 quote units\nGross PnL: 40 quote units\nNet PnL: 38 quote units\nReturn on entry notional: 19%"
+    },
+    {
+      "tool": "liquidation",
+      "initialRequests": [
+        {
+          "type": "document",
+          "url": "http://127.0.0.1:4398/tools/liquidation/"
+        },
+        {
+          "type": "stylesheet",
+          "url": "http://127.0.0.1:4398/_astro/index.BQIfr2vA.css"
+        }
+      ],
+      "afterLoadRequests": [],
+      "websockets": [],
+      "result": "Threshold price: 84.21052632 quote units / asset unit\nMaintenance at entry: 5 quote units"
+    },
+    {
+      "tool": "impermanent-loss",
+      "initialRequests": [
+        {
+          "type": "document",
+          "url": "http://127.0.0.1:4398/tools/impermanent-loss/"
+        },
+        {
+          "type": "stylesheet",
+          "url": "http://127.0.0.1:4398/_astro/index.BQIfr2vA.css"
+        }
+      ],
+      "afterLoadRequests": [],
+      "websockets": [],
+      "result": "Price ratio: 4×\nHolding value: 2,500 quote units\nPool value: 2,000 quote units\nPool minus holding: -500 quote units\nImpermanent loss: -20%"
+    }
+  ]
+}

@@ -190,6 +190,43 @@ h3 {
   text-align: center;
   color: #8fa495;
 }
+.category-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+.category-list button[aria-pressed="true"] {
+  background: #d8f977;
+  border-color: #d8f977;
+  color: #172010;
+}
+.tool-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+.tool-card {
+  display: block;
+}
+.tool-card[hidden] {
+  display: none;
+}
+.tool-card:hover,
+.tool-card:focus-visible {
+  border-color: #d8f977;
+}
+.tool-mode {
+  color: #d8f977;
+  font-size: 13px;
+}
+.calculator {
+  max-width: 700px;
+}
+.calc-output {
+  white-space: pre-line;
+  margin-top: 18px;
+}
 @media (max-width: 760px) {
   .grid {
     grid-template-columns: 1fr;

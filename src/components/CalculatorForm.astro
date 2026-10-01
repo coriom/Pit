@@ -1,0 +1,128 @@
+---
+type Kind = "pnl" | "liquidation" | "impermanent-loss";
+const { kind } = Astro.props as { kind: Kind };
+---
+<section class="panel calculator">
+  {kind === "pnl" && <>
+    <p class="notice">Price-based long or short PnL. Quantity is in asset units; prices and total fees are in the same quote currency. Return uses entry notional, without leverage, funding, gas, slippage or taxes.</p>
+  </>}
+  {kind === "liquidation" && <>
+    <p class="notice">Generic isolated linear position, not a protocol liquidation engine. Equity equals collateral plus price PnL. Maintenance equals the entered rate times position value at the mark price. No funding, trading/liquidation fees, cross margin, price impact or tiered margin.</p>
+  </>}
+  {kind === "impermanent-loss" && <>
+    <p class="notice">Fee-free 50/50 constant-product pool versus holding the initial assets. One asset's price changes against a stable quote unit; no fees, rewards, depeg, deposits or withdrawals are modeled.</p>
+  </>}
+  <form data-calculator={kind} novalidate>
+    {kind !== "impermanent-loss" && <label>Position side
+      <select name="side" aria-label="Position side"><option value="long">Long</option><option value="short">Short</option></select>
+    </label>}
+    {kind === "pnl" && <>
+      <label>Entry price (quote units / asset unit)<input name="entryPrice" inputmode="decimal" autocomplete="off" /></label>
+      <label>Exit price (quote units / asset unit)<input name="exitPrice" inputmode="decimal" autocomplete="off" /></label>
+      <label>Quantity (asset units)<input name="quantity" inputmode="decimal" autocomplete="off" /></label>
+      <label>Total fees (quote units)<input name="totalFees" inputmode="decimal" autocomplete="off" value="0" /></label>
+    </>}
+    {kind === "liquidation" && <>
+      <label>Entry price (quote units / asset unit)<input name="entryPrice" inputmode="decimal" autocomplete="off" /></label>
+      <label>Quantity (asset units)<input name="quantity" inputmode="decimal" autocomplete="off" /></label>
+      <label>Collateral (quote units)<input name="collateral" inputmode="decimal" autocomplete="off" /></label>
+      <label>Maintenance rate (%)<input name="maintenanceRatePct" inputmode="decimal" autocomplete="off" /></label>
+    </>}
+    {kind === "impermanent-loss" && <>
+      <label>Initial price (quote units / asset unit)<input name="initialPrice" inputmode="decimal" autocomplete="off" /></label>
+      <label>Final price (quote units / asset unit)<input name="finalPrice" inputmode="decimal" autocomplete="off" /></label>
+      <label>Initial pool value (quote units)<input name="initialPoolValue" inputmode="decimal" autocomplete="off" /></label>
+    </>}
+    <button class="primary" type="submit">Calculate</button>
+    <div class="notice calc-output" role="status" data-result>Enter values to calculate locally.</div>
+    <p class="error" role="alert" data-error hidden></p>
+  </form>
+</section>
+<script>
+  import {
+    calculateImpermanentLoss,
+    calculateLiquidation,
+    calculatePnL,
+    parseDecimal,
+    type PositionSide,
+  } from "../lib/calculators";
+
+  function format(value: number): string {
+    if (value === 0) return "0";
+    if (Math.abs(value) < 0.000001 || Math.abs(value) >= 1e12)
+      return value.toExponential(6);
+    return new Intl.NumberFormat("en-US", { maximumFractionDigits: 8 }).format(value);
+  }
+
+  document.querySelectorAll<HTMLFormElement>("form[data-calculator]").forEach((form) => {
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const values = new FormData(form);
+      const read = (name: string, label: string) => parseDecimal(String(values.get(name) ?? ""), label);
+      const side = String(values.get("side")) as PositionSide;
+      const result = form.querySelector<HTMLElement>("[data-result]")!;
+      const error = form.querySelector<HTMLElement>("[data-error]")!;
+      try {
+        let lines: string[];
+        switch (form.dataset.calculator) {
+          case "pnl": {
+            const value = calculatePnL({
+              side,
+              entryPrice: read("entryPrice", "Entry price"),
+              exitPrice: read("exitPrice", "Exit price"),
+              quantity: read("quantity", "Quantity"),
+              totalFees: read("totalFees", "Total fees"),
+            });
+            lines = [
+              `Entry notional: ${format(value.entryNotional)} quote units`,
+              `Gross PnL: ${format(value.grossPnL)} quote units`,
+              `Net PnL: ${format(value.netPnL)} quote units`,
+              `Return on entry notional: ${format(value.returnPct)}%`,
+            ];
+            break;
+          }
+          case "liquidation": {
+            const value = calculateLiquidation({
+              side,
+              entryPrice: read("entryPrice", "Entry price"),
+              quantity: read("quantity", "Quantity"),
+              collateral: read("collateral", "Collateral"),
+              maintenanceRatePct: read("maintenanceRatePct", "Maintenance rate"),
+            });
+            lines = [
+              value.thresholdPrice === null
+                ? "No positive-price threshold under these assumptions."
+                : `Threshold price: ${format(value.thresholdPrice)} quote units / asset unit`,
+              `Maintenance at entry: ${format(value.maintenanceAtEntry)} quote units`,
+            ];
+            break;
+          }
+          case "impermanent-loss": {
+            const value = calculateImpermanentLoss({
+              initialPrice: read("initialPrice", "Initial price"),
+              finalPrice: read("finalPrice", "Final price"),
+              initialPoolValue: read("initialPoolValue", "Initial pool value"),
+            });
+            lines = [
+              `Price ratio: ${format(value.priceRatio)}×`,
+              `Holding value: ${format(value.holdValue)} quote units`,
+              `Pool value: ${format(value.poolValue)} quote units`,
+              `Pool minus holding: ${format(value.difference)} quote units`,
+              `Impermanent loss: ${format(value.lossPct)}%`,
+            ];
+            break;
+          }
+          default:
+            throw new Error("Unknown calculator.");
+        }
+        result.textContent = lines.join("\n");
+        error.textContent = "";
+        error.hidden = true;
+      } catch (cause) {
+        result.textContent = "No result. Correct the inputs and recalculate.";
+        error.textContent = cause instanceof Error ? cause.message : "Invalid input.";
+        error.hidden = false;
+      }
+    });
+  });
+</script>

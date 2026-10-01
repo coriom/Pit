@@ -1,0 +1,6 @@
+---
+import ToolLayout from "../../../components/ToolLayout.astro";
+import TradeTool from "../../../components/TradeTool";
+import { toolById } from "../../../lib/tool-registry";
+---
+<ToolLayout tool={toolById("swap")}><TradeTool kind="swap" client:only="react" /></ToolLayout>

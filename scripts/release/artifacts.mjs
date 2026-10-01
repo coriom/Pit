@@ -57,7 +57,13 @@ export function collectArtifacts(root = "dist") {
 
 export function validateArtifacts(files) {
   const htmlFiles = [...files].filter(([name]) => name.endsWith(".html"));
-  if (htmlFiles.length !== 3) throw Error("Expected three static HTML pages");
+  for (const page of [
+    "index.html",
+    "fees/index.html",
+    "legal/index.html",
+    "tools/index.html",
+  ])
+    if (!files.has(page)) throw Error(`Missing required static page: ${page}`);
   const headers = files.get("_headers");
   if (!headers) throw Error("Missing Cloudflare Pages response headers");
   let externalExecutable = 0;

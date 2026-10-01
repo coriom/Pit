@@ -10,6 +10,7 @@ function fixture() {
   const html = `<html><head><meta http-equiv="content-security-policy" content="${policy}"><link rel="stylesheet" href="./_astro/app.css"></head><body><script src="./_astro/app.js"></script></body></html>`;
   return new Map([
     ["index.html", html],
+    ["tools/index.html", html],
     ["fees/index.html", html],
     ["legal/index.html", html],
     [
@@ -24,7 +25,12 @@ function mutateAllHtml(
   files: Map<string, string>,
   fn: (html: string) => string,
 ) {
-  for (const key of ["index.html", "fees/index.html", "legal/index.html"])
+  for (const key of [
+    "index.html",
+    "tools/index.html",
+    "fees/index.html",
+    "legal/index.html",
+  ])
     files.set(key, fn(files.get(key)!));
 }
 function mutatePolicy(
@@ -38,6 +44,11 @@ function mutatePolicy(
 describe("release static artifact gate", () => {
   it("accepts self-hosted scripts/styles with strict CSP", () => {
     expect(validateArtifacts(fixture()).externalExecutable).toBe(0);
+  });
+  it("rejects a missing toolbox landing page", () => {
+    const files = fixture();
+    files.delete("tools/index.html");
+    expect(() => validateArtifacts(files)).toThrow("Missing required static page");
   });
   it.each([
     [

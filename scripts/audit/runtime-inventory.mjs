@@ -8,7 +8,6 @@ try {
   const page = await browser.newPage();
   let phase = "first load";
   const requests = [];
-  const violations = [];
   page.on("request", (request) =>
     requests.push({ phase, type: request.resourceType(), url: request.url() }),
   );

@@ -1,0 +1,36 @@
+{
+  "before": {
+    "pages": 3,
+    "js": 117,
+    "css": 1,
+    "files": 123,
+    "bytes": 3178667,
+    "largest_js": {
+      "path": "_astro/TradingApp.psgEthuH.js",
+      "bytes": 1441171
+    }
+  },
+  "after": {
+    "pages": 11,
+    "js": 122,
+    "css": 1,
+    "files": 136,
+    "bytes": 3231363,
+    "largest_js": {
+      "path": "_astro/Wallet.CN6rL4sq.js",
+      "bytes": 1182166
+    }
+  },
+  "delta": {
+    "pages": 8,
+    "js": 5,
+    "css": 0,
+    "files": 13,
+    "bytes": 52696
+  },
+  "largest_new_filename_js": {
+    "path": "_astro/Wallet.CN6rL4sq.js",
+    "bytes": 1182166
+  },
+  "calculator_external_js_requests": 0
+}

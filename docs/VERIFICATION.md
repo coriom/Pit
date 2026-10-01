@@ -2482,3 +2482,35 @@ RELEASE CHECK PASS — offline testnet candidate only; no live acceptance or dep
 ```
 
 The clean-tree run used the source commit shown in its output. This verification section and the full log are appended to that same phase commit afterward; no source or test code changes follow the run. Phase L changes neither the Phase H-live blocker nor Assumption 8's OPEN disposition: no dedicated public HTTPS origin or live transaction has been verified.
+
+## Phase M — toolbox foundation
+
+[Architecture, registry inventory, formulas and execution boundary](audit/phase-m/TOOLBOX-ARCHITECTURE.md) · [calculator request capture](audit/phase-m/calculator-inventory.json) · [build impact](audit/phase-m/build-impact.json) · [complete candidate artifact manifest](audit/phase-m/artifact-inventory.json) · [exact clean-tree release-check output](audit/phase-m/release-check.txt).
+
+Commands: `pnpm test`, `pnpm check`, `pnpm build`, `node scripts/release/artifacts.mjs`, `pnpm test:e2e`, `node scripts/audit/calculator-inventory.mjs` against a local production preview, and finally `pnpm release:check` from a clean committed tree. The request capture uses offline browser contexts after initial same-origin HTML/CSS loads; all three calculators report `afterLoadRequests: []` and `websockets: []`. The Playwright suite covers registry URLs, landing search, calculation, direct reload, offline/no-network use and disabled signing controls on direct execution URLs. The exact final suite totals and build hash appear in the linked release-check output.
+
+The existing execution preflight, fee-disabled flag, Taxlot schema and derivative evidence boundary are unchanged. Assumption 8 remains OPEN; Phase H-live acceptance remains blocked.
+
+The decisive lines from the exact 345-line clean-tree output are:
+
+```text
+Clean release source: a73dbf01c56522403937485c747019b888d78bd1
+PASS protected fee/network configuration: FEES_ENABLED=false; MAINNET_ENABLED=false; recipients/rates unchanged
+PASS exact Taxlot v1 schema SHA256 d8eb339ed7acd7da3b68ef09fe5c1b01c4cc3258cb401a4f2ba8805e7a3b07d7
+PASS origin policy: default-deny; production allowlist empty; legal page unchanged
+PASS tracked-file credential patterns and environment-file policy (not a proof against encoded secrets)
+PASS no direct analytics dependency or app-source analytics import
+ Test Files  17 passed (17)
+      Tests  116 passed (116)
+Result (76 files):
+- 0 errors
+- 0 warnings
+- 0 hints
+12:11:40 [build] 11 page(s) built in 21.97s
+Build SHA-256: 82b197be5ddb9db674e64e878e5c7787c4f8ef34c68d65fee01ee931bda23e24
+PASS static artifacts: 136 files; 11 HTML pages; 0 external scripts/styles; CSP, SRI, telemetry, secret, source-map and mainnet endpoint guards
+  22 passed (13.8s)
+RELEASE CHECK PASS — offline testnet candidate only; no live acceptance or deployment
+```
+
+The clean-tree run used the source commit shown above. Only this verification text and the exact log are added to the same phase commit afterward; no source or test code changes follow the run.

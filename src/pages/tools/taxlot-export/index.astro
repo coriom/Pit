@@ -1,0 +1,6 @@
+---
+import ToolLayout from "../../../components/ToolLayout.astro";
+import AccountingTool from "../../../components/AccountingTool";
+import { toolById } from "../../../lib/tool-registry";
+---
+<ToolLayout tool={toolById("taxlot-export")}><AccountingTool client:only="react" /></ToolLayout>

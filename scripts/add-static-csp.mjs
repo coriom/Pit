@@ -1,8 +1,19 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 const root = "dist";
-const pages = ["index.html", "fees/index.html", "legal/index.html"];
+async function htmlPages(dir = root) {
+  const pages = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) pages.push(...(await htmlPages(path)));
+    else if (entry.name.endsWith(".html"))
+      pages.push(path.slice(root.length + 1));
+  }
+  return pages.sort();
+}
+const pages = await htmlPages();
+if (!pages.length) throw new Error("No generated HTML pages for CSP headers");
 const policies = await Promise.all(
   pages.map(async (name) => {
     const html = await readFile(join(root, name), "utf8");

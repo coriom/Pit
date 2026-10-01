@@ -1,0 +1,6 @@
+---
+import ToolLayout from "../../../components/ToolLayout.astro";
+import WalletTool from "../../../components/WalletTool";
+import { toolById } from "../../../lib/tool-registry";
+---
+<ToolLayout tool={toolById("wallet")}><WalletTool client:only="react" /></ToolLayout>
