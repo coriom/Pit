@@ -10,13 +10,65 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("every registered tool has a production URL", async ({ page }) => {
+  const titles = new Set<string>();
+  const descriptions = new Set<string>();
   for (const tool of TOOLS) {
     const response = await page.goto(tool.path);
     expect(response?.status(), tool.path).toBe(200);
     await expect(
       page.getByRole("heading", { name: tool.title, exact: true }),
     ).toBeVisible();
+    const title = await page.title();
+    const description = await page
+      .locator('meta[name="description"]')
+      .getAttribute("content");
+    expect(title).toBe(`${tool.title} · PIT Toolbox`);
+    expect(description).toContain(tool.description);
+    expect(titles.has(title)).toBe(false);
+    expect(descriptions.has(description!)).toBe(false);
+    titles.add(title);
+    descriptions.add(description!);
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+      "content",
+      "noindex,nofollow",
+    );
+    await expect(page.locator('link[rel="canonical"]')).toHaveCount(0);
+    const structured = JSON.parse(
+      (await page.locator('script[type="application/ld+json"]').textContent())!,
+    );
+    expect(structured).toMatchObject({
+      "@type": "WebApplication",
+      name: tool.title,
+      applicationCategory: tool.category,
+    });
+    if (tool.executionMode === "execution") {
+      expect(structured.description).toContain("Testnet only.");
+      await expect(page.getByText("TESTNET PREVIEW")).toBeVisible();
+    }
+    for (const id of tool.relatedToolIds) {
+      const related = TOOLS.find((entry) => entry.id === id)!;
+      await expect(page.locator(`a[href="../${related.slug}/"]`)).toHaveCount(
+        1,
+      );
+    }
   }
+});
+
+test("unverified-origin robots policy withholds a sitemap", async ({
+  request,
+  page,
+}) => {
+  const robots = await request.get("/robots.txt");
+  expect(robots.ok()).toBe(true);
+  expect(await robots.text()).toBe("User-agent: *\nDisallow: /\n");
+  const sitemap = await request.get("/sitemap.xml");
+  expect(sitemap.status()).toBe(404);
+  await page.goto("/tools/");
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+    "content",
+    "noindex,nofollow",
+  );
+  await expect(page.locator('link[rel="canonical"]')).toHaveCount(0);
 });
 
 test("landing search, category and direct reload lead to a local calculation", async ({

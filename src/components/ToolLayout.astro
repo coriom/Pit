@@ -1,7 +1,10 @@
 ---
-import type { ToolDefinition } from "../lib/tool-registry";
+import { relatedTools, toolDiscoverability, type ToolDefinition } from "../lib/tool-registry";
 import "../styles/global.css";
 const { tool } = Astro.props as { tool: ToolDefinition };
+const seo = toolDiscoverability(tool);
+const jsonLd = JSON.stringify(seo.structuredData).replace(/</g, "\\u003c");
+const related = relatedTools(tool);
 const modeLabel = {
   local: "Local · no wallet or network",
   "read-only": "Read-only · no transaction",
@@ -12,8 +15,13 @@ const modeLabel = {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
-    <meta name="description" content={tool.description} />
-    <title>{tool.title} · PIT Toolbox</title>
+    <meta name="description" content={seo.description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="PIT" />
+    <meta property="og:title" content={seo.title} />
+    <meta property="og:description" content={seo.description} />
+    <script type="application/ld+json" set:html={jsonLd} />
+    <title>{seo.title}</title>
   </head>
   <body>
     <main class="shell">
@@ -29,6 +37,10 @@ const modeLabel = {
         <p class="tool-mode">{modeLabel}</p>
       </section>
       <slot />
+      <section aria-label="Other tools" class="panel">
+        <h2>Other tools</h2>
+        <ul>{related.map((entry) => <li><a href={`../${entry.slug}/`}>{entry.title}</a> · {entry.category} · {entry.executionMode}</li>)}</ul>
+      </section>
       <footer><a href="../">← All tools</a> · Non-custodial · No address analytics</footer>
     </main>
   </body>

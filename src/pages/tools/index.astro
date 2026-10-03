@@ -1,13 +1,17 @@
 ---
-import { TOOL_CATEGORIES, TOOLS } from "../../lib/tool-registry";
+import { TOOLBOX_PAGE, TOOL_CATEGORIES, TOOLS } from "../../lib/tool-registry";
 import "../../styles/global.css";
 ---
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
-    <meta name="description" content="PIT toolbox: choose a precise local or testnet tool." />
-    <title>PIT Toolbox</title>
+    <meta name="description" content={TOOLBOX_PAGE.description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="PIT" />
+    <meta property="og:title" content={TOOLBOX_PAGE.title} />
+    <meta property="og:description" content={TOOLBOX_PAGE.description} />
+    <title>{TOOLBOX_PAGE.title}</title>
   </head>
   <body>
     <main class="shell">

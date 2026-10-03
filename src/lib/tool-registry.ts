@@ -30,7 +30,13 @@ export type ToolDefinition = Readonly<{
   walletRequirement: "none" | "connected";
   networkRequirement: NetworkRequirement;
   status: ToolStatus;
+  relatedToolIds: readonly string[];
 }>;
+
+export const TOOLBOX_PAGE = {
+  title: "PIT Toolbox",
+  description: "PIT toolbox: choose a precise local or testnet tool.",
+} as const;
 
 export const TOOLS = [
   {
@@ -45,6 +51,7 @@ export const TOOLS = [
     walletRequirement: "connected",
     networkRequirement: "ethereum-sepolia",
     status: "testnet-only",
+    relatedToolIds: ["perps", "pnl"],
   },
   {
     id: "perps",
@@ -58,6 +65,7 @@ export const TOOLS = [
     walletRequirement: "connected",
     networkRequirement: "hyperliquid-testnet",
     status: "testnet-only",
+    relatedToolIds: ["swap", "liquidation"],
   },
   {
     id: "wallet",
@@ -71,6 +79,7 @@ export const TOOLS = [
     walletRequirement: "none",
     networkRequirement: "none",
     status: "available",
+    relatedToolIds: ["swap", "taxlot-export"],
   },
   {
     id: "pnl",
@@ -84,6 +93,7 @@ export const TOOLS = [
     walletRequirement: "none",
     networkRequirement: "none",
     status: "available",
+    relatedToolIds: ["liquidation", "impermanent-loss"],
   },
   {
     id: "liquidation",
@@ -96,6 +106,7 @@ export const TOOLS = [
     walletRequirement: "none",
     networkRequirement: "none",
     status: "available",
+    relatedToolIds: ["pnl", "perps"],
   },
   {
     id: "impermanent-loss",
@@ -108,6 +119,7 @@ export const TOOLS = [
     walletRequirement: "none",
     networkRequirement: "none",
     status: "available",
+    relatedToolIds: ["pnl"],
   },
   {
     id: "taxlot-export",
@@ -121,6 +133,7 @@ export const TOOLS = [
     walletRequirement: "connected",
     networkRequirement: "testnet-apis",
     status: "testnet-only",
+    relatedToolIds: ["wallet", "swap"],
   },
 ] as const satisfies readonly ToolDefinition[];
 
@@ -128,4 +141,27 @@ export function toolById(id: (typeof TOOLS)[number]["id"]) {
   const tool = TOOLS.find((entry) => entry.id === id);
   if (!tool) throw new Error(`Unknown tool: ${id}`);
   return tool;
+}
+
+export function toolDiscoverability(tool: ToolDefinition) {
+  const description = `${tool.description}${tool.status === "testnet-only" ? " Testnet only." : ""}`;
+  return {
+    title: `${tool.title} · PIT Toolbox`,
+    description,
+    structuredData: {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      name: tool.title,
+      description,
+      applicationCategory: tool.category,
+    },
+  } as const;
+}
+
+export function relatedTools(tool: ToolDefinition) {
+  return tool.relatedToolIds.map((id) => {
+    const related = TOOLS.find((entry) => entry.id === id);
+    if (!related) throw new Error(`Unknown related tool: ${id}`);
+    return related;
+  });
 }

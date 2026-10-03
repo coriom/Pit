@@ -2514,3 +2514,32 @@ RELEASE CHECK PASS — offline testnet candidate only; no live acceptance or dep
 ```
 
 The clean-tree run used the source commit shown above. Only this verification text and the exact log are added to the same phase commit afterward; no source or test code changes follow the run.
+
+## Phase N — registry-driven discoverability
+
+[Metadata architecture, complete route matrix, indexing activation rule, built JSON-LD and negative-guard evidence](audit/phase-n/DISCOVERABILITY.md) · [exact clean-tree release-check output](audit/phase-n/release-check.txt).
+
+The versioned policy is disabled: all 11 built pages emit `noindex,nofollow`, `robots.txt` disallows `/`, and no canonical production host or sitemap is generated. The new artifact guard checks metadata against the authoritative registry and confirms calculator/discovery HTML has no wallet/protocol JavaScript reference. Playwright checks actual served metadata and robots behavior. The separate Phase L artifact guard still validates CSP/SRI, telemetry, secrets, source maps and mainnet endpoints. See the linked exact log for complete command outputs and totals.
+
+The exact 351-line clean-tree `pnpm release:check` output is in the linked log. Decisive lines:
+
+```text
+Clean release source: 886149c0dc33e2b2e0e8e802f301fae7f11053f5
+ Test Files  18 passed (18)
+      Tests  124 passed (124)
+Result (79 files):
+- 0 errors
+- 0 warnings
+- 0 hints
+10:20:55 [build] 11 page(s) built in 17.37s
+Discoverability: 11 noindex pages; robots.txt; sitemap withheld
+Build SHA-256: 38da18fe32116bef0d89982bdba2d3f49c1332eae7d3fd3ada201471d72507e6
+PASS static artifacts: 137 files; 11 HTML pages; 0 external scripts/styles; CSP, SRI, telemetry, secret, source-map and mainnet endpoint guards
+PASS discoverability: 11 routes; 7 registry tool pages; 4 local/discovery pages without wallet or protocol JS; indexing policy and sitemap guards
+  23 passed (17.5s)
+RELEASE CHECK PASS — offline testnet candidate only; no live acceptance or deployment
+```
+
+The run used the clean source commit shown above. This verification text and the exact output log are appended to the same phase commit afterward; no source or test changes follow that run.
+
+Assumption 8 remains **OPEN**. This local static build neither deploys nor independently verifies a dedicated public HTTPS origin; live Phase H execution is still blocked by absent funded external testnet accounts and operator-approved signatures.

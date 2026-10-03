@@ -64,6 +64,7 @@ try {
   run("pnpm", ["check"]);
   run("pnpm", ["build"]);
   run("node", ["scripts/release/artifacts.mjs"]);
+  run("node", ["scripts/release/discoverability.mjs"]);
   // Browser tests exercise precisely the production build just created.
   run("pnpm", ["test:e2e"]);
   clean();

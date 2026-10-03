@@ -6,7 +6,7 @@
   "packageManager": "pnpm@10.17.1",
   "scripts": {
     "dev": "astro dev --host 127.0.0.1",
-    "build": "node scripts/generate-validator.mjs && astro build && node scripts/prepare-static.mjs && node scripts/add-static-csp.mjs && node scripts/build-manifest.mjs",
+    "build": "node scripts/generate-validator.mjs && astro build && node scripts/prepare-static.mjs && node scripts/discoverability.mjs && node scripts/add-static-csp.mjs && node scripts/build-manifest.mjs",
     "check": "astro check",
     "test": "vitest run",
     "test:e2e": "playwright test",
