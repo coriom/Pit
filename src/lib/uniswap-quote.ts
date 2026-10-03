@@ -45,10 +45,16 @@ export type UniswapReadOps = Readonly<{
   }): Promise<readonly [bigint, bigint, number, bigint]>;
 }>;
 
-export function publicUniswapReadOps(blockNumber?: bigint): UniswapReadOps {
+export function publicUniswapReadOps(
+  blockNumber?: bigint,
+  rpcFetch?: typeof fetch,
+): UniswapReadOps {
   const client = createPublicClient({
     chain: sepolia,
-    transport: http(publicRpc[11155111][0]),
+    transport: http(
+      publicRpc[11155111][0],
+      rpcFetch ? { fetchFn: rpcFetch, timeout: 8000, retryCount: 0 } : {},
+    ),
   });
   return {
     chainId: () => client.getChainId(),

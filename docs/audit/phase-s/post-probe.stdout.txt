@@ -1,0 +1,220 @@
+
+> pit@0.1.0 quotes:probe /home/corio/PIT
+> node scripts/audit/quotes-probe.mjs
+
+{
+  "runUtc": "2026-10-03T10:06:24.225Z",
+  "results": [
+    {
+      "status": "BLOCKED",
+      "startedUtc": "2026-10-03T10:06:14.683Z",
+      "finishedUtc": "2026-10-03T10:06:24.225Z",
+      "marketId": "sepolia-weth-circle-test-usdc",
+      "diagnosticFrom": "0x6f473606a9053ed49bbaa90c23f689348655c947",
+      "requestedQuality": "verified",
+      "block": null,
+      "tokens": [],
+      "intent": {
+        "chainId": 11155111,
+        "sellToken": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+        "buyToken": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+        "sellAmountText": "0.01",
+        "direction": "exact-in"
+      },
+      "outcomes": [
+        {
+          "provider": "cow",
+          "availability": "available",
+          "quote": {
+            "provider": "cow",
+            "availability": "available",
+            "chainId": 11155111,
+            "sellToken": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+            "buyToken": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+            "direction": "exact-in",
+            "sellDecimals": 18,
+            "buyDecimals": 6,
+            "sellAmount": "10000000000000000",
+            "swapInputSellAmount": "9739564939411786",
+            "buyAmount": "442398381",
+            "minimumReceiveBuyAmount": "440186390",
+            "protocolFee": {
+              "amount": "88497",
+              "token": "buy",
+              "ratePpm": 200,
+              "includedInBuyAmount": true
+            },
+            "networkCostSellAmount": "260435060588214",
+            "estimatedGasUnits": null,
+            "gasEstimateScope": "none",
+            "singlePoolAddress": null,
+            "pitFeeBuyAmount": "0",
+            "quotedAtMs": 1791021984224,
+            "expiresAtMs": 1791022044224,
+            "executableThroughPit": false,
+            "diagnosticOnly": true
+          }
+        },
+        {
+          "provider": "uniswap-v3",
+          "availability": "unavailable",
+          "reason": "PROVIDER_ERROR"
+        }
+      ],
+      "ranking": {
+        "comparable": false,
+        "reason": "NONE",
+        "fresh": [
+          {
+            "provider": "cow",
+            "availability": "available",
+            "chainId": 11155111,
+            "sellToken": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+            "buyToken": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+            "direction": "exact-in",
+            "sellDecimals": 18,
+            "buyDecimals": 6,
+            "sellAmount": "10000000000000000",
+            "swapInputSellAmount": "9739564939411786",
+            "buyAmount": "442398381",
+            "minimumReceiveBuyAmount": "440186390",
+            "protocolFee": {
+              "amount": "88497",
+              "token": "buy",
+              "ratePpm": 200,
+              "includedInBuyAmount": true
+            },
+            "networkCostSellAmount": "260435060588214",
+            "estimatedGasUnits": null,
+            "gasEstimateScope": "none",
+            "singlePoolAddress": null,
+            "pitFeeBuyAmount": "0",
+            "quotedAtMs": 1791021984224,
+            "expiresAtMs": 1791022044224,
+            "executableThroughPit": false,
+            "diagnosticOnly": true
+          }
+        ],
+        "bestProviderIds": []
+      },
+      "classes": [
+        {
+          "provider": "cow",
+          "classification": "QUOTE_OK",
+          "availability": "available"
+        },
+        {
+          "provider": "uniswap-v3",
+          "classification": "RATE_LIMITED_OR_UNREACHABLE",
+          "availability": "unavailable",
+          "error": "HTTP request failed.\n\nURL: https://ethereum-sepolia-rpc.publicnode.com/\nRequest body: {\"method\":\"eth_chainId\"}\n\nDetails: The operation was aborted due to timeout\nVersion: viem@2.57.0"
+        }
+      ],
+      "poolState": null,
+      "raw": {
+        "cow": {
+          "request": {
+            "from": "0x6f473606a9053ed49bbaa90c23f689348655c947",
+            "sellToken": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+            "buyToken": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+            "kind": "sell",
+            "sellAmountBeforeFee": "10000000000000000",
+            "validFor": 1200,
+            "priceQuality": "verified",
+            "signingScheme": "eip712"
+          },
+          "response": {
+            "quote": {
+              "sellToken": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+              "buyToken": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+              "receiver": null,
+              "sellAmount": "9739564939411786",
+              "buyAmount": "442398381",
+              "validTo": 1791023184,
+              "appData": "public-hash:00000000000000000000000000000000:00000000000000000000000000000000",
+              "feeAmount": "260435060588214",
+              "gasAmount": "244203",
+              "gasPrice": "1066469538",
+              "sellTokenPrice": "1",
+              "kind": "sell",
+              "partiallyFillable": false,
+              "sellTokenBalance": "erc20",
+              "buyTokenBalance": "erc20",
+              "signingScheme": "eip712"
+            },
+            "from": "0x6f473606a9053ed49bbaa90c23f689348655c947",
+            "expiration": "2026-10-03T10:08:24.042899738Z",
+            "id": 1658166,
+            "verified": true,
+            "protocolFeeBps": "2"
+          },
+          "amounts": {
+            "isSell": true,
+            "costs": {
+              "networkFee": {
+                "amountInSellCurrency": "260435060588214",
+                "amountInBuyCurrency": "11829691"
+              },
+              "partnerFee": {
+                "amount": "0",
+                "bps": 0
+              },
+              "protocolFee": {
+                "amount": "88497",
+                "bps": 2
+              }
+            },
+            "beforeAllFees": {
+              "sellAmount": "10000000000000000",
+              "buyAmount": "454316569"
+            },
+            "beforeNetworkCosts": {
+              "sellAmount": "10000000000000000",
+              "buyAmount": "454228072"
+            },
+            "afterProtocolFees": {
+              "sellAmount": "10000000000000000",
+              "buyAmount": "454228072"
+            },
+            "afterNetworkCosts": {
+              "sellAmount": "9739564939411786",
+              "buyAmount": "442398381"
+            },
+            "afterPartnerFees": {
+              "sellAmount": "9739564939411786",
+              "buyAmount": "442398381"
+            },
+            "afterSlippage": {
+              "sellAmount": "9739564939411786",
+              "buyAmount": "440186390"
+            },
+            "amountsToSign": {
+              "sellAmount": "10000000000000000",
+              "buyAmount": "440186390"
+            }
+          }
+        },
+        "uniswap": [],
+        "metadataError": "HTTP request failed.\n\nURL: https://ethereum-sepolia-rpc.publicnode.com/\nRequest body: {\"method\":\"eth_chainId\"}\n\nDetails: The operation was aborted due to timeout\nVersion: viem@2.57.0",
+        "metadataErrorCauses": [
+          {
+            "name": "HttpRequestError",
+            "code": null
+          },
+          {
+            "name": "TimeoutError",
+            "code": 23
+          }
+        ],
+        "uniswapProviderError": "HTTP request failed.\n\nURL: https://ethereum-sepolia-rpc.publicnode.com/\nRequest body: {\"method\":\"eth_chainId\"}\n\nDetails: The operation was aborted due to timeout\nVersion: viem@2.57.0",
+        "uniswapProviderErrorCauses": [
+          {
+            "name": "Error",
+            "code": null
+          }
+        ]
+      }
+    }
+  ]
+}
+ ELIFECYCLE  Command failed with exit code 2.

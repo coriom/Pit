@@ -49,6 +49,7 @@ const LABEL = "PIT-Q-DIAGNOSTIC-NON-SIGNING-ADDRESS-v1";
 export const DIAGNOSTIC_FROM =
   `0x${keccak256(toBytes(LABEL)).slice(-40)}` as Address;
 export const DIAGNOSTIC_QUALITY = PriceQuality.VERIFIED;
+export const DIAGNOSTIC_RPC_URL = publicRpc[11155111][0];
 const quoteAbi = parseAbi([
   "function quoteExactInputSingle((address tokenIn, address tokenOut, uint256 amountIn, uint24 fee, uint160 sqrtPriceLimitX96) params) returns (uint256 amountOut, uint160 sqrtPriceX96After, uint32 initializedTicksCrossed, uint256 gasEstimate)",
 ]);
@@ -93,6 +94,26 @@ export function classifyDiagnosticError(message: string): DiagnosticClass {
 }
 const errorText = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
+// Error messages can contain URLs; report only typed causes in machine output.
+export function diagnosticErrorCauses(error: unknown) {
+  const causes: Array<{ name: string; code: string | number | null }> = [];
+  const seen = new Set<object>();
+  let current = error;
+  while (current && typeof current === "object" && causes.length < 6) {
+    if (seen.has(current)) break;
+    seen.add(current);
+    const item = current as { name?: unknown; code?: unknown; cause?: unknown };
+    causes.push({
+      name: typeof item.name === "string" ? item.name : "Error",
+      code:
+        typeof item.code === "string" || typeof item.code === "number"
+          ? item.code
+          : null,
+    });
+    current = item.cause;
+  }
+  return causes;
+}
 
 export async function diagnosticCowQuote(
   intent: QuoteIntent,
@@ -165,6 +186,7 @@ export async function probeDiagnosticMarket(
   dependencies: {
     cow?: typeof diagnosticCowQuote;
     uniswap?: QuoteProvider;
+    rpcFetch?: typeof fetch;
   } = {},
 ) {
   const startedUtc = new Date().toISOString();
@@ -178,11 +200,16 @@ export async function probeDiagnosticMarket(
     throw new Error("CONFIG_INVALID: release flags or amount index");
   const client = createPublicClient({
     chain: sepolia,
-    transport: http(publicRpc[11155111][0], { timeout: 12000, retryCount: 0 }),
+    transport: http(DIAGNOSTIC_RPC_URL, {
+      timeout: dependencies.rpcFetch ? 8000 : 12000,
+      retryCount: 0,
+      ...(dependencies.rpcFetch ? { fetchFn: dependencies.rpcFetch } : {}),
+    }),
   });
   let block: Awaited<ReturnType<typeof client.getBlock>> | undefined;
   let tokens: unknown[] = [];
   let metadataError: string | null = null;
+  let metadataErrorCauses: ReturnType<typeof diagnosticErrorCauses> = [];
   try {
     if ((await client.getChainId()) !== 11155111)
       throw new Error("CONFIG_INVALID: RPC chain");
@@ -215,6 +242,7 @@ export async function probeDiagnosticMarket(
   } catch (error) {
     if (errorText(error).startsWith("CONFIG_INVALID")) throw error;
     metadataError = errorText(error);
+    metadataErrorCauses = diagnosticErrorCauses(error);
   }
   const amountText = market.sellAmounts[amountIndex];
   const amount = parseUnits(amountText, market.sell.decimals);
@@ -229,8 +257,11 @@ export async function probeDiagnosticMarket(
     cow: null,
     uniswap: [],
     metadataError,
+    metadataErrorCauses,
   };
-  const uniswapBase = block ? publicUniswapReadOps(block.number!) : null;
+  const uniswapBase = block
+    ? publicUniswapReadOps(block.number!, dependencies.rpcFetch)
+    : null;
   const uniOps =
     uniswapBase && block
       ? {
@@ -320,6 +351,7 @@ export async function probeDiagnosticMarket(
         return await uniBase.quote(input);
       } catch (error) {
         raw.uniswapProviderError = errorText(error);
+        raw.uniswapProviderErrorCauses = diagnosticErrorCauses(error);
         throw error;
       }
     },

@@ -1,6 +1,7 @@
 import { build } from "esbuild";
 import { mkdir } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
+import { createProbeFetch, probeExitCode } from "./quote-probe-runtime.mjs";
 
 await mkdir(".astro", { recursive: true });
 await build({
@@ -11,13 +12,16 @@ await build({
   platform: "node",
   format: "esm",
 });
-const { probeDiagnosticMarket } = await import(
+const { DIAGNOSTIC_RPC_URL, probeDiagnosticMarket } = await import(
   pathToFileURL(`${process.cwd()}/.astro/quote-probe.mjs`).href
 );
+const rpcFetch = createProbeFetch(DIAGNOSTIC_RPC_URL);
 const output = [];
 for (const amountIndex of [0, 1]) {
   try {
-    const result = await probeDiagnosticMarket(undefined, amountIndex);
+    const result = await probeDiagnosticMarket(undefined, amountIndex, {
+      rpcFetch,
+    });
     output.push(result);
     if (result.status === "COMPARISON_OK") break;
     if (
@@ -42,8 +46,4 @@ console.log(
     2,
   ),
 );
-process.exitCode = output.some((item) => item.status === "COMPARISON_OK")
-  ? 0
-  : output.some((item) => item.status === "CONFIG_OR_READ_FAILURE")
-    ? 3
-    : 2;
+process.exitCode = probeExitCode(output);

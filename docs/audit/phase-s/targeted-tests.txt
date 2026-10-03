@@ -1,0 +1,11 @@
+
+ RUN  v3.2.7 /home/corio/PIT
+
+ ✓ tests/diagnostic-quotes.test.ts (3 tests) 13ms
+ ✓ tests/quote-probe-runtime.test.ts (4 tests) 352ms
+   ✓ bounds a transient retry and preserves a rate-limit Retry-After beyond the budget  308ms
+
+ Test Files  2 passed (2)
+      Tests  7 passed (7)
+   Start at  18:13:59
+   Duration  1.60s (transform 260ms, setup 47ms, collect 1.74s, tests 366ms, environment 1ms, prepare 254ms)

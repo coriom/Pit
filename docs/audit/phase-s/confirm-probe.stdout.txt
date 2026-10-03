@@ -1,0 +1,301 @@
+
+> pit@0.1.0 quotes:probe /home/corio/PIT
+> node scripts/audit/quotes-probe.mjs
+
+{
+  "runUtc": "2026-10-03T10:06:48.039Z",
+  "results": [
+    {
+      "status": "COMPARISON_OK",
+      "startedUtc": "2026-10-03T10:06:41.764Z",
+      "finishedUtc": "2026-10-03T10:06:48.039Z",
+      "marketId": "sepolia-weth-circle-test-usdc",
+      "diagnosticFrom": "0x6f473606a9053ed49bbaa90c23f689348655c947",
+      "requestedQuality": "verified",
+      "block": {
+        "number": "11835085",
+        "hash": "public-hash:e5774d0d4e60945b05f2f678c3a1d1b7:39670807e05692903aaa392ebef7cbc0"
+      },
+      "tokens": [
+        {
+          "address": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+          "codePresent": true,
+          "codeKeccak256": "public-hash:c864e10689f2da18833652a3b075d431:06e87f0f90d95ee64f6f0b33bc026083",
+          "decimals": 18
+        },
+        {
+          "address": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+          "codePresent": true,
+          "codeKeccak256": "public-hash:cd3f29e2ea9c61dadd48bfeaf8b2884b:6de9dfee7bf45329452c4c33d0868ceb",
+          "decimals": 6
+        }
+      ],
+      "intent": {
+        "chainId": 11155111,
+        "sellToken": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+        "buyToken": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+        "sellAmountText": "0.01",
+        "direction": "exact-in"
+      },
+      "outcomes": [
+        {
+          "provider": "cow",
+          "availability": "available",
+          "quote": {
+            "provider": "cow",
+            "availability": "available",
+            "chainId": 11155111,
+            "sellToken": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+            "buyToken": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+            "direction": "exact-in",
+            "sellDecimals": 18,
+            "buyDecimals": 6,
+            "sellAmount": "10000000000000000",
+            "swapInputSellAmount": "9728415349121215",
+            "buyAmount": "441891935",
+            "minimumReceiveBuyAmount": "439682476",
+            "protocolFee": {
+              "amount": "88396",
+              "token": "buy",
+              "ratePpm": 200,
+              "includedInBuyAmount": true
+            },
+            "networkCostSellAmount": "271584650878785",
+            "estimatedGasUnits": null,
+            "gasEstimateScope": "none",
+            "singlePoolAddress": null,
+            "pitFeeBuyAmount": "0",
+            "quotedAtMs": 1791022006361,
+            "expiresAtMs": 1791022066361,
+            "executableThroughPit": false,
+            "diagnosticOnly": true
+          }
+        },
+        {
+          "provider": "uniswap-v3",
+          "availability": "available",
+          "quote": {
+            "provider": "uniswap-v3",
+            "availability": "available",
+            "chainId": 11155111,
+            "sellToken": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+            "buyToken": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+            "direction": "exact-in",
+            "sellDecimals": 18,
+            "buyDecimals": 6,
+            "sellAmount": "10000000000000000",
+            "swapInputSellAmount": "10000000000000000",
+            "buyAmount": "566804400",
+            "minimumReceiveBuyAmount": null,
+            "protocolFee": {
+              "amount": null,
+              "token": "sell",
+              "ratePpm": 500,
+              "includedInBuyAmount": true
+            },
+            "networkCostSellAmount": null,
+            "estimatedGasUnits": "123373",
+            "gasEstimateScope": "quoter-internal-only",
+            "singlePoolAddress": "0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1",
+            "pitFeeBuyAmount": "0",
+            "quotedAtMs": 1791022006827,
+            "expiresAtMs": 1791022036827,
+            "executableThroughPit": false
+          }
+        }
+      ],
+      "ranking": {
+        "comparable": true,
+        "reason": "NONE",
+        "fresh": [
+          {
+            "provider": "cow",
+            "availability": "available",
+            "chainId": 11155111,
+            "sellToken": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+            "buyToken": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+            "direction": "exact-in",
+            "sellDecimals": 18,
+            "buyDecimals": 6,
+            "sellAmount": "10000000000000000",
+            "swapInputSellAmount": "9728415349121215",
+            "buyAmount": "441891935",
+            "minimumReceiveBuyAmount": "439682476",
+            "protocolFee": {
+              "amount": "88396",
+              "token": "buy",
+              "ratePpm": 200,
+              "includedInBuyAmount": true
+            },
+            "networkCostSellAmount": "271584650878785",
+            "estimatedGasUnits": null,
+            "gasEstimateScope": "none",
+            "singlePoolAddress": null,
+            "pitFeeBuyAmount": "0",
+            "quotedAtMs": 1791022006361,
+            "expiresAtMs": 1791022066361,
+            "executableThroughPit": false,
+            "diagnosticOnly": true
+          },
+          {
+            "provider": "uniswap-v3",
+            "availability": "available",
+            "chainId": 11155111,
+            "sellToken": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+            "buyToken": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+            "direction": "exact-in",
+            "sellDecimals": 18,
+            "buyDecimals": 6,
+            "sellAmount": "10000000000000000",
+            "swapInputSellAmount": "10000000000000000",
+            "buyAmount": "566804400",
+            "minimumReceiveBuyAmount": null,
+            "protocolFee": {
+              "amount": null,
+              "token": "sell",
+              "ratePpm": 500,
+              "includedInBuyAmount": true
+            },
+            "networkCostSellAmount": null,
+            "estimatedGasUnits": "123373",
+            "gasEstimateScope": "quoter-internal-only",
+            "singlePoolAddress": "0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1",
+            "pitFeeBuyAmount": "0",
+            "quotedAtMs": 1791022006827,
+            "expiresAtMs": 1791022036827,
+            "executableThroughPit": false
+          }
+        ],
+        "bestProviderIds": [
+          "uniswap-v3"
+        ]
+      },
+      "classes": [
+        {
+          "provider": "cow",
+          "classification": "QUOTE_OK",
+          "availability": "available"
+        },
+        {
+          "provider": "uniswap-v3",
+          "classification": "QUOTE_OK",
+          "availability": "available"
+        }
+      ],
+      "poolState": {
+        "address": "0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1",
+        "token0": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+        "token1": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+        "fee": 500,
+        "initialized": true,
+        "sqrtPriceX96": "332672799133104215935019476629535"
+      },
+      "raw": {
+        "cow": {
+          "request": {
+            "from": "0x6f473606a9053ed49bbaa90c23f689348655c947",
+            "sellToken": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+            "buyToken": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+            "kind": "sell",
+            "sellAmountBeforeFee": "10000000000000000",
+            "validFor": 1200,
+            "priceQuality": "verified",
+            "signingScheme": "eip712"
+          },
+          "response": {
+            "quote": {
+              "sellToken": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+              "buyToken": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+              "receiver": null,
+              "sellAmount": "9728415349121215",
+              "buyAmount": "441891935",
+              "validTo": 1791023206,
+              "appData": "public-hash:00000000000000000000000000000000:00000000000000000000000000000000",
+              "feeAmount": "271584650878785",
+              "gasAmount": "244203",
+              "gasPrice": "1112126595",
+              "sellTokenPrice": "1",
+              "kind": "sell",
+              "partiallyFillable": false,
+              "sellTokenBalance": "erc20",
+              "buyTokenBalance": "erc20",
+              "signingScheme": "eip712"
+            },
+            "from": "0x6f473606a9053ed49bbaa90c23f689348655c947",
+            "expiration": "2026-10-03T10:08:46.556408249Z",
+            "id": 1657994,
+            "verified": true,
+            "protocolFeeBps": "2"
+          },
+          "amounts": {
+            "isSell": true,
+            "costs": {
+              "networkFee": {
+                "amountInSellCurrency": "271584650878785",
+                "amountInBuyCurrency": "12336137"
+              },
+              "partnerFee": {
+                "amount": "0",
+                "bps": 0
+              },
+              "protocolFee": {
+                "amount": "88396",
+                "bps": 2
+              }
+            },
+            "beforeAllFees": {
+              "sellAmount": "10000000000000000",
+              "buyAmount": "454316468"
+            },
+            "beforeNetworkCosts": {
+              "sellAmount": "10000000000000000",
+              "buyAmount": "454228072"
+            },
+            "afterProtocolFees": {
+              "sellAmount": "10000000000000000",
+              "buyAmount": "454228072"
+            },
+            "afterNetworkCosts": {
+              "sellAmount": "9728415349121215",
+              "buyAmount": "441891935"
+            },
+            "afterPartnerFees": {
+              "sellAmount": "9728415349121215",
+              "buyAmount": "441891935"
+            },
+            "afterSlippage": {
+              "sellAmount": "9728415349121215",
+              "buyAmount": "439682476"
+            },
+            "amountsToSign": {
+              "sellAmount": "10000000000000000",
+              "buyAmount": "439682476"
+            }
+          }
+        },
+        "uniswap": [
+          {
+            "fee": 3000,
+            "request": {
+              "to": "0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3",
+              "data": "0xc6a5026a000000000000000000000000fff9976782d46cc05630d1f6ebab18b2324d6b140000000000000000000000001c7d4b196cb0c7b01d743fbc6116a902379c7238000000000000000000000000000000000000000000000000002386f26fc100000000000000000000000000000000000000000000000000000000000000000bb80000000000000000000000000000000000000000000000000000000000000000",
+              "block": "0xb496cd"
+            },
+            "response": "0x000000000000000000000000000000000000000000000000000000001b00fce50000000000000000000000000000000000001253aad9a3db7b7a14e178237ef600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000016cd3"
+          },
+          {
+            "fee": 500,
+            "request": {
+              "to": "0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3",
+              "data": "0xc6a5026a000000000000000000000000fff9976782d46cc05630d1f6ebab18b2324d6b140000000000000000000000001c7d4b196cb0c7b01d743fbc6116a902379c7238000000000000000000000000000000000000000000000000002386f26fc1000000000000000000000000000000000000000000000000000000000000000001f40000000000000000000000000000000000000000000000000000000000000000",
+              "block": "0xb496cd"
+            },
+            "response": "0x0000000000000000000000000000000000000000000000000000000021c8bfb00000000000000000000000000000000000001067a360902a2f66534c39ab815c0000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000001e1ed"
+          }
+        ],
+        "metadataError": null,
+        "metadataErrorCauses": []
+      }
+    }
+  ]
+}
