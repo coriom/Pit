@@ -1,0 +1,2 @@
+STATIC ARTIFACT CHECK FAILED: Secret-like value in artifact: _astro/Swap.fixture.js
+matched substring: https://developers.uniswap.org/docs/protocols/v3/deployments/v3-ethereum-deployments

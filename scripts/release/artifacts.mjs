@@ -11,8 +11,31 @@ const allowedConnect = new Set([
 ]);
 const analytics =
   /google-analytics\.com|googletagmanager\.com|analytics\.google\.com|api\.segment\.io|cdn\.segment\.com|api\.mixpanel\.com|posthog\.com|hotjar\.com|fullstory\.com|sentry\.io/i;
-const secret =
-  /(?:PRIVATE[_-]?KEY|API[_-]?KEY|API[_-]?SECRET|MNEMONIC|SEED[_-]?PHRASE|ACCESS[_-]?TOKEN)\s*[=:]\s*["']?[A-Za-z0-9_./+\-=]{16,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|https?:\/\/[^\s"']+\/v[23]\/[^\s"']{20,}/i;
+// Independent checks scan the full body: accepting one public URL cannot mask
+// a second candidate beside it. No domain, file, or value is allowlisted.
+const secretPatterns = [
+  [
+    "assignment",
+    /(?:PRIVATE[_-]?KEY|API[_-]?KEY|API[_-]?SECRET|MNEMONIC|SEED[_-]?PHRASE|ACCESS[_-]?TOKEN)\s*[=:]\s*["']?[A-Za-z0-9_./+\-=]{16,}/i,
+  ],
+  ["private-key-pem", /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/i],
+  ["url-userinfo", /https?:\/\/[^\s/:@"'<>]+:[^\s/@"'<>]+@[^\s"'<>]+/i],
+  [
+    "url-sensitive-query",
+    /https?:\/\/[^\s"'<>]*[?&](?:api[_-]?key|api[_-]?token|token|secret|password|client[_-]?secret)=[A-Za-z0-9_%+.-]+/i,
+  ],
+  // A single opaque ID directly after /v2/ or /v3/ remains suspect. The old
+  // rule crossed further path separators and caught ordinary documentation.
+  [
+    "url-opaque-version-id",
+    /https?:\/\/[^\s"'<>]*?\/v[23]\/[A-Za-z0-9_-]{20,}(?![A-Za-z0-9_-])/i,
+  ],
+];
+export function artifactSecretKind(body) {
+  for (const [kind, pattern] of secretPatterns)
+    if (pattern.test(body)) return kind;
+  return null;
+}
 const mainnetExecution =
   /https:\/\/(?:api\.cow\.fi\/(?:mainnet|base|arbitrum)|api\.hyperliquid\.xyz\/(?:exchange|info)|rpc\.hyperliquid\.xyz\/[^"'\s]+)/i;
 const analyticsPackage =
@@ -75,7 +98,7 @@ export function validateArtifacts(files) {
       throw Error(`Source map leakage: ${name}`);
     if (analytics.test(body))
       throw Error(`Analytics endpoint in artifact: ${name}`);
-    if (secret.test(body))
+    if (artifactSecretKind(body))
       throw Error(`Secret-like value in artifact: ${name}`);
     if (mainnetExecution.test(body))
       throw Error(`Mainnet execution endpoint in artifact: ${name}`);

@@ -1,0 +1,45 @@
+
+ RUN  v3.2.7 /home/corio/PIT
+
+ ✓ tests/unit/static-artifacts.test.ts > release static artifact gate > accepts self-hosted scripts/styles with strict CSP 6ms
+ ✓ tests/unit/static-artifacts.test.ts > release static artifact gate > rejects a missing toolbox landing page 1ms
+ ✓ tests/unit/static-artifacts.test.ts > release static artifact gate > rejects remote script without SRI 1ms
+ ✓ tests/unit/static-artifacts.test.ts > release static artifact gate > rejects unquoted remote script 1ms
+ ✓ tests/unit/static-artifacts.test.ts > release static artifact gate > rejects protocol-relative remote script 1ms
+ ✓ tests/unit/static-artifacts.test.ts > release static artifact gate > rejects remote stylesheet without SRI 1ms
+ ✓ tests/unit/static-artifacts.test.ts > release static artifact gate > rejects remote script with SRI but no CORS 1ms
+ ✓ tests/unit/static-artifacts.test.ts > release static artifact gate > rejects unsafe eval 0ms
+ ✓ tests/unit/static-artifacts.test.ts > release static artifact gate > rejects wildcard CSP 1ms
+ ✓ tests/unit/static-artifacts.test.ts > release static artifact gate > rejects mainnet CSP host 1ms
+ ✓ tests/unit/static-artifacts.test.ts > release static artifact gate > rejects analytics endpoint 0ms
+ ✓ tests/unit/static-artifacts.test.ts > release static artifact gate > rejects secret-like value 0ms
+ ✓ tests/unit/static-artifacts.test.ts > release static artifact gate > rejects source map 0ms
+ ✓ tests/unit/static-artifacts.test.ts > release static artifact gate > rejects mainnet execution endpoint 0ms
+ ✓ tests/unit/static-artifacts.test.ts > release static artifact gate > rejects external CSS import 0ms
+ ✓ tests/unit/static-artifacts.test.ts > release static artifact gate > rejects external CSS font or image 0ms
+ ✓ tests/unit/static-artifacts.test.ts > public documentation URL and credential URL classification > accepts the original literal URL in source and built-style JavaScript 1ms
+ ✓ tests/unit/static-artifacts.test.ts > public documentation URL and credential URL classification > still rejects an independent assignment beside the public URL 0ms
+ ✓ tests/unit/static-artifacts.test.ts > public documentation URL and credential URL classification > rejects credential-shaped URL userinfo and sensitive query values 1ms
+ ✓ tests/unit/static-artifacts.test.ts > public documentation URL and credential URL classification > does not grant trust to a lookalike host or nested public URL 1ms
+ ✓ tests/unit/static-artifacts.test.ts > public documentation URL and credential URL classification > rejects a changed opaque value regardless of artifact location 0ms
+ ✓ tests/unit/static-artifacts.test.ts > analytics dependency gate > accepts PIT's package and source fixture 1ms
+ ✓ tests/unit/static-artifacts.test.ts > analytics dependency gate > rejects a direct analytics package 1ms
+ ✓ tests/unit/static-artifacts.test.ts > analytics dependency gate > rejects an app-source telemetry import 0ms
+ ✓ tests/release-invariants.test.ts > release invariant verifier accepts the exact protected configuration 6ms
+ ✓ tests/release-invariants.test.ts > release invariant fails closed when src/lib/config.ts changes 1ms
+ ✓ tests/release-invariants.test.ts > release invariant fails closed when src/lib/storage-origins.ts changes 1ms
+ ✓ tests/release-invariants.test.ts > release invariant fails closed when src/lib/storage-policy.ts changes 1ms
+ ✓ tests/release-invariants.test.ts > release invariant fails closed when schemas/events.v1.json changes 1ms
+ ✓ tests/release-invariants.test.ts > release invariant fails closed when .env.example changes 0ms
+ ✓ tests/release-invariants.test.ts > release invariant fails closed when src/pages/legal.astro changes 0ms
+ ✓ tests/release-invariants.test.ts > release refuses tracked .env.local without printing contents 1ms
+ ✓ tests/release-invariants.test.ts > release refuses tracked nested/.env without printing contents 1ms
+ ✓ tests/release-invariants.test.ts > release refuses tracked wallet.keystore without printing contents 1ms
+ ✓ tests/release-invariants.test.ts > release refuses a credential assignment assembled solely in memory 1ms
+ ✓ tests/release-invariants.test.ts > release refuses an unreviewed private-key-shaped value in docs evidence 2ms
+ ✓ tests/release-invariants.test.ts > tracked source accepts the public URL but rejects a neighboring credential 2ms
+
+ Test Files  2 passed (2)
+      Tests  37 passed (37)
+   Start at  17:36:13
+   Duration  692ms (transform 141ms, setup 51ms, collect 129ms, tests 41ms, environment 1ms, prepare 284ms)

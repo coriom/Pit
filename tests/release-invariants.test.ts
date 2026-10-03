@@ -31,3 +31,19 @@ it("release refuses a credential assignment assembled solely in memory", () => {
   );
   expect(() => validateTrackedFiles(files)).toThrow("Credential candidate");
 });
+it("release refuses an unreviewed private-key-shaped value in docs evidence", () => {
+  const files = original();
+  files.set("docs/evidence.txt", Buffer.from("0x" + "a".repeat(64)));
+  expect(() => validateTrackedFiles(files)).toThrow("Credential candidate");
+});
+it("tracked source accepts the public URL but rejects a neighboring credential", () => {
+  const files = original();
+  const source = readFileSync("src/lib/quote-markets.ts");
+  files.set("src/lib/quote-markets.ts", source);
+  expect(() => validateTrackedFiles(files)).not.toThrow();
+  files.set(
+    "src/lib/quote-markets.ts",
+    Buffer.from(source.toString() + ["API_", "KEY=", '"syntheticvalue123456"'].join("")),
+  );
+  expect(() => validateTrackedFiles(files)).toThrow("Credential candidate");
+});

@@ -1,0 +1,18 @@
+{
+  "sourceLiteralPresent": true,
+  "workaroundSymbolPresent": false,
+  "trackedScan": "PASS",
+  "trackedFileCount": 217,
+  "artifactHits": [
+    {
+      "name": "_astro/Swap.DzbFUzpB.js",
+      "exactLiteral": true,
+      "secretKind": null
+    }
+  ],
+  "artifactValidation": {
+    "html": 11,
+    "files": 137,
+    "externalExecutable": 0
+  }
+}

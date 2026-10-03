@@ -1,12 +1,6 @@
 import { isAddress } from "viem";
 
 export const QUOTE_MARKET_VERSION = 1 as const;
-// A public docs URL, assembled transparently so the artifact guard's broad
-// credential-URL pattern does not mistake its /v3/ documentation path for a key.
-const uniswapDeploymentSource = new URL(
-  "v3-ethereum-deployments",
-  "https://developers.uniswap.org/docs/protocols/v3/deployments/",
-).href;
 const WETH_SEPOLIA = "0xfff9976782d46cc05630d1f6ebab18b2324d6b14";
 const CIRCLE_TEST_USDC_SEPOLIA = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
 export const quoteMarkets = [
@@ -19,7 +13,8 @@ export const quoteMarkets = [
       decimals: 18,
       displaySymbol: "WETH",
       displayName: "Wrapped Ether",
-      source: uniswapDeploymentSource,
+      source:
+        "https://developers.uniswap.org/docs/protocols/v3/deployments/v3-ethereum-deployments",
       retrievedUtc: "2026-10-03",
       codeKeccak256:
         "hex:c864e10689f2da18833652a3b075d43106e87f0f90d95ee64f6f0b33bc026083",

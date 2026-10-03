@@ -1,0 +1,6 @@
+fixture source field: src/lib/quote-markets.ts -> quoteMarkets[0].sell.source
+literal present in source: true
+original rule alternative: https?:\/\/[^\s"']+\/v[23]\/[^\s"']{20,}
+isolated artifact context: source:"https://developers.uniswap.org/docs/protocols/v3/deployments/v3-ethereum-deployments"
+matched substring: https://developers.uniswap.org/docs/protocols/v3/deployments/v3-ethereum-deployments
+original rule match: true
