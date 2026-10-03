@@ -76,8 +76,12 @@ it("direct execution with wrong chain or disconnected wallet never invokes provi
   await expect(
     placePerp({} as never, 0, true, "2000", "1", false),
   ).rejects.toThrow("DISCONNECTED");
-  await expect(approveSwap({} as never)).rejects.toThrow("QUOTE_EXPIRED");
-  await expect(submitSwap({} as never)).rejects.toThrow("QUOTE_EXPIRED");
+  await expect(approveSwap({} as never)).rejects.toThrow(
+    "INVALID_EXECUTION_QUOTE",
+  );
+  await expect(submitSwap({} as never)).rejects.toThrow(
+    "INVALID_EXECUTION_QUOTE",
+  );
   expect(request).not.toHaveBeenCalled();
 });
 it("actual wallet chain takes precedence over cached Sepolia chain", async () => {

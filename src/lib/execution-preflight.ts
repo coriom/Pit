@@ -28,6 +28,7 @@ export type PreflightCode =
   | "INSUFFICIENT_BALANCE"
   | "WALLET_CHANGED"
   | "QUOTE_EXPIRED"
+  | "INVALID_EXECUTION_QUOTE"
   | "MARKET_UNAVAILABLE"
   | "READ_FAILED"
   | "CHECKING";
@@ -132,6 +133,8 @@ export const preflightMessage: Record<PreflightCode, string> = {
   INSUFFICIENT_BALANCE: "Insufficient balance for this execution.",
   WALLET_CHANGED: "Wallet changed. Check the account and request a new quote.",
   QUOTE_EXPIRED: "Request a fresh quote before signing.",
+  INVALID_EXECUTION_QUOTE:
+    "This is not the current original CoW execution quote. Request a new quote.",
   MARKET_UNAVAILABLE: "Market or reduce-only position unavailable.",
   READ_FAILED:
     "Preflight read failed. Execution is blocked; retry when the provider is available.",

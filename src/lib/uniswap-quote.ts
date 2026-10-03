@@ -2,6 +2,7 @@ import {
   createPublicClient,
   erc20Abi,
   http,
+  zeroAddress,
   parseAbi,
   type Address,
   type Hex,
@@ -21,15 +22,21 @@ import {
 // Official Uniswap v3 Ethereum Sepolia deployment table, independently checked with eth_getCode.
 export const UNISWAP_V3_SEPOLIA_QUOTER_V2 =
   "0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3" as const;
+export const UNISWAP_V3_SEPOLIA_FACTORY =
+  "0x0227628f3F023bb0B980b67D528571c95c6DaC1c" as const;
 export const UNISWAP_V3_FEE_TIERS = [100, 500, 3000, 10000] as const;
 const quoterAbi = parseAbi([
   "function quoteExactInputSingle((address tokenIn, address tokenOut, uint256 amountIn, uint24 fee, uint160 sqrtPriceLimitX96) params) returns (uint256 amountOut, uint160 sqrtPriceX96After, uint32 initializedTicksCrossed, uint256 gasEstimate)",
+]);
+const factoryAbi = parseAbi([
+  "function getPool(address tokenA, address tokenB, uint24 fee) view returns (address pool)",
 ]);
 type FeeTier = (typeof UNISWAP_V3_FEE_TIERS)[number];
 export type UniswapReadOps = Readonly<{
   chainId(): Promise<number>;
   code(address: Address): Promise<Hex | undefined>;
   decimals(token: Address): Promise<number>;
+  pool(tokenIn: Address, tokenOut: Address, fee: FeeTier): Promise<Address>;
   exactInputSingle(params: {
     tokenIn: Address;
     tokenOut: Address;
@@ -54,6 +61,13 @@ export function publicUniswapReadOps(): UniswapReadOps {
           functionName: "decimals",
         }),
       ),
+    pool: (tokenIn, tokenOut, fee) =>
+      client.readContract({
+        address: UNISWAP_V3_SEPOLIA_FACTORY,
+        abi: factoryAbi,
+        functionName: "getPool",
+        args: [tokenIn, tokenOut, fee],
+      }),
     exactInputSingle: (params) =>
       client.readContract({
         address: UNISWAP_V3_SEPOLIA_QUOTER_V2,
@@ -154,6 +168,13 @@ export function uniswapV3QuoteProvider(
             : 1,
       );
       const best = valid[0];
+      const pool = await ops.pool(
+        intent.sellToken as Address,
+        intent.buyToken as Address,
+        best.fee,
+      );
+      if (pool.toLowerCase() === zeroAddress)
+        throw new NoLiquidityError("Selected Uniswap v3 pool does not exist");
       const quotedAtMs = Date.now();
       return {
         provider: "uniswap-v3",
@@ -165,6 +186,7 @@ export function uniswapV3QuoteProvider(
         sellDecimals,
         buyDecimals,
         sellAmount,
+        swapInputSellAmount: sellAmount,
         buyAmount: best.buyAmount,
         minimumReceiveBuyAmount: null,
         protocolFee: {
@@ -175,6 +197,8 @@ export function uniswapV3QuoteProvider(
         },
         networkCostSellAmount: null,
         estimatedGasUnits: best.gasUnits,
+        gasEstimateScope: "quoter-internal-only",
+        singlePoolAddress: pool,
         pitFeeBuyAmount: 0n,
         quotedAtMs,
         expiresAtMs: quotedAtMs + 30000,

@@ -1,0 +1,25 @@
+{
+  "utc": "2026-10-03T07:51:13.222Z",
+  "result": {
+    "origin": "http://127.0.0.1:4321",
+    "https": false,
+    "cow": {
+      "status": 200,
+      "body": "v2.381.3@1911906c068fca7ea890735bb8ca15187bc51b12"
+    },
+    "rpc": {
+      "status": 200,
+      "body": "{\"jsonrpc\":\"2.0\",\"result\":\"0xaa36a7\",\"id\":1}\n"
+    }
+  },
+  "requests": [
+    {
+      "url": "https://api.cow.fi/sepolia/api/v1/version",
+      "method": "GET"
+    },
+    {
+      "url": "https://ethereum-sepolia-rpc.publicnode.com/",
+      "method": "POST"
+    }
+  ]
+}

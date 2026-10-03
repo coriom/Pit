@@ -3,6 +3,7 @@ import { useAccount, useWalletClient } from "wagmi";
 import {
   inspectCow,
   inspectSwap,
+  invalidateSwapQuote,
   submitSwap,
   approveSwap,
   costsDisplay,
@@ -12,7 +13,7 @@ import {
 } from "../lib/cow";
 import { useExecutionPreflight } from "./useExecutionPreflight";
 import { preflightMessage, PreflightError } from "../lib/execution-preflight";
-import { isAddress } from "viem";
+import { isAddress, parseUnits } from "viem";
 import {
   collectQuotes,
   cowQuoteProvider,
@@ -37,8 +38,11 @@ export function Swap() {
   const [status, setStatus] = useState("");
   const [history, setHistory] = useState<{ uid: string; status: string }[]>([]);
   const revision = useRef(0);
+  const requestSequence = useRef(0);
   useEffect(() => {
     revision.current++;
+    requestSequence.current++;
+    invalidateSwapQuote(quote);
     setQuote(undefined);
     setComparison([]);
     setApproved(false);
@@ -98,6 +102,19 @@ export function Swap() {
       wallet.chain?.id !== quote.chainId
     )
       throw new PreflightError("WALLET_CHANGED");
+    if (
+      sell.toLowerCase() !== quote.sellToken.toLowerCase() ||
+      buy.toLowerCase() !== quote.buyToken.toLowerCase() ||
+      !/^\d+(?:\.\d+)?$/.test(amount) ||
+      (() => {
+        try {
+          return parseUnits(amount, quote.sellDecimals) !== quote.units;
+        } catch {
+          return true;
+        }
+      })()
+    )
+      throw new PreflightError("INVALID_EXECUTION_QUOTE");
     await inspectSwap(quote);
   }, [wallet, quote, sell, buy, amount]);
   const gate = useExecutionPreflight(
@@ -145,6 +162,10 @@ export function Swap() {
         onClick={() =>
           act(async () => {
             const r = revision.current;
+            const s = ++requestSequence.current;
+            invalidateSwapQuote(quote);
+            setQuote(undefined);
+            setApproved(false);
             if (
               !isAddress(sell) ||
               !isAddress(buy) ||
@@ -170,7 +191,7 @@ export function Swap() {
               ],
               intent,
             );
-            if (r === revision.current) {
+            if (r === revision.current && s === requestSequence.current) {
               setComparison(outcomes);
               setClock(Date.now());
               setQuote(
@@ -208,9 +229,10 @@ export function Swap() {
             <section className="rule" data-testid="quote-comparison">
               <h3>Same-input venue quotes</h3>
               <p className="muted">
-                Exact-input quoted output after known provider fees, before
-                slippage and wallet gas. Gas is shown separately; no cross-token
-                gas conversion is assumed.
+                Same total sell-token debit budget. Quoted output includes
+                venue-specific embedded fees, but cost coverage differs.
+                Separate wallet gas is unknown and excluded; no cross-token gas
+                conversion is assumed.
               </p>
               {comparison.map((outcome) => (
                 <div
@@ -230,6 +252,11 @@ export function Swap() {
                       return (
                         <>
                           <p>Quoted output: {detail.output} buy token</p>
+                          <p>Sell budget: {detail.budget} sell token</p>
+                          <p>
+                            Quoted swap input: {detail.swapInput} sell token
+                          </p>
+                          <p>Path: {detail.pool}</p>
                           <p>Protocol/provider fee: {detail.protocolFee}</p>
                           <p>Estimated gas: {detail.gas}</p>
                           <p>Network cost: {detail.networkCost}</p>
@@ -248,7 +275,7 @@ export function Swap() {
               ))}
               <p data-testid="quote-ranking">
                 {ranking.comparable
-                  ? `Best quoted output (gas excluded): ${ranking.bestProviderIds.join(" and ")}${ranking.bestProviderIds.includes("uniswap-v3") ? ". Uniswap is quote-only; PIT cannot execute it." : "."}`
+                  ? `Best quoted output (separately paid gas excluded; cost coverage differs): ${ranking.bestProviderIds.join(" and ")}${ranking.bestProviderIds.includes("uniswap-v3") ? ". Uniswap is quote-only; PIT cannot execute it." : "."}`
                   : ranking.fresh.length === 1
                     ? "Only one fresh quote; no best-output comparison."
                     : ranking.fresh.length === 0

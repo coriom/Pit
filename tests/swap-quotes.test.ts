@@ -43,6 +43,7 @@ function quote(
     sellDecimals: 18,
     buyDecimals: 6,
     sellAmount: 10n ** 18n,
+    swapInputSellAmount: provider === "cow" ? 10n ** 18n - 10n : 10n ** 18n,
     buyAmount,
     minimumReceiveBuyAmount: provider === "cow" ? buyAmount - 1n : null,
     protocolFee: {
@@ -53,6 +54,9 @@ function quote(
     },
     networkCostSellAmount: provider === "cow" ? 10n : null,
     estimatedGasUnits: provider === "cow" ? null : 100000n,
+    gasEstimateScope: provider === "cow" ? "none" : "quoter-internal-only",
+    singlePoolAddress:
+      provider === "cow" ? null : "0x3333333333333333333333333333333333333333",
     pitFeeBuyAmount: 0n,
     quotedAtMs: at,
     expiresAtMs: at + 30000,
@@ -71,7 +75,7 @@ describe("integer exact-input quote normalization and ranking", () => {
     const amounts = getQuoteAmountsAndCosts({
       orderParams: {
         kind: OrderKind.SELL,
-        sellAmount: "1000000000000000000",
+        sellAmount: "999000000000000000",
         buyAmount: "2000000",
         feeAmount: "1000000000000000",
       } as any,
@@ -91,6 +95,10 @@ describe("integer exact-input quote normalization and ranking", () => {
       obtainedAt: at,
     } as never);
     expect(normalized.buyAmount).toBe(amounts.afterPartnerFees.buyAmount);
+    expect(normalized.sellAmount).toBe(10n ** 18n);
+    expect(normalized.swapInputSellAmount).toBe(
+      amounts.afterNetworkCosts.sellAmount,
+    );
     expect(normalized.minimumReceiveBuyAmount).toBe(
       amounts.afterSlippage.buyAmount,
     );
@@ -101,6 +109,11 @@ describe("integer exact-input quote normalization and ranking", () => {
       amounts.costs.networkFee.amountInSellCurrency,
     );
     expect(normalized.pitFeeBuyAmount).toBe(0n);
+    expect(normalized.buyAmount).toBe(amounts.afterNetworkCosts.buyAmount);
+    expect(normalized.buyAmount).not.toBe(
+      amounts.afterNetworkCosts.buyAmount - amounts.costs.protocolFee.amount,
+    );
+    expect(displayQuote(normalized, at).gas).toContain("gas unknown");
     expect(() =>
       assertNormalizedQuote(normalized, intent, at + 100),
     ).not.toThrow();
@@ -114,6 +127,12 @@ describe("integer exact-input quote normalization and ranking", () => {
         },
       } as never),
     ).toThrow(/fee-disabled/);
+    expect(() =>
+      normalizeCowQuote({
+        quoteResults: { amountsAndCosts: amounts },
+        units: 999000000000000000n,
+      } as never),
+    ).toThrow(/total sell debit/);
   });
   it("ranks only exact integer buy output, handles ties and never converts gas into buy token", () => {
     const cow = quote("cow", 9007199254740993n);
@@ -138,15 +157,45 @@ describe("integer exact-input quote normalization and ranking", () => {
       ).bestProviderIds,
     ).toEqual(["uniswap-v3"]);
   });
+  it("compares a 6-decimal sell budget to an 18-decimal buy output without Number conversion", () => {
+    const sixToEighteen: QuoteIntent = {
+      ...intent,
+      sellAmountText: "9007199254.740993",
+    };
+    const amount = 9007199254740993n;
+    const cow = quote("cow", amount + 10n, {
+      sellDecimals: 6,
+      buyDecimals: 18,
+      sellAmount: amount,
+      swapInputSellAmount: amount - 10n,
+    });
+    const uni = quote("uniswap-v3", amount + 11n, {
+      sellDecimals: 6,
+      buyDecimals: 18,
+      sellAmount: amount,
+      swapInputSellAmount: amount,
+      estimatedGasUnits: 0n,
+    });
+    expect(() => assertNormalizedQuote(cow, sixToEighteen, at)).not.toThrow();
+    expect(() => assertNormalizedQuote(uni, sixToEighteen, at)).not.toThrow();
+    expect(
+      rankQuotedOutput([available(cow), available(uni)], at).bestProviderIds,
+    ).toEqual(["uniswap-v3"]);
+    expect(displayQuote(uni, at).gas).toContain(
+      "wallet swap/approval gas unknown",
+    );
+  });
   it("rejects stale, cross-chain, mismatched assets, malformed integers and precision", () => {
     const base = quote("cow", 100n);
     for (const altered of [
       { chainId: 1 },
       { buyToken: sell },
       { sellAmount: 1n },
+      { swapInputSellAmount: 10n ** 18n + 1n },
       { sellAmount: "100" as never },
       { sellDecimals: 6 },
       { quotedAtMs: at - 70000, expiresAtMs: at + 1000 },
+      { quotedAtMs: at + 1002 },
       { pitFeeBuyAmount: 1n },
       { executableThroughPit: false },
     ])
@@ -274,6 +323,7 @@ function readOps(overrides: Partial<UniswapReadOps> = {}): UniswapReadOps {
     code: async () => "0x6000",
     decimals: async (token) =>
       token.toLowerCase() === sell.toLowerCase() ? 18 : 6,
+    pool: async () => "0x3333333333333333333333333333333333333333",
     exactInputSingle: async ({ fee }) => [
       fee === 500 ? 2000001n : 2000000n,
       1n,
@@ -301,6 +351,7 @@ describe("Uniswap v3 Sepolia read-only adapter", () => {
     );
     const result = await uniswapV3QuoteProvider(ops).quote(intent);
     expect(result.sellAmount).toBe(10n ** 18n);
+    expect(result.swapInputSellAmount).toBe(10n ** 18n);
     expect(result.buyAmount).toBe(2000001n);
     expect(result.protocolFee).toEqual({
       amount: null,
@@ -309,13 +360,21 @@ describe("Uniswap v3 Sepolia read-only adapter", () => {
       includedInBuyAmount: true,
     });
     expect(result.estimatedGasUnits).toBe(100000n);
+    expect(result.gasEstimateScope).toBe("quoter-internal-only");
+    expect(result.singlePoolAddress).toBe(
+      "0x3333333333333333333333333333333333333333",
+    );
     expect(result.pitFeeBuyAmount).toBe(0n);
     expect(result.executableThroughPit).toBe(false);
     expect("calldata" in result).toBe(false);
     expect(sign).not.toHaveBeenCalled();
     expect(sendTransaction).not.toHaveBeenCalled();
-    await expect(approveSwap(result as never)).rejects.toThrow("QUOTE_EXPIRED");
-    await expect(submitSwap(result as never)).rejects.toThrow("QUOTE_EXPIRED");
+    await expect(approveSwap(result as never)).rejects.toThrow(
+      "INVALID_EXECUTION_QUOTE",
+    );
+    await expect(submitSwap(result as never)).rejects.toThrow(
+      "INVALID_EXECUTION_QUOTE",
+    );
     expect(sendTransaction).not.toHaveBeenCalled();
   });
   it("fails closed on wrong RPC chain, missing bytecode, bad decimals, no liquidity and malformed data", async () => {

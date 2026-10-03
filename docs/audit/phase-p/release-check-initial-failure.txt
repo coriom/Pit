@@ -1,0 +1,7 @@
+
+> pit@0.1.0 release:check /home/corio/PIT
+> node scripts/release/check.mjs
+
+Clean release source: 2c6e9d0ca98bba33b7be94071574beb389d6273f
+RELEASE CHECK FAILED: Credential candidate (review required): docs/audit/phase-p/QUOTE-INTEGRITY.md
+ ELIFECYCLE  Command failed with exit code 1.

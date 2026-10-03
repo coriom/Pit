@@ -197,6 +197,9 @@ export async function quoteSwap(
   buyToken: string,
   amount: string,
 ) {
+  const request = (quoteRequests.get(wallet) ?? 0) + 1;
+  quoteRequests.set(wallet, request);
+  currentQuotes.delete(wallet);
   const { provider, units, sellDecimals, buyDecimals } = await inspectCow(
     wallet,
     sellToken,
@@ -226,16 +229,34 @@ export async function quoteSwap(
     chainId: wallet.chain!.id,
     obtainedAt: Date.now(),
   };
+  // An older asynchronous response never replaces the current wallet request.
+  if (quoteRequests.get(wallet) !== request) return q;
   executions.set(q, {
     wallet,
     sdk,
     provider,
     post: quote.postSwapOrderFromQuote,
     amount,
+    context: {
+      units,
+      sellToken,
+      buyToken,
+      owner: q.owner,
+      chainId: q.chainId,
+      obtainedAt: q.obtainedAt,
+      quoteResults: q.quoteResults,
+      amountsAndCosts: q.quoteResults.amountsAndCosts,
+      disclosure: JSON.stringify(q.quoteResults.amountsAndCosts, (_, value) =>
+        typeof value === "bigint" ? value.toString() : value,
+      ),
+    },
   });
+  currentQuotes.set(wallet, q);
   return q;
 }
 export type SwapQuote = Awaited<ReturnType<typeof quoteSwap>>;
+const quoteRequests = new WeakMap<WalletClient, number>();
+const currentQuotes = new WeakMap<WalletClient, object>();
 const executions = new WeakMap<
   object,
   {
@@ -244,11 +265,48 @@ const executions = new WeakMap<
     provider: Awaited<ReturnType<typeof inspectCow>>["provider"];
     post: () => Promise<{ orderId: string }>;
     amount: string;
+    context: {
+      units: bigint;
+      sellToken: string;
+      buyToken: string;
+      owner: string;
+      chainId: number;
+      obtainedAt: number;
+      quoteResults: SwapQuote["quoteResults"];
+      amountsAndCosts: SwapQuote["quoteResults"]["amountsAndCosts"];
+      disclosure: string;
+    };
   }
 >();
-export async function inspectSwap(q: SwapQuote) {
+export function invalidateSwapQuote(q: SwapQuote | undefined) {
+  if (!q) return;
   const execution = executions.get(q);
-  requirePredicate(!!execution, "QUOTE_EXPIRED");
+  if (execution && currentQuotes.get(execution.wallet) === q)
+    currentQuotes.delete(execution.wallet);
+  executions.delete(q);
+}
+export async function inspectSwap(q: SwapQuote) {
+  // WeakMap identity is runtime provenance. Display quotes, copies, casts and
+  // objects with forged provider/executable labels never acquire a posting closure.
+  requirePredicate(!!q && typeof q === "object", "INVALID_EXECUTION_QUOTE");
+  const execution = executions.get(q);
+  requirePredicate(!!execution, "INVALID_EXECUTION_QUOTE");
+  const c = execution.context;
+  requirePredicate(
+    currentQuotes.get(execution.wallet) === q &&
+      q.units === c.units &&
+      q.sellToken === c.sellToken &&
+      q.buyToken === c.buyToken &&
+      q.owner === c.owner &&
+      q.chainId === c.chainId &&
+      q.obtainedAt === c.obtainedAt &&
+      q.quoteResults === c.quoteResults &&
+      q.quoteResults.amountsAndCosts === c.amountsAndCosts &&
+      JSON.stringify(q.quoteResults.amountsAndCosts, (_, value) =>
+        typeof value === "bigint" ? value.toString() : value,
+      ) === c.disclosure,
+    "INVALID_EXECUTION_QUOTE",
+  );
   requirePredicate(Date.now() - q.obtainedAt < 60000, "QUOTE_EXPIRED");
   const result = await inspectCow(
     execution.wallet,
@@ -257,6 +315,10 @@ export async function inspectSwap(q: SwapQuote) {
     execution.amount,
   );
   requirePredicate(result.units === q.units, "INVALID_AMOUNT");
+  requirePredicate(
+    currentQuotes.get(execution.wallet) === q,
+    "INVALID_EXECUTION_QUOTE",
+  );
   requirePredicate(Date.now() - q.obtainedAt < 60000, "QUOTE_EXPIRED");
   return execution;
 }

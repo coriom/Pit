@@ -100,6 +100,8 @@ test("CoW quote failure leaves the read-only Uniswap quote visible and signing g
           )
             .toString(16)
             .padStart(64, "0")}`;
+        else if (call.data?.startsWith("0x1698ee82"))
+          result = `0x${"3333333333333333333333333333333333333333".padStart(64, "0")}`;
         else
           result = `0x${[2000000n, 1n, 0n, 100000n].map((value) => value.toString(16).padStart(64, "0")).join("")}`;
       } else throw Error(`Unexpected public RPC ${method}`);
@@ -128,6 +130,15 @@ test("CoW quote failure leaves the read-only Uniswap quote visible and signing g
   await expect(page.getByTestId("quote-cow")).toContainText("unavailable");
   await expect(page.getByTestId("quote-uniswap-v3")).toContainText(
     "Quoted output: 2 buy token",
+  );
+  await expect(page.getByTestId("quote-uniswap-v3")).toContainText(
+    "Sell budget: 1 sell token",
+  );
+  await expect(page.getByTestId("quote-uniswap-v3")).toContainText(
+    "one v3 pool; no route search",
+  );
+  await expect(page.getByTestId("quote-uniswap-v3")).toContainText(
+    "wallet swap/approval gas unknown",
   );
   await expect(page.getByTestId("quote-uniswap-v3")).toContainText(
     "Quote-only: PIT cannot execute this Uniswap quote.",

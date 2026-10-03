@@ -2542,8 +2542,6 @@ RELEASE CHECK PASS — offline testnet candidate only; no live acceptance or dep
 
 The run used the clean source commit shown above. This verification text and the exact output log are appended to the same phase commit afterward; no source or test changes follow that run.
 
-Assumption 8 remains **OPEN**. This local static build neither deploys nor independently verifies a dedicated public HTTPS origin; live Phase H execution is still blocked by absent funded external testnet accounts and operator-approved signatures.
-
 ## Phase O — secretless multi-venue swap quoting
 
 [Architecture, exact normalization/ranking semantics, official deployment and `eth_getCode` evidence, failure isolation, and execution boundary](audit/phase-o/BEST-SWAP-QUOTING.md) · [keyless runtime request capture](audit/phase-o/runtime-inventory.json) · [exact clean-tree release-check output](audit/phase-o/release-check.txt).
@@ -2573,3 +2571,15 @@ RELEASE CHECK PASS — offline testnet candidate only; no live acceptance or dep
 ```
 
 The run used the clean source commit shown above. This verification text and the exact output log are appended to the same phase commit afterward; no source or test changes follow that run.
+
+## Phase P — quote provenance and same-budget cost coverage
+
+[Full boundary, SDK amount-stage and live-read audit](audit/phase-p/QUOTE-INTEGRITY.md) · [pinned Sepolia block response](audit/phase-p/block-response.json) · [quoter/factory raw RPC responses](audit/phase-p/contracts-response.json) · [built-page browser CORS capture](audit/phase-p/browser-production-read.json) · [complete clean-tree release transcript](audit/phase-p/release-check.txt).
+
+The original `QUOTE_EXPIRED` response for a normalized Uniswap object meant only that it was absent from CoW's private execution map. Both approval and submission now reject missing, forged, copied, stale-request or mutated execution provenance as `INVALID_EXECUTION_QUOTE` before SDK approval/posting; `QUOTE_EXPIRED` is reserved for a retained valid CoW quote past its 60-second limit. Valid fixture controls reach the SDK approval and posting spies. Comparison now requires the same **total** sell-token debit budget, separates CoW's network-fee-reduced solver input from the original budget, and displays unknown wallet gas separately from embedded costs. Uniswap resolves and shows the selected single pool and fee tier; it remains quote-only.
+
+Live Sepolia chain, block, quoter bytecode/factory identity and CoW version reads succeeded, and the local browser reached both existing public endpoints. **LIVE_COMPARISON is BLOCKED**: no real Sepolia token pair was approved/configured and no public quote `from` context was supplied; no token quote, signing or transaction was attempted. These infrastructure and browser CORS checks are not live pricing or execution acceptance. Assumption 8 remains **OPEN**; Phase H live acceptance and Phase K dedicated-origin verification remain blocked. The linked transcript gives exact deterministic unit, typecheck, build, artifact-guard and Playwright output for the clean tested source commit.
+
+The complete 357-line clean-tree `pnpm release:check` output is in the linked transcript. It tested source commit `e1925f106b4d7eda390487820cde2ca543005069`: 134 unit tests, 24 Playwright tests, 83 typechecked files with zero diagnostics, 11 static pages, and build SHA-256 `56ee7fbec4c7618494bb6aca91c872f3be92b73f4bc97f95df97ae283b195f50`. It ended `RELEASE CHECK PASS — offline testnet candidate only; no live acceptance or deployment`. Only this verification text, the audit document and exact log were added after that run; tested non-evidence files remain identical.
+
+Assumption 8 remains **OPEN**. This local static build neither deploys nor independently verifies a dedicated public HTTPS origin; live Phase H execution is still blocked by absent funded external testnet accounts and operator-approved signatures.
