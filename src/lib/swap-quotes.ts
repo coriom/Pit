@@ -42,6 +42,7 @@ export type NormalizedQuote = Readonly<{
   quotedAtMs: number;
   expiresAtMs: number;
   executableThroughPit: boolean;
+  diagnosticOnly?: true;
 }>;
 export type QuoteUnavailableReason =
   "TIMEOUT" | "NO_LIQUIDITY" | "PROVIDER_ERROR" | "MALFORMED_QUOTE";
@@ -196,7 +197,8 @@ export function assertNormalizedQuote(
       (!Number.isInteger(q.protocolFee.ratePpm) ||
         q.protocolFee.ratePpm < 0 ||
         q.protocolFee.ratePpm > 1000000)) ||
-    q.executableThroughPit !== (q.provider === "cow") ||
+    q.executableThroughPit !==
+      (q.provider === "cow" && q.diagnosticOnly !== true) ||
     (q.provider === "cow" &&
       (q.protocolFee.amount === null ||
         q.protocolFee.token !== "buy" ||

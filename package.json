@@ -14,7 +14,8 @@
     "format": "prettier --write src tests scripts",
     "schema:generate": "node scripts/generate-validator.mjs",
     "release:check": "node scripts/release/check.mjs",
-    "staging:smoke": "node scripts/audit/staging-smoke.mjs"
+    "staging:smoke": "node scripts/audit/staging-smoke.mjs",
+    "quotes:probe": "node scripts/audit/quotes-probe.mjs"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.10",

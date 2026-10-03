@@ -1,0 +1,50 @@
+[
+  {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "eth_call",
+    "params": [
+      {
+        "to": "0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1",
+        "data": "0x0dfe1681"
+      },
+      "0xb49563"
+    ]
+  },
+  {
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "eth_call",
+    "params": [
+      {
+        "to": "0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1",
+        "data": "0xd21220a7"
+      },
+      "0xb49563"
+    ]
+  },
+  {
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "eth_call",
+    "params": [
+      {
+        "to": "0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1",
+        "data": "0xddca3f43"
+      },
+      "0xb49563"
+    ]
+  },
+  {
+    "jsonrpc": "2.0",
+    "id": 4,
+    "method": "eth_call",
+    "params": [
+      {
+        "to": "0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1",
+        "data": "0x3850c7bd"
+      },
+      "0xb49563"
+    ]
+  }
+]

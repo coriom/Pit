@@ -1,0 +1,29 @@
+{
+  "utc": "2026-10-03T08:30:49.556Z",
+  "endpoint": "https://ethereum-sepolia-rpc.publicnode.com",
+  "chainId": 11155111,
+  "blockNumber": "11834646",
+  "blockHash": "hex:6ce1752515cdef0c9cdb61cf99dd29e4bc2a554255308fdf16b6592fcaa3da63",
+  "tokens": [
+    {
+      "label": "WETH",
+      "address": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+      "codePresent": true,
+      "codeBytes": 3124,
+      "codeKeccak256": "hex:c864e10689f2da18833652a3b075d43106e87f0f90d95ee64f6f0b33bc026083",
+      "decimals": 18,
+      "symbol": "WETH",
+      "name": "Wrapped Ether"
+    },
+    {
+      "label": "Circle test USDC",
+      "address": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+      "codePresent": true,
+      "codeBytes": 1798,
+      "codeKeccak256": "hex:cd3f29e2ea9c61dadd48bfeaf8b2884b6de9dfee7bf45329452c4c33d0868ceb",
+      "decimals": 6,
+      "symbol": "USDC",
+      "name": "USDC"
+    }
+  ]
+}

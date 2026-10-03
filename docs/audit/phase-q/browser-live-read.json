@@ -1,0 +1,403 @@
+{
+  "utc": "2026-10-03T09:09:39.067Z",
+  "origin": "http://127.0.0.1:4321",
+  "url": "http://127.0.0.1:4321/tools/swap/",
+  "diagnosticText": "Sepolia market read\n\nRead-only diagnostic for WETH \u2192 test USDC. Uses a synthetic public address, not your wallet. These quotes cannot be signed or executed through PIT. Test tokens have no implied dollar value.\n\nSell budget: 0.01 WETH \u00b7 selected Uniswap v3 fee tiers: 0.05% and 0.3%\n\nRead market quotes\n\nStatus: COMPARISON_OK\n\ncow: 442.009102 test USDC quoted output (diagnostic only)\nuniswap-v3: 566.8044 test USDC quoted output (diagnostic only)\n\nBest quoted output, excluding separate gas: uniswap-v3. Neither diagnostic quote is executable.",
+  "signingControls": 0,
+  "externalRecords": [
+    {
+      "endpoint": "https://ethereum-sepolia-rpc.publicnode.com/",
+      "httpMethod": "POST",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 0,
+        "method": "eth_chainId"
+      },
+      "httpStatus": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "result": "0xaa36a7",
+        "id": 0
+      }
+    },
+    {
+      "endpoint": "https://ethereum-sepolia-rpc.publicnode.com/",
+      "httpMethod": "POST",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "eth_getBlockByNumber",
+        "params": [
+          "latest",
+          false
+        ]
+      },
+      "httpStatus": 200,
+      "response": {
+        "number": "0xb495c8",
+        "hash": "hex:2f421923901cf98854568602f246c45b74a5a28d2ce1226b5b7e658aaa9743f3",
+        "timestamp": "0x6ac0c638",
+        "bodyCaptureTruncated": true
+      }
+    },
+    {
+      "endpoint": "https://ethereum-sepolia-rpc.publicnode.com/",
+      "httpMethod": "POST",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "eth_getCode",
+        "params": [
+          "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+          "0xb495c8"
+        ]
+      },
+      "httpStatus": 200,
+      "response": {
+        "codePresent": true,
+        "bodyCaptureTruncated": true
+      }
+    },
+    {
+      "endpoint": "https://ethereum-sepolia-rpc.publicnode.com/",
+      "httpMethod": "POST",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "eth_getCode",
+        "params": [
+          "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+          "0xb495c8"
+        ]
+      },
+      "httpStatus": 200,
+      "response": {
+        "codePresent": true,
+        "bodyCaptureTruncated": true
+      }
+    },
+    {
+      "endpoint": "https://ethereum-sepolia-rpc.publicnode.com/",
+      "httpMethod": "POST",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "eth_call",
+        "params": [
+          {
+            "data": "0x313ce567",
+            "to": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"
+          },
+          "0xb495c8"
+        ]
+      },
+      "httpStatus": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "result": "hex:0000000000000000000000000000000000000000000000000000000000000006"
+      }
+    },
+    {
+      "endpoint": "https://ethereum-sepolia-rpc.publicnode.com/",
+      "httpMethod": "POST",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 5,
+        "method": "eth_call",
+        "params": [
+          {
+            "data": "0x313ce567",
+            "to": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14"
+          },
+          "0xb495c8"
+        ]
+      },
+      "httpStatus": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 5,
+        "result": "hex:0000000000000000000000000000000000000000000000000000000000000012"
+      }
+    },
+    {
+      "endpoint": "https://ethereum-sepolia-rpc.publicnode.com/",
+      "httpMethod": "POST",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 6,
+        "method": "eth_chainId"
+      },
+      "httpStatus": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "result": "0xaa36a7",
+        "id": 6
+      }
+    },
+    {
+      "endpoint": "https://ethereum-sepolia-rpc.publicnode.com/",
+      "httpMethod": "POST",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "method": "eth_getCode",
+        "params": [
+          "0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3",
+          "0xb495c8"
+        ]
+      },
+      "httpStatus": 200,
+      "response": {
+        "codePresent": true,
+        "bodyCaptureTruncated": true
+      }
+    },
+    {
+      "endpoint": "https://ethereum-sepolia-rpc.publicnode.com/",
+      "httpMethod": "POST",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 8,
+        "method": "eth_call",
+        "params": [
+          {
+            "data": "0x313ce567",
+            "to": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14"
+          },
+          "0xb495c8"
+        ]
+      },
+      "httpStatus": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "result": "hex:0000000000000000000000000000000000000000000000000000000000000012",
+        "id": 8
+      }
+    },
+    {
+      "endpoint": "https://ethereum-sepolia-rpc.publicnode.com/",
+      "httpMethod": "POST",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 9,
+        "method": "eth_call",
+        "params": [
+          {
+            "data": "0x313ce567",
+            "to": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"
+          },
+          "0xb495c8"
+        ]
+      },
+      "httpStatus": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "result": "hex:0000000000000000000000000000000000000000000000000000000000000006",
+        "id": 9
+      }
+    },
+    {
+      "endpoint": "https://api.cow.fi/sepolia/api/v1/quote",
+      "httpMethod": "POST",
+      "request": {
+        "from": "0x6f473606a9053ed49bbaa90c23f689348655c947",
+        "sellToken": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+        "buyToken": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+        "kind": "sell",
+        "sellAmountBeforeFee": "10000000000000000",
+        "validFor": 1200,
+        "priceQuality": "verified",
+        "signingScheme": "eip712"
+      },
+      "httpStatus": 200,
+      "response": {
+        "quote": {
+          "sellToken": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+          "buyToken": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+          "receiver": null,
+          "sellAmount": "9730994831710201",
+          "buyAmount": "442009102",
+          "validTo": 1791019765,
+          "appData": "hex:0000000000000000000000000000000000000000000000000000000000000000",
+          "feeAmount": "269005168289799",
+          "gasAmount": "244203",
+          "gasPrice": "1101563733",
+          "sellTokenPrice": "1",
+          "kind": "sell",
+          "partiallyFillable": false,
+          "sellTokenBalance": "erc20",
+          "buyTokenBalance": "erc20",
+          "signingScheme": "eip712"
+        },
+        "from": "0x6f473606a9053ed49bbaa90c23f689348655c947",
+        "expiration": "2026-10-03T09:11:25.344901669Z",
+        "id": 1657636,
+        "verified": true,
+        "protocolFeeBps": "2"
+      }
+    },
+    {
+      "endpoint": "https://ethereum-sepolia-rpc.publicnode.com/",
+      "httpMethod": "POST",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 10,
+        "method": "eth_call",
+        "params": [
+          {
+            "to": "0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3",
+            "data": "0xc6a5026a000000000000000000000000fff9976782d46cc05630d1f6ebab18b2324d6b140000000000000000000000001c7d4b196cb0c7b01d743fbc6116a902379c7238000000000000000000000000000000000000000000000000002386f26fc1000000000000000000000000000000000000000000000000000000000000000001f40000000000000000000000000000000000000000000000000000000000000000"
+          },
+          "0xb495c8"
+        ]
+      },
+      "httpStatus": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 10,
+        "result": "0x0000000000000000000000000000000000000000000000000000000021c8bfb00000000000000000000000000000000000001067a360902a2f66534c39ab815c0000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000001e1ed"
+      }
+    },
+    {
+      "endpoint": "https://ethereum-sepolia-rpc.publicnode.com/",
+      "httpMethod": "POST",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 11,
+        "method": "eth_call",
+        "params": [
+          {
+            "to": "0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3",
+            "data": "0xc6a5026a000000000000000000000000fff9976782d46cc05630d1f6ebab18b2324d6b140000000000000000000000001c7d4b196cb0c7b01d743fbc6116a902379c7238000000000000000000000000000000000000000000000000002386f26fc100000000000000000000000000000000000000000000000000000000000000000bb80000000000000000000000000000000000000000000000000000000000000000"
+          },
+          "0xb495c8"
+        ]
+      },
+      "httpStatus": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 11,
+        "result": "0x000000000000000000000000000000000000000000000000000000001b00fce50000000000000000000000000000000000001253aad9a3db7b7a14e178237ef600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000016cd3"
+      }
+    },
+    {
+      "endpoint": "https://ethereum-sepolia-rpc.publicnode.com/",
+      "httpMethod": "POST",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 12,
+        "method": "eth_call",
+        "params": [
+          {
+            "data": "0x1698ee82000000000000000000000000fff9976782d46cc05630d1f6ebab18b2324d6b140000000000000000000000001c7d4b196cb0c7b01d743fbc6116a902379c723800000000000000000000000000000000000000000000000000000000000001f4",
+            "to": "0x0227628f3F023bb0B980b67D528571c95c6DaC1c"
+          },
+          "0xb495c8"
+        ]
+      },
+      "httpStatus": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 12,
+        "result": "hex:0000000000000000000000003289680dd4d6c10bb19b899729cda5eef58aeff1"
+      }
+    },
+    {
+      "endpoint": "https://ethereum-sepolia-rpc.publicnode.com/",
+      "httpMethod": "POST",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 13,
+        "method": "eth_call",
+        "params": [
+          {
+            "data": "0x3850c7bd",
+            "to": "0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1"
+          },
+          "0xb495c8"
+        ]
+      },
+      "httpStatus": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 13,
+        "result": "0x0000000000000000000000000000000000001066ebc9c44345776ddfbb38b81f0000000000000000000000000000000000000000000000000000000000028bcb00000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000384000000000000000000000000000000000000000000000000000000000000038400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001"
+      }
+    },
+    {
+      "endpoint": "https://ethereum-sepolia-rpc.publicnode.com/",
+      "httpMethod": "POST",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 14,
+        "method": "eth_call",
+        "params": [
+          {
+            "data": "0x0dfe1681",
+            "to": "0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1"
+          },
+          "0xb495c8"
+        ]
+      },
+      "httpStatus": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 14,
+        "result": "hex:0000000000000000000000001c7d4b196cb0c7b01d743fbc6116a902379c7238"
+      }
+    },
+    {
+      "endpoint": "https://ethereum-sepolia-rpc.publicnode.com/",
+      "httpMethod": "POST",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 15,
+        "method": "eth_call",
+        "params": [
+          {
+            "data": "0xd21220a7",
+            "to": "0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1"
+          },
+          "0xb495c8"
+        ]
+      },
+      "httpStatus": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 15,
+        "result": "hex:000000000000000000000000fff9976782d46cc05630d1f6ebab18b2324d6b14"
+      }
+    },
+    {
+      "endpoint": "https://ethereum-sepolia-rpc.publicnode.com/",
+      "httpMethod": "POST",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 16,
+        "method": "eth_call",
+        "params": [
+          {
+            "data": "0xddca3f43",
+            "to": "0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1"
+          },
+          "0xb495c8"
+        ]
+      },
+      "httpStatus": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 16,
+        "result": "hex:00000000000000000000000000000000000000000000000000000000000001f4"
+      }
+    }
+  ],
+  "externalMethods": [
+    "POST",
+    "eth_call",
+    "eth_chainId",
+    "eth_getBlockByNumber",
+    "eth_getCode"
+  ],
+  "signingOrSubmissionRequests": 0
+}

@@ -31,7 +31,7 @@ const quoterAbi = parseAbi([
 const factoryAbi = parseAbi([
   "function getPool(address tokenA, address tokenB, uint24 fee) view returns (address pool)",
 ]);
-type FeeTier = (typeof UNISWAP_V3_FEE_TIERS)[number];
+export type FeeTier = (typeof UNISWAP_V3_FEE_TIERS)[number];
 export type UniswapReadOps = Readonly<{
   chainId(): Promise<number>;
   code(address: Address): Promise<Hex | undefined>;
@@ -45,20 +45,21 @@ export type UniswapReadOps = Readonly<{
   }): Promise<readonly [bigint, bigint, number, bigint]>;
 }>;
 
-export function publicUniswapReadOps(): UniswapReadOps {
+export function publicUniswapReadOps(blockNumber?: bigint): UniswapReadOps {
   const client = createPublicClient({
     chain: sepolia,
     transport: http(publicRpc[11155111][0]),
   });
   return {
     chainId: () => client.getChainId(),
-    code: (address) => client.getCode({ address }),
+    code: (address) => client.getCode({ address, blockNumber }),
     decimals: async (token) =>
       Number(
         await client.readContract({
           address: token,
           abi: erc20Abi,
           functionName: "decimals",
+          blockNumber,
         }),
       ),
     pool: (tokenIn, tokenOut, fee) =>
@@ -67,6 +68,7 @@ export function publicUniswapReadOps(): UniswapReadOps {
         abi: factoryAbi,
         functionName: "getPool",
         args: [tokenIn, tokenOut, fee],
+        blockNumber,
       }),
     exactInputSingle: (params) =>
       client.readContract({
@@ -82,12 +84,14 @@ export function publicUniswapReadOps(): UniswapReadOps {
             sqrtPriceLimitX96: 0n,
           },
         ],
+        blockNumber,
       }),
   };
 }
 
 export function uniswapV3QuoteProvider(
   ops: UniswapReadOps = publicUniswapReadOps(),
+  feeTiers: readonly FeeTier[] = UNISWAP_V3_FEE_TIERS,
 ): QuoteProvider {
   return {
     id: "uniswap-v3",
@@ -116,7 +120,7 @@ export function uniswapV3QuoteProvider(
         sellDecimals,
       );
       const results = await Promise.allSettled(
-        UNISWAP_V3_FEE_TIERS.map(async (fee) => {
+        feeTiers.map(async (fee) => {
           const value = await ops.exactInputSingle({
             tokenIn: intent.sellToken as Address,
             tokenOut: intent.buyToken as Address,

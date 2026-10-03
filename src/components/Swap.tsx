@@ -23,6 +23,7 @@ import {
   type QuoteIntent,
 } from "../lib/swap-quotes";
 import { uniswapV3QuoteProvider } from "../lib/uniswap-quote";
+import { DiagnosticQuotes } from "./DiagnosticQuotes";
 export function Swap() {
   const { address, chainId } = useAccount();
   const { data: wallet } = useWalletClient();
@@ -131,6 +132,7 @@ export function Swap() {
         Ethereum Sepolia only (11155111), not Base Sepolia (84532) · 0.50%
         slippage
       </p>
+      <DiagnosticQuotes />
       <label>
         Sell token address
         <input

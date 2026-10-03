@@ -1,0 +1,88 @@
+{
+  "utc": "2026-10-03T09:09:39.067Z",
+  "block": {
+    "number": "0xb495c8",
+    "hash": "hex:2f421923901cf98854568602f246c45b74a5a28d2ce1226b5b7e658aaa9743f3",
+    "timestamp": "0x6ac0c638",
+    "bodyCaptureTruncated": true
+  },
+  "requestedDebit": "10000000000000000",
+  "cow": {
+    "verified": true,
+    "expires": "2026-10-03T09:11:25.344901669Z",
+    "quoteId": 1657636,
+    "amounts": {
+      "isSell": true,
+      "costs": {
+        "networkFee": {
+          "amountInSellCurrency": "269005168289799",
+          "amountInBuyCurrency": "12218969"
+        },
+        "partnerFee": {
+          "amount": "0",
+          "bps": 0
+        },
+        "protocolFee": {
+          "amount": "88419",
+          "bps": 2
+        }
+      },
+      "beforeAllFees": {
+        "sellAmount": "10000000000000000",
+        "buyAmount": "454316490"
+      },
+      "beforeNetworkCosts": {
+        "sellAmount": "10000000000000000",
+        "buyAmount": "454228071"
+      },
+      "afterProtocolFees": {
+        "sellAmount": "10000000000000000",
+        "buyAmount": "454228071"
+      },
+      "afterNetworkCosts": {
+        "sellAmount": "9730994831710201",
+        "buyAmount": "442009102"
+      },
+      "afterPartnerFees": {
+        "sellAmount": "9730994831710201",
+        "buyAmount": "442009102"
+      },
+      "afterSlippage": {
+        "sellAmount": "9730994831710201",
+        "buyAmount": "439799057"
+      },
+      "amountsToSign": {
+        "sellAmount": "10000000000000000",
+        "buyAmount": "439799057"
+      }
+    }
+  },
+  "uniswap": [
+    {
+      "feeTier": 500,
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000021c8bfb00000000000000000000000000000000000001067a360902a2f66534c39ab815c0000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000001e1ed",
+      "decoded": [
+        "566804400",
+        "332729617191674468099172927766876",
+        1,
+        "123373"
+      ]
+    },
+    {
+      "feeTier": 3000,
+      "returnData": "0x000000000000000000000000000000000000000000000000000000001b00fce50000000000000000000000000000000000001253aad9a3db7b7a14e178237ef600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000016cd3",
+      "decoded": [
+        "453049573",
+        "371712185916780963794395796307702",
+        0,
+        "93395"
+      ]
+    }
+  ],
+  "comparison": {
+    "cowBuyAmount": "442009102",
+    "uniswapSelectedBuyAmount": "566804400",
+    "separateGasExcluded": true,
+    "pitFee": "0"
+  }
+}
