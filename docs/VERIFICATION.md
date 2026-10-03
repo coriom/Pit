@@ -2543,3 +2543,33 @@ RELEASE CHECK PASS — offline testnet candidate only; no live acceptance or dep
 The run used the clean source commit shown above. This verification text and the exact output log are appended to the same phase commit afterward; no source or test changes follow that run.
 
 Assumption 8 remains **OPEN**. This local static build neither deploys nor independently verifies a dedicated public HTTPS origin; live Phase H execution is still blocked by absent funded external testnet accounts and operator-approved signatures.
+
+## Phase O — secretless multi-venue swap quoting
+
+[Architecture, exact normalization/ranking semantics, official deployment and `eth_getCode` evidence, failure isolation, and execution boundary](audit/phase-o/BEST-SWAP-QUOTING.md) · [keyless runtime request capture](audit/phase-o/runtime-inventory.json) · [exact clean-tree release-check output](audit/phase-o/release-check.txt).
+
+The second venue is Uniswap v3 QuoterV2 on Ethereum Sepolia, read through the existing public Sepolia RPC. It is quote-only. CoW's original SDK quote, exact fee disclosure and preflight retain sole swap execution authority. Comparison ranks BigInt quoted output after known provider fees, before slippage and wallet gas, only for matching fresh exact-input quotes. No live quote for a real pool, wallet signature, swap or public deployment is claimed. `FEES_ENABLED=false` and Assumption 8's **OPEN** disposition are unchanged. The linked exact release log contains the final unit, Playwright, typecheck, build, CSP/artifact and discoverability results.
+
+The exact 359-line clean-tree `pnpm release:check` output is in the linked log. Decisive lines:
+
+```text
+Clean release source: ee4c9c7368797c82418efb8e22aca1f0fb15dc5b
+PASS protected fee/network configuration: FEES_ENABLED=false; MAINNET_ENABLED=false; recipients/rates unchanged
+PASS exact Taxlot v1 schema SHA256 d8eb339ed7acd7da3b68ef09fe5c1b01c4cc3258cb401a4f2ba8805e7a3b07d7
+PASS origin policy: default-deny; production allowlist empty; legal page unchanged
+ Test Files  19 passed (19)
+      Tests  130 passed (130)
+Result (83 files):
+- 0 errors
+- 0 warnings
+- 0 hints
+10:51:19 [build] 11 page(s) built in 18.96s
+Discoverability: 11 noindex pages; robots.txt; sitemap withheld
+Build SHA-256: 414305ebc55f769759bf08a21d5ca7152ee9986ad3af1b44c5b04e9b10f25d62
+PASS static artifacts: 137 files; 11 HTML pages; 0 external scripts/styles; CSP, SRI, telemetry, secret, source-map and mainnet endpoint guards
+PASS discoverability: 11 routes; 7 registry tool pages; 4 local/discovery pages without wallet or protocol JS; indexing policy and sitemap guards
+  24 passed (15.8s)
+RELEASE CHECK PASS — offline testnet candidate only; no live acceptance or deployment
+```
+
+The run used the clean source commit shown above. This verification text and the exact output log are appended to the same phase commit afterward; no source or test changes follow that run.

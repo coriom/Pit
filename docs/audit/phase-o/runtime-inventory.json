@@ -1,0 +1,15 @@
+{
+  "fixture": "keyless synthetic wallet; external HTTP fulfilled or aborted",
+  "origins": [
+    "https://api.cow.fi",
+    "https://api.hyperliquid-testnet.xyz",
+    "https://ethereum-sepolia-rpc.publicnode.com"
+  ],
+  "rpcMethods": [
+    "eth_call",
+    "eth_chainId",
+    "eth_getCode"
+  ],
+  "credentialHeaders": [],
+  "signingCalls": 0
+}

@@ -12,6 +12,16 @@ import {
 } from "../lib/cow";
 import { useExecutionPreflight } from "./useExecutionPreflight";
 import { preflightMessage, PreflightError } from "../lib/execution-preflight";
+import { isAddress } from "viem";
+import {
+  collectQuotes,
+  cowQuoteProvider,
+  displayQuote,
+  rankQuotedOutput,
+  type QuoteOutcome,
+  type QuoteIntent,
+} from "../lib/swap-quotes";
+import { uniswapV3QuoteProvider } from "../lib/uniswap-quote";
 export function Swap() {
   const { address, chainId } = useAccount();
   const { data: wallet } = useWalletClient();
@@ -19,6 +29,8 @@ export function Swap() {
   const [buy, setBuy] = useState("");
   const [amount, setAmount] = useState("");
   const [quote, setQuote] = useState<SwapQuote>();
+  const [comparison, setComparison] = useState<QuoteOutcome[]>([]);
+  const [clock, setClock] = useState(Date.now());
   const [approved, setApproved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -28,10 +40,16 @@ export function Swap() {
   useEffect(() => {
     revision.current++;
     setQuote(undefined);
+    setComparison([]);
     setApproved(false);
     setError("");
     setStatus("");
   }, [address, chainId, sell, buy, amount]);
+  useEffect(() => {
+    if (!comparison.length) return;
+    const id = setInterval(() => setClock(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [comparison]);
   useEffect(() => {
     let stopped = false;
     setHistory([]);
@@ -127,10 +145,52 @@ export function Swap() {
         onClick={() =>
           act(async () => {
             const r = revision.current;
-            const q = await quoteSwap(wallet!, sell, buy, amount);
+            if (
+              !isAddress(sell) ||
+              !isAddress(buy) ||
+              sell.toLowerCase() === buy.toLowerCase()
+            )
+              throw new PreflightError("UNSUPPORTED_ASSETS");
+            if (chainId !== 11155111) throw new PreflightError("WRONG_CHAIN");
+            const intent: QuoteIntent = {
+              chainId,
+              sellToken: sell,
+              buyToken: buy,
+              sellAmountText: amount,
+              direction: "exact-in",
+            };
+            let cowCandidate: SwapQuote | undefined;
+            const outcomes = await collectQuotes(
+              [
+                cowQuoteProvider(async () => {
+                  cowCandidate = await quoteSwap(wallet!, sell, buy, amount);
+                  return cowCandidate;
+                }),
+                uniswapV3QuoteProvider(),
+              ],
+              intent,
+            );
             if (r === revision.current) {
-              setQuote(q);
+              setComparison(outcomes);
+              setClock(Date.now());
+              setQuote(
+                outcomes.some(
+                  (outcome) =>
+                    outcome.provider === "cow" &&
+                    outcome.availability === "available",
+                )
+                  ? cowCandidate
+                  : undefined,
+              );
               setApproved(false);
+              if (
+                outcomes.every(
+                  (outcome) => outcome.availability === "unavailable",
+                )
+              )
+                setError(
+                  "No Sepolia venue quote is available for these inputs.",
+                );
             }
           })
         }
@@ -141,6 +201,63 @@ export function Swap() {
       <p data-testid="cow-preflight">
         {gate}: {preflightMessage[gate]}
       </p>
+      {comparison.length > 0 &&
+        (() => {
+          const ranking = rankQuotedOutput(comparison, clock);
+          return (
+            <section className="rule" data-testid="quote-comparison">
+              <h3>Same-input venue quotes</h3>
+              <p className="muted">
+                Exact-input quoted output after known provider fees, before
+                slippage and wallet gas. Gas is shown separately; no cross-token
+                gas conversion is assumed.
+              </p>
+              {comparison.map((outcome) => (
+                <div
+                  className="panel"
+                  data-testid={`quote-${outcome.provider}`}
+                  key={outcome.provider}
+                >
+                  <h4>
+                    {outcome.provider === "cow" ? "CoW Protocol" : "Uniswap v3"}{" "}
+                    · {outcome.availability}
+                  </h4>
+                  {outcome.availability === "unavailable" ? (
+                    <p>{outcome.reason}</p>
+                  ) : (
+                    (() => {
+                      const detail = displayQuote(outcome.quote, clock);
+                      return (
+                        <>
+                          <p>Quoted output: {detail.output} buy token</p>
+                          <p>Protocol/provider fee: {detail.protocolFee}</p>
+                          <p>Estimated gas: {detail.gas}</p>
+                          <p>Network cost: {detail.networkCost}</p>
+                          <p>PIT fee: {detail.pitFee}</p>
+                          <p>Quote age: {detail.age}</p>
+                          <p>
+                            {outcome.quote.executableThroughPit
+                              ? "CoW execution available only through its separate preflight below."
+                              : "Quote-only: PIT cannot execute this Uniswap quote."}
+                          </p>
+                        </>
+                      );
+                    })()
+                  )}
+                </div>
+              ))}
+              <p data-testid="quote-ranking">
+                {ranking.comparable
+                  ? `Best quoted output (gas excluded): ${ranking.bestProviderIds.join(" and ")}${ranking.bestProviderIds.includes("uniswap-v3") ? ". Uniswap is quote-only; PIT cannot execute it." : "."}`
+                  : ranking.fresh.length === 1
+                    ? "Only one fresh quote; no best-output comparison."
+                    : ranking.fresh.length === 0
+                      ? "No fresh quote available."
+                      : `Quotes cannot be compared: ${ranking.reason}.`}
+              </p>
+            </section>
+          );
+        })()}
       {quote && (
         <div className="rule">
           {Object.entries(

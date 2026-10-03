@@ -1,0 +1,15 @@
+{
+  "officialSource": "https://developers.uniswap.org/docs/protocols/v3/deployments/v3-ethereum-deployments",
+  "existingPublicRpc": "https://ethereum-sepolia-rpc.publicnode.com",
+  "eth_chainId": "0xaa36a7",
+  "eth_blockNumber": "0xb48ece",
+  "quoterV2": "0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3",
+  "eth_getCode": {
+    "block": "0xb48ece",
+    "responseId": 4,
+    "nonempty": true,
+    "byteLength": 8273,
+    "prefix": "0x608060405234801561001057600080fd",
+    "bytecodeSha256": "41807167ee6769e9848dc88cc44931db2c9d9f3fe320f8c10e5a588722f4496b"
+  }
+}
