@@ -2615,3 +2615,7 @@ The [authoritative Phase T operator checklist, dry-run proof and future evidence
 Phase U adds a separate local append-only acceptance-session database and exact-integer CoW / raw-only derivative reconciliation. Synthetic fixtures and disconnected browser dry runs are the only new acceptance evidence; no live transaction or deployment occurred. Full design and results: [LIVE-EVIDENCE-HARNESS.md](audit/phase-u/LIVE-EVIDENCE-HARNESS.md). Assumption 8 remains OPEN.
 
 Phase U clean-source release result: tested commit `be2d4d032f7260f02872dfd509585dd87d5f28e5`, 157/157 unit tests, 27/27 Playwright tests, 99 files with zero typecheck diagnostics, 11 pages, build SHA-256 `5d8513c0ab4e6819401968fb384b8b75363bff3755b4f0dad0d909f4bd1de8ba`. [Exact output](audit/phase-u/release-check.txt). Later changes are evidence-only; live acceptance remains blocked.
+
+## Phase H-live blocked preflight
+
+The [Phase H-live record](audit/phase-h-live/LIVE-ACCEPTANCE.md) documents a clean release preflight, then an H.1 stop: no externally controlled funded testnet wallet/account was connected or supplied. No prompt, order, fill, acceptance-session export or live accounting reconciliation occurred. Source and fee configuration are unchanged. Assumption 8 remains OPEN.
