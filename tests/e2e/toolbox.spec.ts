@@ -188,7 +188,7 @@ test("direct execution URLs keep signing controls behind existing preflight", as
   ).toHaveCount(0);
   await page.goto("/tools/perps/");
   await expect(
-    page.getByRole("button", { name: "Sign & place limit order" }),
+    page.getByRole("button", { name: "Review testnet limit order" }),
   ).toBeDisabled();
   await expect(page.getByTestId("hl-preflight")).not.toContainText("GREEN");
 });

@@ -62,7 +62,7 @@ test("perps fields render against public info fixture and mobile does not overfl
   await page.getByLabel("Limit price (USDC)").fill("2000");
   await page.getByLabel("Size (ETH)").fill("0.01");
   await expect(
-    page.getByRole("button", { name: "Sign & place limit order" }),
+    page.getByRole("button", { name: "Review testnet limit order" }),
   ).toBeDisabled();
   expect(
     await page.evaluate(
@@ -244,7 +244,9 @@ test("IPFS-style subpath hydrates and links stay beneath the CID", async ({
     page.getByRole("heading", { name: "What PIT earns." }),
   ).toBeVisible();
   await page.goto("/ipfs/test-cid/tools/pnl/");
-  await page.getByRole("link", { name: /Liquidation Price Calculator/ }).click();
+  await page
+    .getByRole("link", { name: /Liquidation Price Calculator/ })
+    .click();
   await expect(page).toHaveURL(/\/ipfs\/test-cid\/tools\/liquidation\/$/);
   expect(errors).toEqual([]);
 });

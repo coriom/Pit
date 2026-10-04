@@ -1,5 +1,7 @@
 # Phase J — testnet operator runbook
 
+The current authoritative operator checklist and checkpoint sequence is [Phase T live readiness](../phase-t/LIVE-READINESS.md). This Phase J runbook is retained as historical technical background.
+
 **No live acceptance has occurred.** Run `pnpm release:check` from a clean checkout before a separately authorized live session. A passing release check is offline evidence only. Use an external wallet; never supply a private key, seed phrase, API secret or keystore password to PIT. Do not create a private-key `.env.local`.
 
 ## CoW / Ethereum Sepolia prerequisites

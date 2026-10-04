@@ -24,6 +24,11 @@ import {
 } from "../lib/swap-quotes";
 import { uniswapV3QuoteProvider } from "../lib/uniswap-quote";
 import { DiagnosticQuotes } from "./DiagnosticQuotes";
+import { config } from "../lib/config";
+import { storageEnabled } from "../lib/storage-policy";
+import { cowOperatorReadiness } from "../lib/operator-readiness";
+import { ReadinessPanel } from "./ReadinessPanel";
+import { OperatorCheckpoint } from "./OperatorCheckpoint";
 export function Swap() {
   const { address, chainId } = useAccount();
   const { data: wallet } = useWalletClient();
@@ -34,6 +39,10 @@ export function Swap() {
   const [comparison, setComparison] = useState<QuoteOutcome[]>([]);
   const [clock, setClock] = useState(Date.now());
   const [approved, setApproved] = useState(false);
+  const [dryRun, setDryRun] = useState(false);
+  const [dryStage, setDryStage] = useState<"approval" | "order" | "done">(
+    "approval",
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
@@ -47,6 +56,7 @@ export function Swap() {
     setQuote(undefined);
     setComparison([]);
     setApproved(false);
+    setDryStage("approval");
     setError("");
     setStatus("");
   }, [address, chainId, sell, buy, amount]);
@@ -122,6 +132,47 @@ export function Swap() {
     `${address}:${chainId}:${sell}:${buy}:${amount}:${quote?.obtainedAt}`,
     check,
   );
+  const readiness = cowOperatorReadiness({
+    connected: !!wallet?.account,
+    chainId,
+    feesEnabled: config.FEES_ENABLED,
+    mainnetEnabled: config.MAINNET_ENABLED,
+    storage: storageEnabled(),
+    sellToken: sell,
+    buyToken: buy,
+    gate,
+    quotePresent: !!quote,
+    quoteDiagnostic:
+      (quote as { diagnosticOnly?: boolean } | undefined)?.diagnosticOnly ===
+      true,
+    quoteObtainedAt: quote?.obtainedAt,
+    now: clock,
+  });
+  const disclosure =
+    quote && gate === "GREEN"
+      ? costsDisplay(
+          quote.quoteResults.amountsAndCosts,
+          quote.sellDecimals,
+          quote.buyDecimals,
+        )
+      : null;
+  const action = dryRun
+    ? dryStage === "approval"
+      ? "token approval"
+      : "order signature and submission"
+    : approved
+      ? "order signature and submission"
+      : "token approval";
+  const checkpointDetails = [
+    "Protocol: CoW Protocol · Ethereum Sepolia (11155111)",
+    `Account: ${address ?? "not connected"}`,
+    `Assets: ${sell || "unknown"} → ${buy || "unknown"} · exact sell amount: ${amount || "unknown"}`,
+    `Side: sell · expected protocol fee: ${disclosure?.["Protocol fee (buy token)"] ?? "UNKNOWN — obtain a fresh executable quote"} buy token`,
+    `Expected solver network cost: ${disclosure?.["Network cost (sell token)"] ?? "UNKNOWN"} sell token; wallet approval gas is separate and unknown.`,
+    `PIT fee: ${disclosure?.["Partner fee (buy token)"] ?? "0 configured; quote not validated"} buy token`,
+    `Minimum receive: ${disclosure?.["Minimum receive (buy token)"] ?? "UNKNOWN"} buy token`,
+    "Accounting on confirmed fill: Taxlot v1 trade; no Taxlot event on quote or submission alone.",
+  ];
   return (
     <>
       <div className="row">
@@ -224,6 +275,24 @@ export function Swap() {
       <p data-testid="cow-preflight">
         {gate}: {preflightMessage[gate]}
       </p>
+      <ReadinessPanel protocol="cow" items={readiness} />
+      <label>
+        <input
+          type="checkbox"
+          style={{ width: "auto", marginRight: 10 }}
+          checked={dryRun}
+          onChange={(event) => {
+            setDryRun(event.target.checked);
+            setDryStage("approval");
+          }}
+        />
+        Dry run only · rehearse checkpoints without wallet signing or submission
+      </label>
+      {dryRun && (
+        <p data-testid="cow-dry-run-stage">
+          Dry-run stage: {dryStage}. No wallet action is possible.
+        </p>
+      )}
       {comparison.length > 0 &&
         (() => {
           const ranking = rankQuotedOutput(comparison, clock);
@@ -304,30 +373,38 @@ export function Swap() {
           <small>
             Quote expires after 60 seconds. Token approval uses gas separately.
           </small>
-          <button
-            className="primary"
-            disabled={busy || gate !== "GREEN"}
-            onClick={() =>
-              act(async () => {
-                await check();
-                if (!approved) {
-                  await approveSwap(quote);
-                  setApproved(true);
-                } else {
-                  const result = await submitSwap(quote);
-                  setStatus(`Submitted: ${result.orderId}`);
-                  setQuote(undefined);
-                }
-              })
-            }
-          >
-            {approved ? "Sign & submit order" : "Approve exact sell amount"}
-          </button>
           <details>
             <summary>Signed appData</summary>
             <pre>{quote.quoteResults.appDataInfo.fullAppData}</pre>
           </details>
         </div>
+      )}
+      {(quote || dryRun) && (!dryRun || dryStage !== "done") && (
+        <OperatorCheckpoint
+          key={`${address}:${chainId}:${sell}:${buy}:${amount}:${quote?.obtainedAt}:${approved}:${dryRun}:${dryStage}`}
+          action={action}
+          details={checkpointDetails}
+          gate={gate}
+          dryRun={dryRun}
+          busy={busy}
+          onDryRun={() =>
+            setDryStage(dryStage === "approval" ? "order" : "done")
+          }
+          onConfirm={() =>
+            act(async () => {
+              await check();
+              if (!quote) throw new PreflightError("INVALID_EXECUTION_QUOTE");
+              if (!approved) {
+                await approveSwap(quote);
+                setApproved(true);
+              } else {
+                const result = await submitSwap(quote);
+                setStatus(`Submitted: ${result.orderId}`);
+                setQuote(undefined);
+              }
+            })
+          }
+        />
       )}
       {error && (
         <p role="alert" className="error">
