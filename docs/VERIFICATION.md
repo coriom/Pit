@@ -2609,3 +2609,9 @@ The bounded Node/viem transport matrix reached the approved Sepolia RPC, while t
 ## Phase T — operator live-acceptance readiness
 
 The [authoritative Phase T operator checklist, dry-run proof and future evidence procedure](audit/phase-t/LIVE-READINESS.md) adds read-only PASS/FAIL/UNKNOWN prerequisites and separate operator checkpoints before approval, CoW sign-and-submit, Hyperliquid order and reduce-only close. Diagnostic quotes cannot become CoW execution quotes. Dry run advances only UI state and makes no wallet signing, submission or accounting write. No live acceptance or public-origin verification is claimed; Assumption 8 remains OPEN. The [complete 362-line clean-source release transcript](audit/phase-t/release-check.txt) tested `6065eeed0dd6ffa2a814f6bb6e192d02708ad6a3`: 152 unit tests, 25 Playwright tests, 95 typechecked files with zero diagnostics, 11 static pages, build SHA-256 `7f6230468ba155f7fe670e1ee7100c17523f52902c00b34fecdb025b605c9a2b`.
+
+## Phase U — acceptance evidence harness
+
+Phase U adds a separate local append-only acceptance-session database and exact-integer CoW / raw-only derivative reconciliation. Synthetic fixtures and disconnected browser dry runs are the only new acceptance evidence; no live transaction or deployment occurred. Full design and results: [LIVE-EVIDENCE-HARNESS.md](audit/phase-u/LIVE-EVIDENCE-HARNESS.md). Assumption 8 remains OPEN.
+
+Phase U clean-source release result: tested commit `be2d4d032f7260f02872dfd509585dd87d5f28e5`, 157/157 unit tests, 27/27 Playwright tests, 99 files with zero typecheck diagnostics, 11 pages, build SHA-256 `5d8513c0ab4e6819401968fb384b8b75363bff3755b4f0dad0d909f4bd1de8ba`. [Exact output](audit/phase-u/release-check.txt). Later changes are evidence-only; live acceptance remains blocked.

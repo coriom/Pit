@@ -29,13 +29,17 @@ import { storageEnabled } from "../lib/storage-policy";
 import { cowOperatorReadiness } from "../lib/operator-readiness";
 import { ReadinessPanel } from "./ReadinessPanel";
 import { OperatorCheckpoint } from "./OperatorCheckpoint";
+import { useAcceptanceEvidence } from "./AcceptanceEvidence";
+import { listAcceptanceEntries } from "../lib/acceptance-evidence";
 export function Swap() {
   const { address, chainId } = useAccount();
+  const evidence = useAcceptanceEvidence();
   const { data: wallet } = useWalletClient();
   const [sell, setSell] = useState("");
   const [buy, setBuy] = useState("");
   const [amount, setAmount] = useState("");
   const [quote, setQuote] = useState<SwapQuote>();
+  const [quoteEvidenceIdentity, setQuoteEvidenceIdentity] = useState("");
   const [comparison, setComparison] = useState<QuoteOutcome[]>([]);
   const [clock, setClock] = useState(Date.now());
   const [approved, setApproved] = useState(false);
@@ -54,6 +58,7 @@ export function Swap() {
     requestSequence.current++;
     invalidateSwapQuote(quote);
     setQuote(undefined);
+    setQuoteEvidenceIdentity("");
     setComparison([]);
     setApproved(false);
     setDryStage("approval");
@@ -77,6 +82,31 @@ export function Swap() {
           offset: 0,
         });
         if (!stopped) setHistory(orders);
+        if (
+          !stopped &&
+          evidence.active?.protocol === "cow" &&
+          evidence.active.account === address.toLowerCase()
+        ) {
+          const recorded = await listAcceptanceEntries(evidence.active);
+          const submitted = new Set(
+            recorded
+              .filter((e) => e.data.kind === "cow-submission")
+              .map((e) => (e.data as { orderUid: string }).orderUid),
+          );
+          for (const order of orders)
+            if (submitted.has(order.uid)) {
+              await evidence.capture(
+                "cow",
+                `status:${order.uid}:${order.status}`,
+                {
+                  kind: "cow-status",
+                  orderUid: order.uid,
+                  status: order.status,
+                  settlementTxHash: null,
+                },
+              );
+            }
+        }
       } catch (e) {
         if (!stopped)
           setStatus(
@@ -90,7 +120,7 @@ export function Swap() {
       stopped = true;
       clearInterval(id);
     };
-  }, [address, chainId, wallet]);
+  }, [address, chainId, wallet, evidence.active?.id]);
   async function act(fn: () => Promise<void>) {
     setBusy(true);
     setError("");
@@ -148,6 +178,7 @@ export function Swap() {
     quoteObtainedAt: quote?.obtainedAt,
     now: clock,
   });
+  const quoteIdentity = quote ? quoteEvidenceIdentity : "";
   const disclosure =
     quote && gate === "GREEN"
       ? costsDisplay(
@@ -218,6 +249,7 @@ export function Swap() {
             const s = ++requestSequence.current;
             invalidateSwapQuote(quote);
             setQuote(undefined);
+            setQuoteEvidenceIdentity("");
             setApproved(false);
             if (
               !isAddress(sell) ||
@@ -247,6 +279,29 @@ export function Swap() {
             if (r === revision.current && s === requestSequence.current) {
               setComparison(outcomes);
               setClock(Date.now());
+              const executableAvailable = outcomes.some(
+                (outcome) =>
+                  outcome.provider === "cow" &&
+                  outcome.availability === "available",
+              );
+              if (executableAvailable && cowCandidate) {
+                const costs = cowCandidate.quoteResults.amountsAndCosts;
+                const identity = `cowquote:${crypto.randomUUID()}`;
+                await evidence.capture("cow", `quote:${identity}`, {
+                  kind: "cow-quote",
+                  quoteIdentity: identity,
+                  sellToken: cowCandidate.sellToken,
+                  buyToken: cowCandidate.buyToken,
+                  sellBudget: cowCandidate.units.toString(),
+                  expectedBuy: costs.afterSlippage.buyAmount.toString(),
+                  pitPartnerFee:
+                    costs.costs.partnerFee.amount.toString() as "0",
+                  obtainedAt: new Date(cowCandidate.obtainedAt).toISOString(),
+                });
+                if (r !== revision.current || s !== requestSequence.current)
+                  return;
+                setQuoteEvidenceIdentity(identity);
+              }
               setQuote(
                 outcomes.some(
                   (outcome) =>
@@ -390,20 +445,41 @@ export function Swap() {
           onDryRun={() =>
             setDryStage(dryStage === "approval" ? "order" : "done")
           }
-          onConfirm={() =>
-            act(async () => {
+          onConfirm={async () => {
+            await evidence.capture("cow", `checkpoint:${crypto.randomUUID()}`, {
+              kind: "readiness",
+              items: readiness.map(({ id, status }) => ({ id, status })),
+            });
+            await evidence.capture("cow", `checkpoint:${crypto.randomUUID()}`, {
+              kind: "checkpoint",
+              action: approved ? "cow-order" : "cow-approval",
+              confirmed: true,
+            });
+            await act(async () => {
               await check();
               if (!quote) throw new PreflightError("INVALID_EXECUTION_QUOTE");
               if (!approved) {
                 await approveSwap(quote);
                 setApproved(true);
+                await evidence.capture("cow", `approval:${quoteIdentity}`, {
+                  kind: "cow-approval",
+                  quoteIdentity,
+                  outcome: "completed",
+                });
               } else {
                 const result = await submitSwap(quote);
                 setStatus(`Submitted: ${result.orderId}`);
+                await evidence.capture("cow", `submission:${result.orderId}`, {
+                  kind: "cow-submission",
+                  quoteIdentity,
+                  orderUid: result.orderId,
+                  pitPartnerFee: "0",
+                });
                 setQuote(undefined);
+                setQuoteEvidenceIdentity("");
               }
-            })
-          }
+            });
+          }}
         />
       )}
       {error && (

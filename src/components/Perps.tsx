@@ -17,8 +17,14 @@ import { storageEnabled } from "../lib/storage-policy";
 import { perpOperatorReadiness } from "../lib/operator-readiness";
 import { ReadinessPanel } from "./ReadinessPanel";
 import { OperatorCheckpoint } from "./OperatorCheckpoint";
+import { useAcceptanceEvidence } from "./AcceptanceEvidence";
+import {
+  hyperliquidSubmissionIdentity,
+  listAcceptanceEntries,
+} from "../lib/acceptance-evidence";
 export function Perps() {
   const { address } = useAccount();
+  const evidence = useAcceptanceEvidence();
   const { data: wallet } = useWalletClient();
   const [markets, setMarkets] = useState<
     { name: string; szDecimals: number }[]
@@ -49,6 +55,54 @@ export function Perps() {
       try {
         const next = await readPerps(address);
         if (!stopped) setData(next);
+        if (
+          !stopped &&
+          evidence.active?.protocol === "hyperliquid" &&
+          evidence.active.account === address.toLowerCase()
+        ) {
+          const entries = await listAcceptanceEntries(evidence.active);
+          const submissions = entries.filter(
+            (e) =>
+              e.data.kind === "hyperliquid-submission" &&
+              e.data.orderId !== null,
+          );
+          for (const submission of submissions) {
+            const orderId = (submission.data as { orderId: string }).orderId;
+            if (
+              entries.some(
+                (e) =>
+                  e.data.kind === "hyperliquid-status" &&
+                  e.data.orderId === orderId &&
+                  e.data.status !== "open",
+              )
+            )
+              continue;
+            const result = await hlInfo.orderStatus({
+              user: address,
+              oid: orderId,
+            });
+            if (result.status !== "order") continue;
+            const market = (submission.data as { market: string }).market;
+            const positionSize =
+              next.positions.assetPositions.find(
+                (p) => p.position.coin === market,
+              )?.position.szi ?? null;
+            await evidence.capture(
+              "hyperliquid",
+              `status:${orderId}:${result.order.status}`,
+              {
+                kind: "hyperliquid-status",
+                orderId,
+                status: result.order.status,
+                positionSize,
+                openOrder: next.orders.some((o) => String(o.oid) === orderId),
+                observedAt: new Date(
+                  result.order.statusTimestamp,
+                ).toISOString(),
+              },
+            );
+          }
+        }
       } catch (e) {
         if (!stopped) setError(String(e));
       }
@@ -59,7 +113,7 @@ export function Perps() {
       stopped = true;
       clearInterval(id);
     };
-  }, [address]);
+  }, [address, evidence.active?.id]);
   async function act(fn: () => Promise<unknown>) {
     setBusy(true);
     setError("");
@@ -207,9 +261,53 @@ export function Perps() {
           dryRun={dryRun}
           busy={busy}
           onDryRun={() => setDryRunDone(true)}
-          onConfirm={() =>
-            act(() => placePerp(wallet!, asset, buy, price, size, reduce))
-          }
+          onConfirm={async () => {
+            await evidence.capture(
+              "hyperliquid",
+              `checkpoint:${crypto.randomUUID()}`,
+              {
+                kind: "readiness",
+                items: readiness.map(({ id, status }) => ({ id, status })),
+              },
+            );
+            await evidence.capture(
+              "hyperliquid",
+              `checkpoint:${crypto.randomUUID()}`,
+              {
+                kind: "checkpoint",
+                action: reduce ? "hyperliquid-close" : "hyperliquid-order",
+                confirmed: true,
+              },
+            );
+            await act(async () => {
+              const result = await placePerp(
+                wallet!,
+                asset,
+                buy,
+                price,
+                size,
+                reduce,
+              );
+              const identity = hyperliquidSubmissionIdentity(result);
+              await evidence.capture(
+                "hyperliquid",
+                `submission:${identity.orderId ?? crypto.randomUUID()}`,
+                {
+                  kind: "hyperliquid-submission",
+                  market: markets[asset]?.name ?? "unknown",
+                  side: buy ? "buy" : "sell",
+                  size,
+                  limitPrice: price,
+                  reduceOnly: reduce,
+                  orderId: identity.orderId,
+                  status: identity.status,
+                  pitBuilderFee: "0",
+                  taxlotStatus: "unsupported_derivative_v1",
+                },
+              );
+              return result;
+            });
+          }}
         />
       )}
       {!wallet && (

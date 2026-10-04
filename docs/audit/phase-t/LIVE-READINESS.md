@@ -33,6 +33,10 @@ The read-only Phase Q/S candidate is WETH `0xfff9976782d46cc05630d1f6ebab18b2324
 | Accounting | `taxlot_status=unsupported_derivative_v1`; confirmed fills/funding are raw derivative evidence only, never Taxlot spot events or CSV rows |
 | Storage | Approved origin and writable local accounting database, preserving existing records |
 
+## Phase U local evidence session
+
+Before a future live action, start a protocol-specific **Acceptance evidence** session on the approved testnet tool UI. The sequence is readiness → operator checkpoint and separate wallet action → protocol confirmation → local evidence capture → Taxlot/raw reconciliation → exported JSON/Markdown report and independent acceptance review. The recorder is local and append-only; it does not initiate a wallet action, and evidence capture does not mean live acceptance has passed. See [Phase U evidence harness](../phase-u/LIVE-EVIDENCE-HARNESS.md).
+
 ## Operator sequence and evidence to capture
 
 1. From a clean checkout, run `pnpm release:check`. Confirm `FEES_ENABLED=false`, `MAINNET_ENABLED=false`, the intended exact testnet endpoints and an approved accounting origin. A local loopback rehearsal does **not** close Assumption 8 or establish public HTTPS header behavior.

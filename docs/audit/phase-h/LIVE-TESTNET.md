@@ -95,3 +95,7 @@ Assumptions 2 and 3 now record missing live parameters and the operator-driven, 
 Live Phase H remains blocked on: external wallet/browser connection and public account; funded Sepolia ERC20 balances/approval gas and viable quote; funded Hyperliquid testnet account/market/minimal order plan; explicit operator wallet approvals; actual IDs, settlement/fill confirmation, final position reconciliation; actual CoW schema validation and network→storage→CSV reconciliation. Phase I remains blocked on derivative semantics and actual importer acceptance. Mainnet and fee activation remain forbidden; no legal-opinion gate was satisfied.
 
 NOT VERIFIED — Quote the exact output of `node scripts/live-e2e.mjs` after the operator supplies a funded external testnet setup and manually approves the intended actions.
+
+## Phase U continuation
+
+A future operator session should follow the [Phase U local evidence sequence](../phase-u/LIVE-EVIDENCE-HARNESS.md) after Phase T readiness. This does not alter this phase's blocked live result or supply any missing UID, fill, fee or CSV proof.
