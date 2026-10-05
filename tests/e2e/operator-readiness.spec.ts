@@ -1,5 +1,46 @@
 import { expect, test } from "@playwright/test";
 
+test("local public-address observer is available without connecting a wallet", async ({
+  page,
+}) => {
+  const walletActions: string[] = [];
+  await page.addInitScript(() => {
+    (window as any).ethereum = {
+      isMetaMask: true,
+      on: () => {},
+      removeListener: () => {},
+      request: async ({ method }: { method: string }) => {
+        if (method === "eth_accounts") return [];
+        if (method === "eth_chainId") return "0xaa36a7";
+        (window as any).__observerWalletActions ??= [];
+        (window as any).__observerWalletActions.push(method);
+        throw Error(method);
+      },
+    };
+  });
+  page.on("request", (request) => {
+    if (
+      /\/api\/v1\/orders|eth_sendTransaction|eth_sendRawTransaction/.test(
+        request.url(),
+      )
+    )
+      walletActions.push(request.url());
+  });
+  await page.goto("/tools/swap/");
+  const observer = page.getByTestId("operator-observer");
+  await expect(observer).toContainText(
+    "No wallet connection, approval, signature or order is requested.",
+  );
+  const run = observer.getByRole("button", { name: "Observe public address" });
+  await expect(run).toBeDisabled();
+  await observer.getByLabel("Public EVM address").fill("invalid-address");
+  await expect(run).toBeDisabled();
+  expect(walletActions).toEqual([]);
+  expect(
+    await page.evaluate(() => (window as any).__observerWalletActions ?? []),
+  ).toEqual([]);
+});
+
 test("disconnected dry-run rehearses both checkpoints without wallet or exchange actions", async ({
   page,
 }) => {

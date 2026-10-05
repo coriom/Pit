@@ -24,6 +24,7 @@ import {
 } from "../lib/swap-quotes";
 import { uniswapV3QuoteProvider } from "../lib/uniswap-quote";
 import { DiagnosticQuotes } from "./DiagnosticQuotes";
+import { OperatorObserver } from "./OperatorObserver";
 import { config } from "../lib/config";
 import { storageEnabled } from "../lib/storage-policy";
 import { cowOperatorReadiness } from "../lib/operator-readiness";
@@ -215,6 +216,7 @@ export function Swap() {
         slippage
       </p>
       <DiagnosticQuotes />
+      <OperatorObserver />
       <label>
         Sell token address
         <input

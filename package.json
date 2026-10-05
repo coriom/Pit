@@ -15,7 +15,9 @@
     "schema:generate": "node scripts/generate-validator.mjs",
     "release:check": "node scripts/release/check.mjs",
     "staging:smoke": "node scripts/audit/staging-smoke.mjs",
-    "quotes:probe": "node scripts/audit/quotes-probe.mjs"
+    "quotes:probe": "node scripts/audit/quotes-probe.mjs",
+    "operator:observe": "node scripts/audit/operator-observe.mjs",
+    "operator:verify": "node scripts/audit/operator-verify.mjs"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.10",

@@ -8,6 +8,10 @@ export type ReadinessItem = Readonly<{
   status: ReadinessStatus;
   detail: string;
 }>;
+export type ObservationFact = Readonly<{
+  status: ReadinessStatus;
+  evidence: string;
+}>;
 
 const item = (
   id: string,
@@ -113,6 +117,48 @@ export function cowOperatorReadiness(f: {
       "Diagnostic and comparison-display quotes never authorize execution.",
     ),
   ];
+}
+
+/** Reuses the same CoW prerequisite IDs, labels and PASS/FAIL/UNKNOWN vocabulary.
+ * A public-address observation cannot claim wallet or IndexedDB readiness, and
+ * its quote row is explicitly read-only rather than an execution authorization.
+ */
+export function cowObservationReadiness({
+  account,
+  facts,
+}: {
+  account: string;
+  facts: Readonly<Record<string, ObservationFact>>;
+}) {
+  const base = cowOperatorReadiness({
+    connected: false,
+    chainId: undefined,
+    feesEnabled: false,
+    mainnetEnabled: false,
+    storage: false,
+    sellToken: "",
+    buyToken: "",
+    gate: "DISCONNECTED",
+    quotePresent: false,
+    quoteDiagnostic: true,
+    now: Date.now(),
+  });
+  return base.map((row) => {
+    if (row.id === "wallet")
+      return {
+        ...row,
+        status: "UNKNOWN" as const,
+        detail: `Public address ${account}; no connected wallet was inspected`,
+      };
+    const observed = facts[row.id];
+    if (!observed) return row;
+    return {
+      ...row,
+      label: row.id === "quote" ? "Fresh read-only CoW quote" : row.label,
+      status: observed.status,
+      detail: observed.evidence,
+    };
+  });
 }
 
 export function perpOperatorReadiness(f: {
