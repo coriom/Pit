@@ -44,6 +44,14 @@ function mutatePolicy(
   files.set("_headers", files.get("_headers")!.replace(policy, replacement));
 }
 describe("release static artifact gate", () => {
+  it.each(["PIT_AUTONOMOUS_SIGNER_TEST_ONLY", "/home/corio/.pit/test-operator/key", "autonomous-signer.mjs"])(
+    "rejects test signer leakage in production output: %s",
+    (value) => {
+      const files = fixture();
+      files.set("_astro/app.js", `console.log(${JSON.stringify(value)})`);
+      expect(() => validateArtifacts(files)).toThrow("Test signer or secret loader");
+    },
+  );
   it("accepts self-hosted scripts/styles with strict CSP", () => {
     expect(validateArtifacts(fixture()).externalExecutable).toBe(0);
   });

@@ -1,0 +1,16 @@
+{
+  "at": "2026-10-09T04:47:01.996Z",
+  "orderUid": "0x5c6cb1b029fa885e0c80d1d8023aaf863d610432a27ebf28de8437273686a34929d0b5939dcc4d0492d72abd1210debd6c90cc966ac87673",
+  "quoteId": 1686720,
+  "account": "0x29d0B5939dcC4D0492D72ABd1210dEbd6c90cC96",
+  "sellToken": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+  "buyToken": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+  "sellBudget": "5000000000000000",
+  "expectedBuy": "249604105",
+  "minimumBuy": "248356085",
+  "networkCostSell": "50205500000000",
+  "protocolFeeBuy": "49930",
+  "pitFeeBuy": "0",
+  "quoteExpiration": "2026-10-09T04:48:52.055055930Z",
+  "httpStatus": 201
+}

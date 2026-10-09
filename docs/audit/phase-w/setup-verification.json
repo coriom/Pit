@@ -1,0 +1,41 @@
+{
+  "chainId": 11155111,
+  "operator": "0x29d0B5939dcC4D0492D72ABd1210dEbd6c90cC96",
+  "weth": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+  "wethCodePresent": true,
+  "wethDecimals": 18,
+  "setup": [
+    {
+      "action": "wrap",
+      "txHash": "public-hash:599298252865760aeaaa147270587d19:bfd6686adfcf1bcdcaa523c2a2989adc",
+      "blockNumber": 11874971,
+      "blockHash": "public-hash:1e0436180868744da62df9c499feb99f:8078432d2faca69d9b05fd67a4bb01a0",
+      "blockTimestampUtc": "2026-10-09T04:32:12.000Z",
+      "gasUsed": "133058",
+      "effectiveGasPriceWei": "1000014",
+      "gasCostWei": "133059862812",
+      "valueWei": "5000000000000000",
+      "calldata": "0xd0e30db0",
+      "receiptStatus": "success"
+    },
+    {
+      "action": "approval",
+      "txHash": "public-hash:54c9b27b8916c95e0dbae5e3e46c0bdf:cb37740c7c4842b8cd924f10732192cc",
+      "blockNumber": 11874980,
+      "blockHash": "public-hash:0df48ab0cee1e6a64a85dacea6d5a4c0:0571b5748b7689c13af99184713d903a",
+      "blockTimestampUtc": "2026-10-09T04:34:00.000Z",
+      "gasUsed": "127972",
+      "effectiveGasPriceWei": "1000014",
+      "gasCostWei": "127973791608",
+      "valueWei": "0",
+      "calldata": "0x095ea7b3000000000000000000000000c92e8bdf79f0507f65a392b0ab4667716bfe01100000000000000000000000000000000000000000000000000011c37937e08000",
+      "receiptStatus": "success"
+    }
+  ],
+  "observedAfterSettlement": {
+    "ethWei": "44999738966345580",
+    "wethWei": "0",
+    "usdcBaseUnits": "270299154",
+    "wethAllowanceWei": "0"
+  }
+}

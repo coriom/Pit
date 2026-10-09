@@ -1,0 +1,63 @@
+{
+  "orderUid": "0x5c6cb1b029fa885e0c80d1d8023aaf863d610432a27ebf28de8437273686a34929d0b5939dcc4d0492d72abd1210debd6c90cc966ac87673",
+  "at": "2026-10-09T04:47:48.147Z",
+  "httpStatus": 200,
+  "order": {
+    "status": "fulfilled",
+    "executedSellAmountBeforeFees": "5000000000000000",
+    "executedBuyAmount": "250299154",
+    "executedFeeAmount": "0",
+    "sellAmount": "5000000000000000",
+    "buyAmount": "248356085",
+    "owner": "0x29d0b5939dcc4d0492d72abd1210debd6c90cc96",
+    "sellToken": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+    "buyToken": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+    "feeAmount": "0"
+  },
+  "event": {
+    "version": 1,
+    "id": "cow:11155111:0x5c6cb1b029fa885e0c80d1d8023aaf863d610432a27ebf28de8437273686a34929d0b5939dcc4d0492d72abd1210debd6c90cc966ac87673:11875047:65",
+    "type": "trade",
+    "timestamp": "2026-10-09T04:47:24.000Z",
+    "sequence": 0,
+    "asset": "eip155:11155111/erc20:0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+    "quantity": "0.005",
+    "counter_asset": "eip155:11155111/erc20:0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+    "counter_quantity": "250.299154",
+    "fee": [
+      {
+        "asset": "eip155:11155111/erc20:0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+        "quantity": "0"
+      }
+    ],
+    "source": "pit:cow:11155111",
+    "account": "0x29d0b5939dcc4d0492d72abd1210debd6c90cc96",
+    "raw_row_ref": "cow:11155111:0x5c6cb1b029fa885e0c80d1d8023aaf863d610432a27ebf28de8437273686a34929d0b5939dcc4d0492d72abd1210debd6c90cc966ac87673:11875047:65",
+    "txid": "public-hash:df87a97fc6604b961e59366ac3968eee:5acb1344e2ead93f4dc374942f4d2d8f",
+    "valuation_note": "Crypto-to-crypto trade, including stablecoins. Amounts from executed fill; no EUR valuation supplied."
+  },
+  "raw": {
+    "orderUid": "0x5c6cb1b029fa885e0c80d1d8023aaf863d610432a27ebf28de8437273686a34929d0b5939dcc4d0492d72abd1210debd6c90cc966ac87673",
+    "owner": "0x29d0b5939dcc4d0492d72abd1210debd6c90cc96",
+    "txHash": "public-hash:df87a97fc6604b961e59366ac3968eee:5acb1344e2ead93f4dc374942f4d2d8f",
+    "sellToken": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+    "buyToken": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+    "sellAmount": "5000000000000000",
+    "sellAmountBeforeFees": "5000000000000000",
+    "buyAmount": "250299154",
+    "blockNumber": 11875047,
+    "logIndex": 65
+  },
+  "trade": {
+    "orderUid": "0x5c6cb1b029fa885e0c80d1d8023aaf863d610432a27ebf28de8437273686a34929d0b5939dcc4d0492d72abd1210debd6c90cc966ac87673",
+    "owner": "0x29d0b5939dcc4d0492d72abd1210debd6c90cc96",
+    "txHash": "public-hash:df87a97fc6604b961e59366ac3968eee:5acb1344e2ead93f4dc374942f4d2d8f",
+    "sellToken": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+    "buyToken": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+    "sellAmount": "5000000000000000",
+    "sellAmountBeforeFees": "5000000000000000",
+    "buyAmount": "250299154",
+    "blockNumber": 11875047,
+    "logIndex": 65
+  }
+}

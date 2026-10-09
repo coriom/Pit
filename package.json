@@ -17,7 +17,8 @@
     "staging:smoke": "node scripts/audit/staging-smoke.mjs",
     "quotes:probe": "node scripts/audit/quotes-probe.mjs",
     "operator:observe": "node scripts/audit/operator-observe.mjs",
-    "operator:verify": "node scripts/audit/operator-verify.mjs"
+    "operator:verify": "node scripts/audit/operator-verify.mjs",
+    "operator:autonomous": "node scripts/audit/operator-autonomous.mjs"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.10",

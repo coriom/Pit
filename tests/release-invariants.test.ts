@@ -47,3 +47,10 @@ it("tracked source accepts the public URL but rejects a neighboring credential",
   );
   expect(() => validateTrackedFiles(files)).toThrow("Credential candidate");
 });
+it("rejects a test signer import or secret path from production source", () => {
+  for (const value of ["import '../scripts/audit/autonomous-signer.mjs'", "/home/corio/.pit/test-operator/key"]) {
+    const files = original();
+    files.set("src/lib/unsafe.ts", Buffer.from(value));
+    expect(() => validateTrackedFiles(files)).toThrow("Test signer import or secret path");
+  }
+});

@@ -1,0 +1,50 @@
+{
+  "orderUid": "0x5c6cb1b029fa885e0c80d1d8023aaf863d610432a27ebf28de8437273686a34929d0b5939dcc4d0492d72abd1210debd6c90cc966ac87673",
+  "schemaValid": true,
+  "type": "trade",
+  "importerIssues": [],
+  "economicReconciliation": "MATCH",
+  "importedCount": 1,
+  "metadataDifferences": [
+    {
+      "field": "id",
+      "pit": "cow:11155111:0x5c6cb1b029fa885e0c80d1d8023aaf863d610432a27ebf28de8437273686a34929d0b5939dcc4d0492d72abd1210debd6c90cc966ac87673:11875047:65",
+      "taxlot": "pit-live-0x5c6cb1b029fa885e0c80d1d8023aaf863d610432a27ebf28de8437273686a34929d0b5939dcc4d0492d72abd1210debd6c90cc966ac87673:2"
+    },
+    {
+      "field": "asset",
+      "pit": "eip155:11155111/erc20:0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+      "taxlot": "EIP155:11155111/ERC20:0XFFF9976782D46CC05630D1F6EBAB18B2324D6B14"
+    },
+    {
+      "field": "counter_asset",
+      "pit": "eip155:11155111/erc20:0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+      "taxlot": "EIP155:11155111/ERC20:0X1C7D4B196CB0C7B01D743FBC6116A902379C7238"
+    },
+    {
+      "field": "fee",
+      "pit": [
+        {
+          "asset": "eip155:11155111/erc20:0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+          "quantity": "0"
+        }
+      ],
+      "taxlot": []
+    },
+    {
+      "field": "source",
+      "pit": "pit:cow:11155111",
+      "taxlot": "Generic"
+    },
+    {
+      "field": "raw_row_ref",
+      "pit": "cow:11155111:0x5c6cb1b029fa885e0c80d1d8023aaf863d610432a27ebf28de8437273686a34929d0b5939dcc4d0492d72abd1210debd6c90cc966ac87673:11875047:65",
+      "taxlot": "pit-live-0x5c6cb1b029fa885e0c80d1d8023aaf863d610432a27ebf28de8437273686a34929d0b5939dcc4d0492d72abd1210debd6c90cc966ac87673:2"
+    },
+    {
+      "field": "valuation_note",
+      "pit": "Crypto-to-crypto trade, including stablecoins. Amounts from executed fill; no EUR valuation supplied.",
+      "taxlot": null
+    }
+  ]
+}

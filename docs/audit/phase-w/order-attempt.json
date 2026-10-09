@@ -1,0 +1,9 @@
+{
+  "stage": "ORDER_ATTEMPT_ARMED",
+  "at": "2026-10-09T04:46:57.512Z",
+  "account": "0x29d0B5939dcC4D0492D72ABd1210dEbd6c90cC96",
+  "quoteId": 1686720,
+  "sellBudget": "5000000000000000",
+  "minimumBuy": "248356085",
+  "profile": "/tmp/pit-test-operator-browser-1QCwBX"
+}

@@ -1,0 +1,29 @@
+{
+  "chainId": 11155111,
+  "txHash": "public-hash:df87a97fc6604b961e59366ac3968eee:5acb1344e2ead93f4dc374942f4d2d8f",
+  "txTo": "0x9008d19f58aabd9ed0d60971565aa8510560ab41",
+  "txFrom": "0xe40cbca4d703642778b40e1e866ebfec1e619872",
+  "status": "success",
+  "blockNumber": 11875047,
+  "blockHash": "public-hash:4758aecd272f1ab1f9d1ba8834f9991d:bc2635e2f52313a12875af0896c6b7ac",
+  "blockTimestampUtc": "2026-10-09T04:47:24.000Z",
+  "gasUsed": "348221",
+  "effectiveGasPriceWei": "100000000",
+  "solverGasCostWei": "34822100000000",
+  "walletTransfers": [
+    {
+      "token": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+      "from": "0x29d0B5939dcC4D0492D72ABd1210dEbd6c90cC96",
+      "to": "0x9008D19f58AAbD9eD0D60971565AA8510560ab41",
+      "amount": "5000000000000000",
+      "logIndex": 66
+    },
+    {
+      "token": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+      "from": "0x9008D19f58AAbD9eD0D60971565AA8510560ab41",
+      "to": "0x29d0B5939dcC4D0492D72ABd1210dEbd6c90cC96",
+      "amount": "250299154",
+      "logIndex": 72
+    }
+  ]
+}

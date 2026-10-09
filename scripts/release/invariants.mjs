@@ -21,6 +21,9 @@ export function validateTrackedFiles(files) {
     /(?:^|[^0-9A-Za-z])0x[0-9a-fA-F]{64}(?![0-9A-Za-z])/,
   ];
   for (const [file, data] of files) {
+    if (/^src\//.test(file) &&
+        /autonomous-signer|test-operator\/key|PIT_AUTONOMOUS_SIGNER_TEST_ONLY/i.test(data.toString()))
+      throw Error(`Test signer import or secret path in production source: ${file}`);
     if (/(?:^|\/)\.env(?:\.|$)/.test(file) && file !== ".env.example")
       throw Error(`Forbidden tracked environment file: ${file}`);
     if (

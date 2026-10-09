@@ -90,24 +90,19 @@ export function csvCell(value: unknown) {
   return `"${s.replaceAll('"', '""')}"`;
 }
 export function eventsCSV(events: TaxlotEvent[]) {
+  // Taxlot's Generic importer rejects nonempty columns outside its explicit
+  // mapping. Full provenance remains in the validated IndexedDB event and
+  // acceptance evidence; this CSV contains only supported import columns.
   const columns = [
-    "version",
-    "id",
-    "type",
     "timestamp",
-    "sequence",
+    "type",
     "asset",
     "quantity",
     "counter_asset",
     "counter_quantity",
-    "fee",
     "fee_asset",
     "fee_quantity",
-    "source",
-    "account",
-    "raw_row_ref",
     "txid",
-    "valuation_note",
   ];
   return (
     [
@@ -119,10 +114,12 @@ export function eventsCSV(events: TaxlotEvent[]) {
           throw new Error(
             "Taxlot Generic CSV mapping supports one fee leg; export blocked to prevent fee loss",
           );
+        const fee = e.fee[0];
+        const hasFee = !!fee && !/^0(?:\.0+)?$/.test(fee.quantity);
         const row = {
           ...e,
-          fee_asset: e.fee[0]?.asset ?? "",
-          fee_quantity: e.fee[0]?.quantity ?? "",
+          fee_asset: hasFee ? fee.asset : "",
+          fee_quantity: hasFee ? fee.quantity : "",
         };
         return columns
           .map((k) => csvCell(row[k as keyof typeof row]))

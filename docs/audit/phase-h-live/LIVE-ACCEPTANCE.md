@@ -1,5 +1,13 @@
 # Phase H-live — real testnet acceptance
 
+## Phase W update — 2026-10-09 UTC
+
+**CoW Ethereum Sepolia live execution and local Taxlot-v1 accounting: PASS for the disposable autonomous test wallet.** Exactly one 0.005 WETH → Circle test-USDC order was signed/submitted through PIT's built swap UI, fulfilled, independently verified against the CoW API and Sepolia settlement receipt, and reconciled through the real browser IndexedDB record, corrected one-row CSV export and current actual Taxlot Generic importer. The order UID is `0x5c6cb1b029fa885e0c80d1d8023aaf863d610432a27ebf28de8437273686a34929d0b5939dcc4d0492d72abd1210debd6c90cc966ac87673`; the settlement transaction is reversibly represented in [Phase W evidence](../phase-w/AUTONOMOUS-TEST-OPERATOR.md). Actual execution was 5,000,000,000,000,000 WETH wei sold for 250,299,154 test-USDC base units received, with zero CoW order/executed fee and no PIT partner-fee metadata. The original CSV was rejected by the newer importer for unmapped provenance columns; the exporter was repaired without changing the stored event or upstream schema, and the original failed export is preserved. [Full per-step evidence and reconciliation](../phase-w/AUTONOMOUS-TEST-OPERATOR.md), [acceptance JSON](../phase-w/live-acceptance.json), [acceptance Markdown](../phase-w/live-acceptance.md).
+
+**Overall H-live remains incomplete:** Hyperliquid testnet live execution and derivative normalization are blocked; a dedicated public HTTPS origin is not verified; Assumption 8 remains OPEN. The historical initial blocked attempt below is retained verbatim as a record of its own 2026-10-04 gate, not a description of current CoW status. No production deployment, mainnet execution, or PIT fee activation occurred.
+
+## Historical initial attempt — 2026-10-04 UTC
+
 **Overall status: BLOCKED. No wallet prompt, approval, signature, order, fill, transaction, or acceptance session occurred.** The operator has not supplied or connected an externally controlled funded Ethereum Sepolia / Hyperliquid-testnet account in this session. PIT must stop both protocols at the mandatory readiness gate. No public identifiers or executed quantities are available; none are synthesized from fixture tests or Phase Q/S diagnostic quotes.
 
 ## Initial preflight — 2026-10-04 UTC

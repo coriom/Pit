@@ -66,7 +66,10 @@ test("approved dedicated HTTPS origin persists and exports; sibling origin canno
   }, event);
   expect(result.allowed).toBe(true);
   expect(result.records).toHaveLength(1);
-  expect(result.csv).toContain('"preserved"');
+  expect(result.records[0].id).toBe("preserved");
+  expect(result.csv).toContain('"trade"');
+  expect(result.csv).toContain('"2000"');
+  expect(result.csv).not.toContain('"preserved"');
   const downloadPromise = page.waitForEvent("download");
   await page.evaluate(async () => (window as any).audit.downloadCSV("fixture"));
   const download = await downloadPromise;

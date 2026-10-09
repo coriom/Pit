@@ -10,6 +10,7 @@ import {
   listEvents,
   eventDB,
   downloadCSV,
+  csvCell,
   type TaxlotEvent,
 } from "../src/lib/events";
 import {
@@ -59,7 +60,9 @@ it("keeps stablecoins as trade and preserves CSV precision and escaping", () => 
   const csv = eventsCSV([{ ...event, valuation_note: '=1+1,"test"\nnext' }]);
   expect(csv).toContain('"trade"');
   expect(csv).toContain("1.000000000000000001");
-  expect(csv).toContain('"\'=1+1,""test""\nnext"');
+  expect(csv).not.toContain("valuation_note");
+  expect(csv.split("\r\n")[0]).toBe('"timestamp","type","asset","quantity","counter_asset","counter_quantity","fee_asset","fee_quantity","txid"');
+  expect(csvCell('=1+1,"test"\nnext')).toBe('"\'=1+1,""test""\nnext"');
 });
 it("retains raw derivative evidence without manufacturing Taxlot events or CSV", async () => {
   const fill = {

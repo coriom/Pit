@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-09T04:53:55.730Z",
+  "httpStatus": 200,
+  "orderUid": "0x5c6cb1b029fa885e0c80d1d8023aaf863d610432a27ebf28de8437273686a34929d0b5939dcc4d0492d72abd1210debd6c90cc966ac87673",
+  "account": "0x29d0b5939dcc4d0492d72abd1210debd6c90cc96",
+  "status": "fulfilled",
+  "sellAmount": "5000000000000000",
+  "buyAmountMinimum": "248356085",
+  "executedSellAmountBeforeFees": "5000000000000000",
+  "executedBuyAmount": "250299154",
+  "orderFeeAmount": "0",
+  "executedFeeAmount": "0",
+  "pitPartnerFeeMetadataPresent": false,
+  "appCode": "PIT",
+  "appDataHash": "public-hash:cf5107a878cb64d342a51e330a92d841:6603af6e36c837643aef554bafe0b356",
+  "appDataHashVerified": true,
+  "signingScheme": "eip712"
+}

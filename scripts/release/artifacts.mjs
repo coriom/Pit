@@ -91,6 +91,8 @@ export function validateArtifacts(files) {
   if (!headers) throw Error("Missing Cloudflare Pages response headers");
   let externalExecutable = 0;
   for (const [name, body] of files) {
+    if (/PIT_AUTONOMOUS_SIGNER_TEST_ONLY|\/\.pit\/test-operator\/|autonomous-signer(?:\.[cm]?[jt]s)?/i.test(body))
+      throw Error(`Test signer or secret loader in production artifact: ${name}`);
     if (
       /\.map$/i.test(name) ||
       /sourceMappingURL\s*=|sourcesContent\s*:/i.test(body)
