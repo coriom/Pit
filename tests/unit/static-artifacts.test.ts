@@ -10,6 +10,11 @@ const policy =
   "default-src 'none'; script-src 'self' 'sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.cow.fi https://api.hyperliquid-testnet.xyz https://rpc.hyperliquid-testnet.xyz https://ethereum-sepolia-rpc.publicnode.com https://11155111.rpc.thirdweb.com; img-src 'self' data:; font-src 'self' data:";
 function fixture() {
   const html = `<html><head><meta http-equiv="content-security-policy" content="${policy}"><link rel="stylesheet" href="./_astro/app.css"></head><body><script src="./_astro/app.js"></script></body></html>`;
+  const securityHeaders = [
+    { key: "X-Content-Type-Options", value: "nosniff" },
+    { key: "Referrer-Policy", value: "no-referrer" },
+    { key: "Content-Security-Policy", value: `${policy}; frame-ancestors 'none'` },
+  ];
   return new Map([
     ["index.html", html],
     ["tools/index.html", html],
@@ -19,6 +24,12 @@ function fixture() {
       "_headers",
       `/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: no-referrer\n  Content-Security-Policy: ${policy}; frame-ancestors 'none'\n`,
     ],
+    ["vercel.json", JSON.stringify({
+      $schema: "https://openapi.vercel.sh/vercel.json",
+      framework: null,
+      outputDirectory: ".",
+      headers: [{ source: "/(.*)", headers: securityHeaders }],
+    })],
     ["_astro/app.css", "body{color:black}"],
     ["_astro/app.js", "console.log('pit')"],
   ]);
@@ -54,6 +65,18 @@ describe("release static artifact gate", () => {
   );
   it("accepts self-hosted scripts/styles with strict CSP", () => {
     expect(validateArtifacts(fixture()).externalExecutable).toBe(0);
+  });
+  it("rejects Vercel headers that differ from the built CSP", () => {
+    const files = fixture();
+    files.set("vercel.json", files.get("vercel.json")!.replace("frame-ancestors 'none'", "frame-ancestors *"));
+    expect(() => validateArtifacts(files)).toThrow("Vercel headers differ");
+  });
+  it("rejects a Vercel function or route added to the static artifact", () => {
+    const files = fixture();
+    const config = JSON.parse(files.get("vercel.json")!);
+    config.functions = { "api/*": {} };
+    files.set("vercel.json", JSON.stringify(config));
+    expect(() => validateArtifacts(files)).toThrow("Vercel headers differ");
   });
   it("rejects a missing toolbox landing page", () => {
     const files = fixture();

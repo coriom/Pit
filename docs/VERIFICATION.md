@@ -1,4 +1,10 @@
-# Phase K verification — dedicated public origin BLOCKED
+# PIT verification — dedicated public origin BLOCKED
+
+## Phase Y.1 — protected Vercel staging candidate
+
+Four inherited Phase Y preparation files generate `dist/vercel.json` from the built CSP and require the Vercel header rule to equal `dist/_headers`; negative tests reject drift or function configuration. The stable staging alias `https://pit-testnet-staging-corioms-projects.vercel.app` and exact deployment URL return Vercel Authentication HTTP 302. All five requested alias paths returned 302, including the CSS asset; those are **authentication responses, not PIT application responses**. Connected Vercel account lookup worked, but project and deployment-file reads returned scope 403. `vercel` CLI is unavailable. An automatic approval review rejected a temporary SSO-bypass share link. No browser acceptance, application HTTP-header verification, or exact-origin accounting approval occurred. [Full access result, safe header matrix and Assumption 8 criteria](audit/phase-y/VERCEL-STAGING.md).
+
+`FEES_ENABLED=false`, `MAINNET_ENABLED=false`, the default-deny accounting-origin policy and noindex remain unchanged. Phase W's CoW live result remains valid; Hyperliquid testnet collateral, public-origin/legacy recovery, and the legal/mainnet-fee gate remain open. The [exact 376-line clean-source release transcript](audit/phase-y/release-check.txt) tested commit `b847225854af59709d29107be2f67b5c35c73c39` and exited 0: **182 unit tests; 28 Playwright tests; 116 typechecked files with 0 errors, 0 warnings, 1 existing hint; 11 static pages; 138 guarded artifacts; build SHA-256 `d8e7e1da8cfc56fb351df1b1126a0272a23dde9849698b70f0fb1c6b4efa39e0`**. The [initial full run](audit/phase-y/release-check-initial-failure.txt) failed one transient Perps-island mount timeout; its isolated rerun and the next full 28-test run passed. Only the two exact transcripts and audit-document corrections were added after the tested source commit. An offline PASS cannot establish Vercel's served headers or browser storage.
 
 ## Phase W — live Sepolia CoW execution and accounting
 

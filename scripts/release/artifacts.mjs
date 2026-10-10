@@ -89,6 +89,24 @@ export function validateArtifacts(files) {
     if (!files.has(page)) throw Error(`Missing required static page: ${page}`);
   const headers = files.get("_headers");
   if (!headers) throw Error("Missing Cloudflare Pages response headers");
+  const vercelText = files.get("vercel.json");
+  if (!vercelText) throw Error("Missing Vercel static response headers");
+  let vercel;
+  try { vercel = JSON.parse(vercelText); }
+  catch { throw Error("Malformed Vercel static response headers"); }
+  const headerLines = headers.trimEnd().split("\n");
+  const expectedHeaders = headerLines.slice(1).map((line) => {
+    const match = line.match(/^  ([A-Za-z-]+): ([^\r\n]+)$/);
+    if (!match) throw Error("Malformed static response header");
+    return { key: match[1], value: match[2] };
+  });
+  if (headerLines[0] !== "/*" ||
+      JSON.stringify(Object.keys(vercel).sort()) !== JSON.stringify(["$schema", "framework", "headers", "outputDirectory"]) ||
+      vercel.framework !== null || vercel.outputDirectory !== "." ||
+      !Array.isArray(vercel.headers) || vercel.headers.length !== 1 ||
+      vercel.headers[0].source !== "/(.*)" ||
+      JSON.stringify(vercel.headers[0].headers) !== JSON.stringify(expectedHeaders))
+    throw Error("Vercel headers differ from the built static CSP and security headers");
   let externalExecutable = 0;
   for (const [name, body] of files) {
     if (/PIT_AUTONOMOUS_SIGNER_TEST_ONLY|\/\.pit\/test-operator\/|autonomous-signer(?:\.[cm]?[jt]s)?/i.test(body))
