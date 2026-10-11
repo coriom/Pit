@@ -1,5 +1,11 @@
 # PIT verification — dedicated public origin BLOCKED
 
+## Phase Y.2 — scope-free Vercel API readback; application SSO still blocks
+
+The connected Vercel MCP now retrieves the exact PIT project and READY staging deployment by ID **without** a team scope argument. It confirms the dedicated stable alias, connected owner/team, Vercel Authentication enabled, and uploaded `vercel.json`, `_headers`, HTML and JS file IDs matching the local artifact. The connector truncates larger file bodies. Unauthenticated HTTPS requests to five staging paths still return Vercel Authentication 302, not PIT application HTTP 200; no actual PIT response CSP or browser storage/CSV check was possible. No shareable bypass was created, no origin was approved, and Assumption 8 remains OPEN. [Exact API selections, artifact identities, HTTP result matrix and blockers](audit/phase-y/VERCEL-STAGING.md).
+
+The [complete 376-line `pnpm release:check` output](audit/phase-y/release-check-y2.txt) tested clean source `11509e7eca109f5cee3c6180688e6a1a758ddf03` and exited 0: **182 unit tests; 28 Playwright tests; 116 files typechecked with 0 errors, 0 warnings and 1 existing hint; 11 pages; 138 guarded artifacts; build SHA-256 `d8e7e1da8cfc56fb351df1b1126a0272a23dde9849698b70f0fb1c6b4efa39e0`**. This phase adds only evidence documentation and the exact transcript after the tested source snapshot.
+
 ## Phase Y.1 — protected Vercel staging candidate
 
 Four inherited Phase Y preparation files generate `dist/vercel.json` from the built CSP and require the Vercel header rule to equal `dist/_headers`; negative tests reject drift or function configuration. The stable staging alias `https://pit-testnet-staging-corioms-projects.vercel.app` and exact deployment URL return Vercel Authentication HTTP 302. All five requested alias paths returned 302, including the CSS asset; those are **authentication responses, not PIT application responses**. Connected Vercel account lookup worked, but project and deployment-file reads returned scope 403. `vercel` CLI is unavailable. An automatic approval review rejected a temporary SSO-bypass share link. No browser acceptance, application HTTP-header verification, or exact-origin accounting approval occurred. [Full access result, safe header matrix and Assumption 8 criteria](audit/phase-y/VERCEL-STAGING.md).

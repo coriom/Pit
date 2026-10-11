@@ -65,3 +65,35 @@ The stable alias was **not** added to the origin allowlist. No wildcard `vercel.
 ## Release evidence
 
 The exact 376-line clean-committed-source `pnpm release:check` transcript is in [release-check.txt](release-check.txt). It tested source commit `b847225854af59709d29107be2f67b5c35c73c39` and exited 0: 182 unit tests, 28 Playwright tests, 116 files typechecked with zero errors, zero warnings and one pre-existing hint in `scripts/audit/verify-live-setup.mjs`, 11 static pages, 138 guarded artifacts, build SHA-256 `d8e7e1da8cfc56fb351df1b1126a0272a23dde9849698b70f0fb1c6b4efa39e0`. The first full run [failed one Playwright mount-timeout check](release-check-initial-failure.txt) after 27 other tests passed; that same case passed in isolation, and the clean-source full rerun passed 28/28. The initial sandbox-only attempt failed before tests at `spawnSync git EPERM` and was rerun with the required filesystem permission; it is not a product failure. The final commit adds only these release transcripts and audit-document corrections after the tested source commit. No live staging acceptance is implied by an offline release PASS.
+
+## Phase Y.2 — scope-free API readback, 2026-10-11
+
+The earlier 403 was specific to calls supplying the `corioms-projects` scope. In this Codex session, the connected Vercel MCP succeeded when the same exact IDs were passed **without** `slug` or `teamId`. No Vercel CLI was installed, no shareable SSO bypass was requested or created, and Vercel Authentication remains enabled.
+
+| Read-only MCP call, without scope argument | Selected exact result |
+|---|---|
+| `get_project({idOrName:"prj_G17pKAhw8I1Ou9bQFFYV6DTB9ydE"})` | `id=prj_G17pKAhw8I1Ou9bQFFYV6DTB9ydE`, `name=pit-testnet-staging`, `accountId=team_jh3uGhEAzuuNEO6gehL1vHE4`, `framework=null`, `domains=["pit-testnet-staging-corioms-projects.vercel.app"]`, `ssoProtection={"enabled":true,"deploymentType":"all_except_custom_domains"}`, `latestDeployment=dpl_GJrqHLzK9TEvgsJEU7Bv2bKhzLZC`. The connected user `coriom` has the same default team ID. |
+| `get_deployment({idOrUrl:"dpl_GJrqHLzK9TEvgsJEU7Bv2bKhzLZC"})` | `id=dpl_GJrqHLzK9TEvgsJEU7Bv2bKhzLZC`, `name=pit-testnet-staging`, `state=READY`, `target=staging`, `url=pit-testnet-staging-l43vpinpv-corioms-projects.vercel.app`, `alias=["pit-testnet-staging-corioms-projects.vercel.app"]`, `creator.username=coriom`, `project.id=prj_G17pKAhw8I1Ou9bQFFYV6DTB9ydE`. |
+| `list_deployment_aliases({id:"dpl_GJrqHLzK9TEvgsJEU7Bv2bKhzLZC"})` | One alias: `pit-testnet-staging-corioms-projects.vercel.app`. |
+| `list_deployment_files({id:"dpl_GJrqHLzK9TEvgsJEU7Bv2bKhzLZC"})` | Deployment API source tree has root `src/` with `src/vercel.json`, `src/_headers`, `src/index.html`, `src/robots.txt`, `src/tools/swap/index.html`, and Astro JS assets. Response reports `truncated=true`, 23 array entries omitted; it is not a complete file enumeration. |
+
+The deployment API's file IDs for those six representative files exactly match independent local `sha1sum dist/...` output:
+
+```text
+6a4dfd570fd6e9d97fabd27138ed1858462ee8c5  dist/vercel.json
+43cf32c6551c1a801c89daa7969c9dae6a1e2495  dist/_headers
+a9bc0896d4e93dd50192d32379d7ad896fd6f644  dist/index.html
+63657cbb7d7086c56b0cd4e5c6999bb683664868  dist/robots.txt
+848d64e0e9439133308a88ab4af73562d0ad08b1  dist/tools/swap/index.html
+b584ad8483bb988612bd20fdab38d96127a99d2b  dist/_astro/Swap.CTeNxFEU.js
+```
+
+The MCP file-content responses for `_headers` and `robots.txt` were complete and byte-identical to the local artifact. Larger file-content responses, including `vercel.json` and HTML, were truncated by the connector, so their direct byte comparison is **not verified**; the matching API file IDs provide upload identity evidence. This establishes that the generated Vercel config file was uploaded under `src/`, but it does **not** establish that Vercel consumed its header rule or served its CSP. Only an authenticated PIT application HTTP 200 with the expected response headers can establish that.
+
+Current unauthenticated HTTPS requests to the stable alias for `/`, `/tools/`, `/tools/swap/`, `/tools/pnl/`, and `/_astro/index.CVsDNC_4.css` all exited 0 from `curl` and returned **HTTP 302** with `content-type: text/plain`, `strict-transport-security: max-age=63072000; includeSubDomains; preload`, `x-frame-options: DENY`, and `x-robots-tag: noindex`. These are Vercel Authentication headers, not PIT application headers. No application HTTP 200, HTTP CSP, browser location, IndexedDB, reload persistence, CSV export, read-only CoW quote, telemetry capture, or live mainnet rejection was observed on staging. The local release tests do not substitute for those checks.
+
+**Updated acceptance disposition:** connected project ownership, staging deployment READY state, stable alias ownership, SSO configuration, and representative artifact-upload identity are verified by scope-free API readback. Actual application response headers/CSP hash match, browser behavior, origin-scoped accounting persistence/CSV, public shared-origin negative behavior, legacy record recovery and real public accounting remain **BLOCKED/OPEN**. The exact stable origin is still absent from `accountingOrigins`; no wildcard is approved. Assumption 8 remains **OPEN**. No redeployment or wallet action occurred.
+
+**Next operator action:** establish a legitimate authenticated test-browser path to this exact SSO-protected staging deployment. The operator can open the stable alias while signed in to the owning Vercel team in an isolated non-wallet browser. Automated PIT browser verification requires a separately authorized, project-scoped protected-access mechanism; no cookie, token, bypass secret or shareable link should be placed in this repository, command arguments, screenshots or report. Until such access exists, stop at the SSO boundary and do not approve the accounting origin.
+
+The exact [Phase Y.2 clean-tree `pnpm release:check` output](release-check-y2.txt) tested source `11509e7eca109f5cee3c6180688e6a1a758ddf03` and exited 0: 182 unit tests, 28 Playwright tests, 116 typechecked files with zero errors, zero warnings and one existing hint, 11 static pages, 138 guarded artifacts, build SHA-256 `d8e7e1da8cfc56fb351df1b1126a0272a23dde9849698b70f0fb1c6b4efa39e0`. The transcript contains 376 lines and SHA-256 `022bb1d30b5117f3ead1bf54d9330e54bd0ea84daaa2dba1accdd9f5f904b3d7`. Phase Y.2 changes audit documentation and its exact release transcript only; tested source/configuration/tests/public assets remain identical.
