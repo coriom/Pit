@@ -4,6 +4,7 @@ import {
   artifactSecretKind,
   validateArtifacts,
   validateAnalyticsDependencies,
+  validateProjectVercelConfig,
 } from "../../scripts/release/artifacts.mjs";
 
 const policy =
@@ -55,6 +56,26 @@ function mutatePolicy(
   files.set("_headers", files.get("_headers")!.replace(policy, replacement));
 }
 describe("release static artifact gate", () => {
+  it("accepts only the matching project-root Vercel CSP and dist output", () => {
+    const artifact = fixture().get("vercel.json")!;
+    const root = JSON.parse(artifact);
+    root.outputDirectory = "dist";
+    expect(() => validateProjectVercelConfig(JSON.stringify(root), artifact)).not.toThrow();
+  });
+  it("rejects stale project-root CSP hashes and unrelated routes", () => {
+    const artifact = fixture().get("vercel.json")!;
+    const root = JSON.parse(artifact);
+    root.outputDirectory = "dist";
+    root.headers[0].headers[2].value += " 'sha256-FAKE'";
+    expect(() => validateProjectVercelConfig(JSON.stringify(root), artifact)).toThrow("Project-root Vercel");
+    root.headers = JSON.parse(artifact).headers;
+    root.routes = [];
+    expect(() => validateProjectVercelConfig(JSON.stringify(root), artifact)).toThrow("Project-root Vercel");
+  });
+  it("rejects a wrong project-root output directory", () => {
+    const artifact = fixture().get("vercel.json")!;
+    expect(() => validateProjectVercelConfig(artifact, artifact)).toThrow("Project-root Vercel");
+  });
   it.each(["PIT_AUTONOMOUS_SIGNER_TEST_ONLY", "/home/corio/.pit/test-operator/key", "autonomous-signer.mjs"])(
     "rejects test signer leakage in production output: %s",
     (value) => {

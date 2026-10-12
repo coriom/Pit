@@ -1,0 +1,6 @@
+
+> pit@0.1.0 release:check /home/corio/PIT
+> node scripts/release/check.mjs
+
+RELEASE CHECK FAILED: spawnSync git EPERM
+ ELIFECYCLE  Command failed with exit code 1.
