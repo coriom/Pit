@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 import re
+import sys
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -29,7 +30,8 @@ def config_csp(path):
     return next(item["value"] for item in headers if item["key"].lower() == "content-security-policy")
 
 
-observed = Path("docs/audit/phase-y/observed-csp-y4.txt").read_text().strip()
+observed_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("docs/audit/phase-y/observed-csp-y4.txt")
+observed = observed_path.read_text().strip()
 html_path = Path("dist/tools/index.html")
 html = html_path.read_text()
 meta = MetaCSP()

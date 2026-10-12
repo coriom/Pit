@@ -101,6 +101,11 @@ export function validateProjectVercelConfig(projectText, artifactText) {
 }
 
 export function validateArtifacts(files) {
+  for (const [name, body] of files) {
+    if (/__pit-staging-accounting\//.test(name) ||
+        /PIT_STAGING_ACCOUNTING_AUDIT_ONLY|__pit-staging-accounting|pit:staging-synthetic/.test(body))
+      throw Error(`Staging accounting harness in production artifact: ${name}`);
+  }
   const htmlFiles = [...files].filter(([name]) => name.endsWith(".html"));
   for (const page of [
     "index.html",

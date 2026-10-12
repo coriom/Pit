@@ -84,6 +84,14 @@ describe("release static artifact gate", () => {
       expect(() => validateArtifacts(files)).toThrow("Test signer or secret loader");
     },
   );
+  it("rejects the staging accounting harness by path or marker in production output", () => {
+    const byPath = fixture();
+    byPath.set("__pit-staging-accounting/index.html", "synthetic audit");
+    expect(() => validateArtifacts(byPath)).toThrow("Staging accounting harness");
+    const byContent = fixture();
+    byContent.set("_astro/app.js", "pit:staging-synthetic");
+    expect(() => validateArtifacts(byContent)).toThrow("Staging accounting harness");
+  });
   it("accepts self-hosted scripts/styles with strict CSP", () => {
     expect(validateArtifacts(fixture()).externalExecutable).toBe(0);
   });
