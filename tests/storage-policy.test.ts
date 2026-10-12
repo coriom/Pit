@@ -13,6 +13,7 @@ import {
   type TaxlotEvent,
 } from "../src/lib/events";
 const origin = "https://pit.example";
+const staging = "https://pit-testnet-staging-corioms-projects.vercel.app";
 const event: TaxlotEvent = {
   version: 1,
   id: "origin-test",
@@ -29,13 +30,18 @@ const event: TaxlotEvent = {
   raw_row_ref: "origin-test",
 };
 afterEach(() => vi.stubGlobal("location", new URL("http://localhost:4321/")));
-it("production policy has no implicitly trusted origins", () => {
-  expect(accountingOrigins).toEqual([]);
+it("production policy trusts only the reviewed exact staging origin", () => {
+  expect(accountingOrigins).toEqual([staging]);
   expect(Object.isFrozen(accountingOrigins)).toBe(true);
+  expect(accountingAllowed(staging + "/tools/")).toBe(true);
   for (const url of [
     "https://pit.pages.dev/",
     "https://cid.ipfs.gateway.example/",
     "https://unknown.example/",
+    "https://pit-testnet-staging-corioms-projects.vercel.app.evil.example/",
+    "https://pit-testnet-staging-l43vpinpv-corioms-projects.vercel.app/",
+    "http://pit-testnet-staging-corioms-projects.vercel.app/",
+    "https://pit-testnet-staging-corioms-projects.vercel.app/ipfs/cid/",
   ])
     expect(accountingAllowed(url)).toBe(false);
 });

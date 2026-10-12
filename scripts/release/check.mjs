@@ -52,7 +52,7 @@ try {
     "PASS exact Taxlot v1 schema SHA256 d8eb339ed7acd7da3b68ef09fe5c1b01c4cc3258cb401a4f2ba8805e7a3b07d7",
   );
   console.log(
-    "PASS origin policy: default-deny; production allowlist empty; legal page unchanged",
+    "PASS origin policy: default-deny; exact reviewed PIT staging alias only; legal page unchanged",
   );
   console.log(
     "PASS tracked-file credential patterns and environment-file policy (not a proof against encoded secrets)",
