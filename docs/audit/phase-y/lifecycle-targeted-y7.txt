@@ -1,0 +1,10 @@
+
+ RUN  v3.2.7 /home/corio/PIT
+
+ ✓ tests/staging-lifecycle.test.ts (15 tests) 12ms
+ ✓ tests/staging-access.test.ts (13 tests) 13ms
+
+ Test Files  2 passed (2)
+      Tests  28 passed (28)
+   Start at  18:23:01
+   Duration  498ms (transform 107ms, setup 39ms, collect 85ms, tests 25ms, environment 0ms, prepare 265ms)

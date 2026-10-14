@@ -111,3 +111,17 @@ test("preexisting records and unapproved origins fail closed", async ({ page }) 
   await expect(page.locator("#report")).toContainText("BLOCKED");
   await expect(page.getByRole("button", { name: "Create" })).toBeDisabled();
 });
+
+test("CSV selection is retained before asynchronous fixture readback", async ({ page }) => {
+  await open(page);
+  await page.getByRole("button", { name: "Create" }).click();
+  const pending = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export" }).click();
+  const download = await pending;
+  await page.locator("#csv-file").setInputFiles((await download.path())!);
+  await page.evaluate(() => {
+    document.getElementById("validate")?.click();
+    (document.getElementById("csv-file") as HTMLInputElement).value = "";
+  });
+  await expect(page.locator("#report")).toContainText("CSV VERIFIED");
+});

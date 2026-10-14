@@ -91,6 +91,11 @@ describe("release static artifact gate", () => {
     const byContent = fixture();
     byContent.set("_astro/app.js", "pit:staging-synthetic");
     expect(() => validateArtifacts(byContent)).toThrow("Staging accounting harness");
+    for (const value of ["PIT_STAGING_ACCEPTANCE_ONLY", "staging-audit-access", "staging-access.mjs", "com.vercel.cli", "x-vercel-protection-bypass"]) {
+      const byAutomation = fixture();
+      byAutomation.set("_astro/app.js", value);
+      expect(() => validateArtifacts(byAutomation)).toThrow("Staging accounting harness");
+    }
   });
   it("accepts self-hosted scripts/styles with strict CSP", () => {
     expect(validateArtifacts(fixture()).externalExecutable).toBe(0);

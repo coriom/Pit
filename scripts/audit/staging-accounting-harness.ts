@@ -136,9 +136,9 @@ async function exportCSV() {
 
 async function validateDownload() {
   assertSite();
-  await savedFixture();
   const file = fileInput.files?.[0];
   if (!file) throw Error("Select the downloaded PIT CSV file");
+  await savedFixture();
   const expected = eventsCSV(await listEvents(ACCOUNT));
   if ((await file.text()) !== expected)
     throw Error("FAIL: downloaded CSV differs from PIT serializer output");

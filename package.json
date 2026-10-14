@@ -18,7 +18,9 @@
     "quotes:probe": "node scripts/audit/quotes-probe.mjs",
     "operator:observe": "node scripts/audit/operator-observe.mjs",
     "operator:verify": "node scripts/audit/operator-verify.mjs",
-    "operator:autonomous": "node scripts/audit/operator-autonomous.mjs"
+    "operator:autonomous": "node scripts/audit/operator-autonomous.mjs",
+    "staging:acceptance": "node scripts/audit/staging-acceptance.mjs",
+    "staging:preflight": "node scripts/audit/staging-preflight.mjs"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.10",
