@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { confirmRevocation, runLifecycle, safeFailure } from "../scripts/audit/staging-lifecycle.mjs";
 
 const secret = "inert-synthetic-credential-never-sent";
@@ -21,7 +24,8 @@ describe("isolated staging credential lifecycle", () => {
     const ops = mockOps();
     const result = await runLifecycle(ops);
     expect(result.status).toBe("PASS");
-    expect(result.creationResponse).toBe("HTTP_SUCCESS");
+    expect(result.creationResponse).toBe("CREATION_CONFIRMED");
+    expect(result.timeline.some((event) => event.status === "ACCESS_CONFIRMED")).toBe(true);
     expect(result.revocation).toBe("REVOCATION_CONFIRMED");
     expect(ops.runBrowser).toHaveBeenCalledOnce();
     expect(ops.deleteSecret).toHaveBeenCalledOnce();
@@ -49,13 +53,19 @@ describe("isolated staging credential lifecycle", () => {
     expect(ops.revokeRemote).not.toHaveBeenCalled();
   });
 
-  it("preserves creation failure but verifies remote absence and deletes retained material", async () => {
+  it("classifies a rejected creation and inactive readback without claiming revocation succeeded", async () => {
     const ops = mockOps();
     ops.createRemote.mockRejectedValueOnce(Object.assign(Error("synthetic secret in response"), { safeCode: "VERCEL_HTTP_400" }));
+    ops.revokeRemote.mockRejectedValueOnce(Object.assign(Error("no such credential"), { safeCode: "VERCEL_HTTP_404" }));
+    ops.verifyRevocation.mockResolvedValueOnce("NO_ACTIVE_BYPASS_OBSERVED");
     const result = await runLifecycle(ops);
-    expect(result.status).toBe("CREDENTIAL_CREATION_FAILED");
+    expect(result.status).toBe("CREATION_REJECTED");
+    expect(result.creationResponse).toBe("CREATION_REJECTED");
+    expect(result.revokeRequest).toBe("REVOCATION_REQUEST_FAILED");
+    expect(result.revocation).toBe("NO_ACTIVE_BYPASS_OBSERVED");
     expect(result.timeline.some((event) => event.reason === "VERCEL_HTTP_400")).toBe(true);
     expect(ops.runBrowser).not.toHaveBeenCalled();
+    expect(ops.createRemote).toHaveBeenCalledOnce();
     expect(ops.revokeRemote).toHaveBeenCalledOnce();
     expect(ops.deleteSecret).toHaveBeenCalledOnce();
     expect(JSON.stringify(result)).not.toContain("synthetic secret");
@@ -91,11 +101,46 @@ describe("isolated staging credential lifecycle", () => {
   it("records a failed revoke request without claiming an active bypass when reads prove absence", async () => {
     const ops = mockOps();
     ops.revokeRemote.mockRejectedValueOnce(Error("synthetic rejected API request"));
+    ops.verifyRevocation.mockResolvedValueOnce("NO_ACTIVE_BYPASS_OBSERVED");
     const result = await runLifecycle(ops);
     expect(result.revokeRequest).toBe("REVOCATION_REQUEST_FAILED");
-    expect(result.revocation).toBe("REVOCATION_CONFIRMED");
-    expect(result.status).toBe("REVOCATION_REQUEST_FAILED");
+    expect(result.revocation).toBe("NO_ACTIVE_BYPASS_OBSERVED");
+    expect(result.status).toBe("NO_ACTIVE_BYPASS_OBSERVED");
     expect(ops.deleteSecret).toHaveBeenCalledOnce();
+  });
+
+  it("redacts nested upstream text in the saved lifecycle report and stdout/stderr", async () => {
+    const ops = mockOps();
+    ops.createRemote.mockRejectedValueOnce(Object.assign(Error(`nested ${secret}`), {
+      safeCode: "VERCEL_HTTP_400",
+      diagnostic: {
+        httpStatus: 400, code: "bad_request", message: `Invalid value ${secret}`,
+        requestId: "iad1::fixture", at: "2026-10-14T00:00:00.000Z",
+        requestFields: ["generate.secret:string[32-alphanumeric]"],
+        nested: { cookie: secret },
+      },
+    }));
+    ops.revokeRemote.mockRejectedValueOnce(Object.assign(Error(secret), { safeCode: "VERCEL_HTTP_404" }));
+    ops.verifyRevocation.mockResolvedValueOnce("NO_ACTIVE_BYPASS_OBSERVED");
+    const result = await runLifecycle(ops);
+    const directory = mkdtempSync(join(tmpdir(), "pit-inert-diagnostic-"));
+    const output = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const path = join(directory, "report.json");
+      writeFileSync(path, JSON.stringify(result));
+      console.log(JSON.stringify(result));
+      expect(readFileSync(path, "utf8")).not.toContain(secret);
+      expect(JSON.stringify(output.mock.calls)).not.toContain(secret);
+      expect(JSON.stringify(errors.mock.calls)).not.toContain(secret);
+      expect(result.timeline.find((event) => event.state === "CREDENTIAL_CREATION")?.diagnostic?.message)
+        .toContain("[REDACTED]");
+      expect(result.status).toBe("CREATION_REJECTED");
+    } finally {
+      output.mockRestore();
+      errors.mockRestore();
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 
   it("reports unknown security state and retains the local secret when confirmation times out", async () => {
@@ -142,7 +187,8 @@ describe("read-only revocation confirmation", () => {
       { entries: 1, old: 200, anonymous: 302 },
       { entries: 0, old: 302, anonymous: 302 },
     ]);
-    expect(await confirmRevocation(secret, ops, (state) => observations.push(state))).toBe("REVOCATION_CONFIRMED");
+    expect(await confirmRevocation(secret, ops, (state) => observations.push(state), { creationResponse: "CREATION_CONFIRMED", revokeRequest: "HTTP_SUCCESS" }))
+      .toBe("REVOCATION_CONFIRMED");
     expect(observations).toEqual(["REVOCATION_PENDING_CONFIRMATION", "REVOCATION_CONFIRMED"]);
   });
 
@@ -153,12 +199,28 @@ describe("read-only revocation confirmation", () => {
 
   it("does not call a 302 redirect accepted, even after a failed revoke request", async () => {
     const { ops } = reads([{ entries: 0, old: 302, anonymous: 302 }]);
-    expect(await confirmRevocation(secret, ops)).toBe("REVOCATION_CONFIRMED");
+    expect(await confirmRevocation(secret, ops, undefined, { creationResponse: "CREATION_REJECTED", revokeRequest: "REVOCATION_REQUEST_FAILED" }))
+      .toBe("NO_ACTIVE_BYPASS_OBSERVED");
+  });
+
+  it("does not claim revocation succeeded when creation succeeded but its revoke PATCH failed", async () => {
+    const { ops } = reads([{ entries: 0, old: 302, anonymous: 302 }]);
+    expect(await confirmRevocation(secret, ops, undefined, { creationResponse: "CREATION_CONFIRMED", revokeRequest: "REVOCATION_REQUEST_FAILED" }))
+      .toBe("NO_ACTIVE_BYPASS_OBSERVED");
   });
 
   it("reports unknown when project state or protected reads are unavailable", async () => {
     const ops = {
       projectState: async () => { throw Error(`nested ${secret}`); },
+      protectedRead: async () => ({ status: 302 }),
+      sleep: async () => undefined,
+    };
+    expect(await confirmRevocation(secret, ops)).toBe("SECURITY_STATUS_UNKNOWN");
+  });
+
+  it("does not treat omitted bypass metadata as an empty entry list", async () => {
+    const ops = {
+      projectState: async () => ({}),
       protectedRead: async () => ({ status: 302 }),
       sleep: async () => undefined,
     };

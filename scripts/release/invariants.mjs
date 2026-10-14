@@ -24,6 +24,9 @@ export function validateTrackedFiles(files) {
     if (/^src\//.test(file) &&
         /autonomous-signer|test-operator\/key|PIT_AUTONOMOUS_SIGNER_TEST_ONLY/i.test(data.toString()))
       throw Error(`Test signer import or secret path in production source: ${file}`);
+    if (/^src\//.test(file) &&
+        /PIT_STAGING_ACCEPTANCE_ONLY|scripts\/audit\/staging-(?:acceptance|access|diagnostics|lifecycle|readonly)\.mjs/i.test(data.toString()))
+      throw Error(`Staging runner import in production source: ${file}`);
     if (/(?:^|\/)\.env(?:\.|$)/.test(file) && file !== ".env.example")
       throw Error(`Forbidden tracked environment file: ${file}`);
     if (

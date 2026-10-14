@@ -43,14 +43,21 @@ async function readVercel(path) {
   }
 }
 
-export async function projectState() {
-  const project = await readVercel(`/v9/projects/${PROJECT_ID}`);
+export function checkedProject(project) {
   if (
+    !project || typeof project !== "object" ||
     project.id !== PROJECT_ID ||
     project.name !== "pit-testnet-staging" ||
-    project.ssoProtection?.deploymentType !== "all_except_custom_domains"
-  ) throw Error("PIT project identity or Vercel Authentication differs");
+    project.ssoProtection?.deploymentType !== "all_except_custom_domains" ||
+    !Object.prototype.hasOwnProperty.call(project, "protectionBypass") ||
+    !project.protectionBypass || typeof project.protectionBypass !== "object" ||
+    Array.isArray(project.protectionBypass)
+  ) throw Error("PIT project identity, Vercel Authentication, or bypass metadata differs");
   return project;
+}
+
+export async function projectState() {
+  return checkedProject(await readVercel(`/v9/projects/${PROJECT_ID}`));
 }
 
 export async function assertDeployment() {
@@ -78,7 +85,7 @@ export async function protectedRead(secret, request = fetch) {
 export async function preflight() {
   await assertDeployment();
   const project = await projectState();
-  if (Object.keys(project.protectionBypass ?? {}).length !== 0)
+  if (Object.keys(project.protectionBypass).length !== 0)
     throw Error("PIT project already has an automation bypass; refuse another");
   if (existsSync(SECRET_PATH)) {
     const entry = lstatSync(SECRET_PATH);

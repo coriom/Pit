@@ -54,3 +54,10 @@ it("rejects a test signer import or secret path from production source", () => {
     expect(() => validateTrackedFiles(files)).toThrow("Test signer import or secret path");
   }
 });
+it("rejects a staging credential-loader or runner import from production source", () => {
+  for (const value of ["import '../scripts/audit/staging-access.mjs'", "import '../scripts/audit/staging-diagnostics.mjs'", "PIT_STAGING_ACCEPTANCE_ONLY"]) {
+    const files = original();
+    files.set("src/lib/unsafe.ts", Buffer.from(value));
+    expect(() => validateTrackedFiles(files)).toThrow("Staging runner import in production source");
+  }
+});
