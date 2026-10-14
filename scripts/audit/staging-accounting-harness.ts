@@ -18,7 +18,14 @@ const SELL = "0.005";
 const BUY = "10.25";
 const output = document.getElementById("report") as HTMLPreElement;
 const fileInput = document.getElementById("csv-file") as HTMLInputElement;
+const fileState = document.getElementById("file-state") as HTMLPreElement;
+const validateButton = document.getElementById("validate") as HTMLButtonElement;
+const cleanupButton = document.getElementById("cleanup") as HTMLButtonElement;
 let csvVerified = false;
+let selectionEventReceived = false;
+let selectedFile: File | null = null;
+let selectedForFixture: string | null = null;
+let validationFileAvailable: boolean | null = null;
 
 function assertSite() {
   if (
@@ -42,6 +49,37 @@ function report(step: string, detail: Record<string, unknown>) {
     ...detail,
   }, null, 2);
 }
+
+function showFileState() {
+  fileState.textContent = JSON.stringify({
+    selectionEventReceived,
+    inputFileListLength: fileInput.files?.length ?? 0,
+    fileObjectCaptured: selectedFile !== null,
+    selectedFilename: selectedFile?.name ?? null,
+    fileSizeBytes: selectedFile?.size ?? null,
+    inputAttached: fileInput.isConnected,
+    validationFileAvailable,
+  }, null, 2);
+  validateButton.disabled = !selectedFile || selectedForFixture !== fixtureId();
+  cleanupButton.disabled = !csvVerified;
+}
+
+fileInput.addEventListener("change", () => {
+  selectionEventReceived = true;
+  selectedFile = fileInput.files?.length === 1 ? fileInput.files[0] : null;
+  selectedForFixture = selectedFile ? fixtureId() : null;
+  validationFileAvailable = null;
+  csvVerified = false;
+  showFileState();
+});
+fileInput.addEventListener("cancel", () => {
+  selectedFile = null;
+  selectedForFixture = null;
+  validationFileAvailable = null;
+  csvVerified = false;
+  showFileState();
+});
+showFileState();
 
 async function emptyStores() {
   const db = await eventDB();
@@ -136,13 +174,16 @@ async function exportCSV() {
 
 async function validateDownload() {
   assertSite();
-  const file = fileInput.files?.[0];
+  const file = selectedForFixture === fixtureId() ? selectedFile : null;
+  validationFileAvailable = file !== null;
+  showFileState();
   if (!file) throw Error("Select the downloaded PIT CSV file");
   await savedFixture();
   const expected = eventsCSV(await listEvents(ACCOUNT));
   if ((await file.text()) !== expected)
     throw Error("FAIL: downloaded CSV differs from PIT serializer output");
   csvVerified = true;
+  showFileState();
   report("CSV VERIFIED — exact PIT serializer and economic fields match", {
     rowCount: 1,
     type: "trade",
@@ -167,6 +208,10 @@ async function cleanup() {
   await tx.done;
   if (!(await emptyStores())) throw Error("FAIL: fixture cleanup incomplete");
   location.hash = "";
+  selectedFile = null;
+  selectedForFixture = null;
+  csvVerified = false;
+  showFileState();
   report("PASS — synthetic fixture cleaned; stores empty", {
     fixtureId: event.id,
     preexistingRecords: 0,

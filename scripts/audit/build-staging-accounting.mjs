@@ -30,8 +30,9 @@ writeFileSync(join(directory, "index.html"), `<!doctype html>
 <li><button id="create">A. Create synthetic record</button></li>
 <li>Reload this page. <button id="verify">B. Verify persisted record</button></li>
 <li><button id="export">C. Download PIT CSV</button></li>
-<li>Choose the downloaded CSV: <input id="csv-file" type="file" accept=".csv,text/csv"> <button id="validate">D. Validate downloaded CSV</button></li>
-<li><button id="cleanup">E. Clean up only this synthetic fixture</button></li>
+<li>Choose the downloaded CSV: <input id="csv-file" type="file" accept=".csv,text/csv"> <button id="validate" disabled>D. Validate downloaded CSV</button>
+<pre id="file-state" role="status"></pre></li>
+<li><button id="cleanup" disabled>E. Clean up only this synthetic fixture</button></li>
 </ol><pre id="report" role="status"></pre></main>
 <script type="module" src="/__pit-staging-accounting/audit.js"></script>
 </body></html>`);

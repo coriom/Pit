@@ -1,13 +1,14 @@
 import { test, expect } from "@playwright/test";
 import { build } from "esbuild";
+import { readFile } from "node:fs/promises";
 
 const origin = "https://pit-testnet-staging-corioms-projects.vercel.app";
 const path = "/__pit-staging-accounting/";
 const html = `<!doctype html><title>Synthetic audit</title>
 <button id="create">Create</button><button id="verify">Verify</button>
 <button id="export">Export</button><input id="csv-file" type="file">
-<button id="validate">Validate</button><button id="cleanup">Cleanup</button>
-<pre id="report"></pre><script src="${path}audit.js"></script>`;
+<button id="validate" disabled>Validate</button><button id="cleanup" disabled>Cleanup</button>
+<pre id="file-state"></pre><pre id="report"></pre><script src="${path}audit.js"></script>`;
 let code: string;
 test.beforeAll(async () => {
   const result = await build({
@@ -53,9 +54,19 @@ test("staging-only synthetic event survives reload, downloads actual PIT CSV, th
   await page.getByRole("button", { name: "Export" }).click();
   const download = await pending;
   expect(download.suggestedFilename()).toBe("pit-taxlot.csv");
-  await page.locator("#csv-file").setInputFiles((await download.path())!);
+  await page.locator("#csv-file").setInputFiles({
+    name: download.suggestedFilename(), mimeType: "text/csv",
+    buffer: await readFile((await download.path())!),
+  });
+  await expect(page.locator("#file-state")).toContainText('"selectionEventReceived": true');
+  await expect(page.locator("#file-state")).toContainText('"inputFileListLength": 1');
+  await expect(page.locator("#file-state")).toContainText('"fileObjectCaptured": true');
+  await expect(page.locator("#file-state")).toContainText('"selectedFilename": "pit-taxlot.csv"');
+  await expect(page.getByRole("button", { name: "Validate" })).toBeEnabled();
   await page.getByRole("button", { name: "Validate" }).click();
   await expect(page.locator("#report")).toContainText("CSV VERIFIED");
+  await expect(page.locator("#file-state")).toContainText('"validationFileAvailable": true');
+  await expect(page.getByRole("button", { name: "Cleanup" })).toBeEnabled();
   await page.getByRole("button", { name: "Cleanup" }).click();
   await expect(page.locator("#report")).toContainText("stores empty");
   const counts = await page.evaluate(async () => {
@@ -124,4 +135,47 @@ test("CSV selection is retained before asynchronous fixture readback", async ({ 
     (document.getElementById("csv-file") as HTMLInputElement).value = "";
   });
   await expect(page.locator("#report")).toContainText("CSV VERIFIED");
+});
+
+test("CSV selection survives report updates and input replacement without re-reading a stale filename", async ({ page }) => {
+  await open(page);
+  await page.getByRole("button", { name: "Create" }).click();
+  const pending = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export" }).click();
+  const download = await pending;
+  await page.locator("#csv-file").setInputFiles((await download.path())!);
+  await page.evaluate(() => {
+    document.getElementById("report")!.textContent = "Visible report update";
+    const oldInput = document.getElementById("csv-file")!;
+    oldInput.replaceWith(oldInput.cloneNode() as Node);
+  });
+  await page.getByRole("button", { name: "Validate" }).click();
+  await expect(page.locator("#report")).toContainText("CSV VERIFIED");
+  await expect(page.locator("#file-state")).toContainText('"inputAttached": false');
+});
+
+test("missing, cancelled, or reloaded file selection cannot enable validation or cleanup", async ({ page }) => {
+  await open(page);
+  await page.getByRole("button", { name: "Create" }).click();
+  await expect(page.getByRole("button", { name: "Validate" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Cleanup" })).toBeDisabled();
+  await page.locator("#csv-file").setInputFiles({ name: "pit-taxlot.csv", mimeType: "text/csv", buffer: Buffer.from("synthetic") });
+  await expect(page.getByRole("button", { name: "Validate" })).toBeEnabled();
+  await page.locator("#csv-file").dispatchEvent("cancel");
+  await expect(page.locator("#file-state")).toContainText('"fileObjectCaptured": false');
+  await expect(page.getByRole("button", { name: "Validate" })).toBeDisabled();
+  await page.reload();
+  await expect(page.locator("#file-state")).toContainText('"selectionEventReceived": false');
+  await expect(page.getByRole("button", { name: "Validate" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Cleanup" })).toBeDisabled();
+});
+
+test("invalid downloaded-file bytes fail without unlocking cleanup", async ({ page }) => {
+  await open(page);
+  await page.getByRole("button", { name: "Create" }).click();
+  await expect(page.locator("#report")).toContainText("CREATED");
+  await page.locator("#csv-file").setInputFiles({ name: "pit-taxlot.csv", mimeType: "text/csv", buffer: Buffer.from("invalid synthetic CSV") });
+  await page.getByRole("button", { name: "Validate" }).click();
+  await expect(page.locator("#report")).toContainText("downloaded CSV differs from PIT serializer output");
+  await expect(page.getByRole("button", { name: "Cleanup" })).toBeDisabled();
 });
