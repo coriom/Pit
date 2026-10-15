@@ -25,6 +25,7 @@ import {
 import { uniswapV3QuoteProvider } from "../lib/uniswap-quote";
 import {
   approveUniswap,
+  inspectUniswapApproval,
   inspectUniswapExecution,
   invalidateUniswapQuote,
   quoteUniswapExecution,
@@ -198,6 +199,23 @@ export function Swap() {
   const uniswapGate = useExecutionPreflight(
     `${address}:${chainId}:${sell}:${buy}:${amount}:${uniswapQuote?.obtainedAt}`,
     checkUniswap,
+  );
+  const checkUniswapApproval = useCallback(async () => {
+    if (venue !== "uniswap-v3" || !wallet || !uniswapQuote || !uniswapApprovalNeeded)
+      throw new PreflightError("INVALID_EXECUTION_QUOTE");
+    if (wallet.account?.address.toLowerCase() !== uniswapQuote.owner.toLowerCase() ||
+        wallet.chain?.id !== uniswapQuote.chainId)
+      throw new PreflightError("WALLET_CHANGED");
+    if (sell.toLowerCase() !== uniswapQuote.sellToken.toLowerCase() ||
+        buy.toLowerCase() !== uniswapQuote.buyToken.toLowerCase() ||
+        !/^\d+(?:\.\d+)?$/.test(amount) ||
+        parseUnits(amount, uniswapQuote.normalized.sellDecimals) !== uniswapQuote.sellAmount)
+      throw new PreflightError("INVALID_EXECUTION_QUOTE");
+    return inspectUniswapApproval(uniswapQuote);
+  }, [venue, wallet, uniswapQuote, uniswapApprovalNeeded, sell, buy, amount]);
+  const uniswapApprovalGate = useExecutionPreflight(
+    `approval:${address}:${chainId}:${sell}:${buy}:${amount}:${uniswapQuote?.obtainedAt}:${uniswapApprovalNeeded}`,
+    checkUniswapApproval,
   );
   const activeGate = venue === "cow" ? gate : uniswapGate;
   const readiness = cowOperatorReadiness({
@@ -521,7 +539,11 @@ export function Swap() {
           <p>Pool fee is included in quoted output. Wallet swap gas and any approval gas are paid separately in Sepolia ETH; they are not included in route ranking.</p>
           <p>PIT fee: 0. Quote expires: {new Date(uniswapQuote.expiresAt).toISOString()}.</p>
           <p>Approval required: {uniswapApprovalNeeded ? "YES — exact sell amount only" : "NO"}.</p>
+          {uniswapApprovalNeeded && <p>Token approval is a separate exact-amount action. A new wallet-bound quote is required after confirmation; this quote never authorizes the later swap.</p>}
         </div>
+      )}
+      {venue === "uniswap-v3" && uniswapApprovalNeeded && uniswapQuote && (
+        <p data-testid="uniswap-approval-preflight">{uniswapApprovalGate}: {preflightMessage[uniswapApprovalGate]}</p>
       )}
       {venue === "cow" && (quote || dryRun) && (!dryRun || dryStage !== "done") && (
         <OperatorCheckpoint
@@ -579,22 +601,31 @@ export function Swap() {
             "Uniswap v3 · Ethereum Sepolia 11155111 · exact 500-tier pool",
             `Wallet: ${uniswapQuote.owner}`,
             `Sell: ${uniswapQuote.sellAmount} base units of ${uniswapQuote.sellToken}`,
-            `Quoted receive: ${uniswapQuote.expectedBuy} base units of ${uniswapQuote.buyToken}`,
-            `Minimum receive: ${uniswapQuote.minimumBuy} base units`,
-            `Pool fee: 500 ppm, included in quote; wallet gas paid separately; PIT fee: 0`,
-            `Quote expiry: ${new Date(uniswapQuote.expiresAt).toISOString()}`,
+            ...(uniswapApprovalNeeded ? [
+              `Exact ERC-20 spender: ${UNISWAP_SEPOLIA.router}`,
+              "Approval changes allowance only; obtain a new quote before any swap.",
+              "Wallet approval gas is paid separately in Sepolia ETH; PIT fee: 0",
+            ] : [
+              `Quoted receive: ${uniswapQuote.expectedBuy} base units of ${uniswapQuote.buyToken}`,
+              `Minimum receive: ${uniswapQuote.minimumBuy} base units`,
+              "Pool fee: 500 ppm, included in quote; wallet gas paid separately; PIT fee: 0",
+              `Quote expiry: ${new Date(uniswapQuote.expiresAt).toISOString()}`,
+            ]),
             "Only a confirmed swap produces a Taxlot spot trade.",
           ]}
-          gate={uniswapGate} dryRun={dryRun} busy={busy}
+          gate={uniswapApprovalNeeded ? uniswapApprovalGate : uniswapGate} dryRun={dryRun} busy={busy}
           onDryRun={() => setDryStage("done")}
           onConfirm={async () => {
             await act(async () => {
-              await checkUniswap();
               if (uniswapApprovalNeeded) {
+                await checkUniswapApproval();
                 const hash = await approveUniswap(uniswapQuote);
-                setStatus(`Exact Uniswap approval confirmed: ${hash}. Request a fresh quote before swapping.`);
+                setStatus(hash
+                  ? `Exact Uniswap approval confirmed: ${hash}. Request a fresh quote before swapping.`
+                  : "Uniswap allowance already sufficient. Request a fresh quote before swapping.");
                 setUniswapQuote(undefined);
               } else {
+                await checkUniswap();
                 const result = await submitUniswap(uniswapQuote);
                 setStatus(`Uniswap Sepolia swap confirmed: ${result.hash}. Reconciling Taxlot…`);
                 const fill = await recordUniswapFill(uniswapQuote, result.receipt, result.client);

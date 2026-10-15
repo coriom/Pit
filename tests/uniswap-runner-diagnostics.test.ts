@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { encodeFunctionData, parseAbi } from "viem";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   assertFreshAfterApproval,
   assertCheckpointValidity,
@@ -13,6 +13,8 @@ import {
 
 const source = readFileSync("src/lib/uniswap-execution.ts", "utf8");
 const served = (value: string) => `export default ${JSON.stringify(value)};\n`;
+const servedTemplate = (value: string) =>
+  `export default \`${value}\`;\n\n/` + "/# sourceMapping" + "URL=data:application/json;base64,e30=\n";
 const abi = parseAbi(["function exactInputSingle((address tokenIn,address tokenOut,uint24 fee,address recipient,uint256 amountIn,uint256 amountOutMinimum,uint160 sqrtPriceLimitX96) params) payable returns (uint256 amountOut)"]);
 const owner = "0x29d0B5939dcC4D0492D72ABd1210dEbd6c90cC96";
 const router = "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E";
@@ -28,6 +30,11 @@ describe("test-only Uniswap runner diagnostics", () => {
   it("rejects disabled execution before wallet access and verifies exact served source", () => {
     expect(sourceGate(source)).toBe(false);
     expect(verifyServedSource(source, served(source)).executionAccepted).toBe(false);
+    expect(verifyServedSource(source, servedTemplate(source)).executionAccepted).toBe(false);
+    expect(() => verifyServedSource(source, servedTemplate(source + "\n// extra")))
+      .toThrow("STALE_OR_WRONG_BUILD");
+    expect(() => verifyServedSource(source, servedTemplate(source) + "\nalert(1)"))
+      .toThrow("STALE_OR_WRONG_BUILD");
     expect(() => verifyServedSource(source, served(source.replace("UNISWAP_EXECUTION_ACCEPTED = false", "UNISWAP_EXECUTION_ACCEPTED = true"))))
       .toThrow("STALE_OR_WRONG_BUILD");
     expect(() => verifyServedSource(source, "<html>Vercel login</html>"))
@@ -46,6 +53,22 @@ describe("test-only Uniswap runner diagnostics", () => {
     expect(() => assertCheckpointValidity(19_999, 10_000)).toThrow("QUOTE_EXPIRED");
     expect(() => assertCheckpointValidity(20_000, 20_000)).toThrow("QUOTE_EXPIRED");
     expect(() => assertCheckpointValidity(Number.NaN, 10_000)).toThrow("QUOTE_EXPIRED");
+  });
+
+  it("refuses a swap wallet call after a slow read consumes the quote lifetime", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-10-15T00:00:00.000Z"));
+      const expiresAt = Date.now() + 30_000;
+      const wallet = vi.fn();
+      const slowRpc = new Promise<void>((resolve) => setTimeout(resolve, 31_000));
+      await vi.advanceTimersByTimeAsync(31_000);
+      await slowRpc;
+      expect(() => assertCheckpointValidity(expiresAt)).toThrow("QUOTE_EXPIRED");
+      expect(wallet).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("mocks gas only for the exact reviewed post-approval swap scope", () => {

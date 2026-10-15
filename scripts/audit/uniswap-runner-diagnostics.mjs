@@ -49,6 +49,17 @@ export function sourceGate(source) {
 }
 
 export function verifyServedSource(localSource, rawModule) {
+  // Vite may serve ?raw as a template literal with an inline source map.
+  // Compare its body byte-for-byte; never evaluate template interpolation.
+  if (rawModule.startsWith("export default `")) {
+    const end = rawModule.lastIndexOf("`;");
+    if (end < "export default `".length ||
+        !/^\s*(?:\/\/# sourceMappingURL=data:application\/json;base64,[A-Za-z0-9+/=]+)?\s*$/.test(
+          rawModule.slice(end + 2))) throw Error("STALE_OR_WRONG_BUILD");
+    const served = rawModule.slice("export default `".length, end);
+    if (served !== localSource) throw Error("STALE_OR_WRONG_BUILD");
+    return { sourceSha256: digest(served), executionAccepted: sourceGate(served) };
+  }
   // Vite's /@fs/...?...raw response exports one quoted JavaScript string.
   // Match only a literal; never evaluate arbitrary response code.
   const encoded = rawModule.match(/^export default ((?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'));(?:\s*\/\/#[^\n]*)?\s*$/s)?.[1];

@@ -239,9 +239,49 @@ export async function inspectUniswapExecution(q: UniswapExecutionQuote) {
     Date.now() < q.expiresAt, "QUOTE_EXPIRED");
   return { context, client, balance, allowance, eth, gasPrice, gasEstimate, data };
 }
+// An ERC-20 approval changes allowance only. It cannot use an expired swap
+// quote for execution, but it need not race that quote's 30-second lifetime.
+// This acceptance scope is deliberately pinned to the reviewed 10-USDC pair.
+export function assertUniswapApprovalScope(q: UniswapExecutionQuote) {
+  requirePredicate(q.chainId === UNISWAP_SEPOLIA.chainId &&
+    same(q.router, UNISWAP_SEPOLIA.router) &&
+    same(q.sellToken, UNISWAP_SEPOLIA.usdc) &&
+    same(q.buyToken, UNISWAP_SEPOLIA.weth) &&
+    q.sellAmount === 10_000_000n,
+    "INVALID_EXECUTION_QUOTE");
+}
+export async function inspectUniswapApproval(q: UniswapExecutionQuote) {
+  requirePredicate(!!q && typeof q === "object", "INVALID_EXECUTION_QUOTE");
+  const context = executions.get(q);
+  requirePredicate(!!context && current.get(context.wallet) === q &&
+    fingerprint(q) === context.fingerprint &&
+    same(q.owner, context.wallet.account?.address ?? ""),
+    "INVALID_EXECUTION_QUOTE");
+  assertUniswapApprovalScope(q);
+  requirePredicate(UNISWAP_EXECUTION_ACCEPTED, "UNISWAP_NOT_ACCEPTED");
+  const { client, pool } = await inspectEnvironment(context.wallet, q.sellToken, q.buyToken);
+  requirePredicate(same(pool, q.pool), "INVALID_EXECUTION_QUOTE");
+  const [balance, allowance, eth, gasPrice] = await Promise.all([
+    client.readContract({ address: q.sellToken, abi: erc20Abi,
+      functionName: "balanceOf", args: [q.owner] }),
+    client.readContract({ address: q.sellToken, abi: erc20Abi,
+      functionName: "allowance", args: [q.owner, q.router] }),
+    client.getBalance({ address: q.owner }), client.getGasPrice(),
+  ]);
+  requirePredicate(balance >= q.sellAmount, "INSUFFICIENT_BALANCE");
+  const gasEstimate = await client.estimateContractGas({ account: q.owner,
+    address: q.sellToken, abi: erc20Abi, functionName: "approve",
+    args: [q.router, q.sellAmount] });
+  requirePredicate(eth >= gasEstimate * gasPrice * 2n, "INSUFFICIENT_BALANCE");
+  requirePredicate(current.get(context.wallet) === q, "INVALID_EXECUTION_QUOTE");
+  return { context, client, balance, allowance, eth, gasPrice, gasEstimate };
+}
 export async function approveUniswap(q: UniswapExecutionQuote) {
-  const state = await inspectUniswapExecution(q);
-  if (state.allowance >= q.sellAmount) return null;
+  const state = await inspectUniswapApproval(q);
+  if (state.allowance >= q.sellAmount) {
+    invalidateUniswapQuote(q);
+    return null;
+  }
   requirePredicate(!state.context.approvalAttempted, "INVALID_EXECUTION_QUOTE");
   const data = encodeFunctionData({ abi: erc20Abi, functionName: "approve",
     args: [q.router, q.sellAmount] });

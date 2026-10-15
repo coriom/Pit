@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { decodeFunctionData, encodeEventTopics, erc20Abi, toHex } from "viem";
 import { listEvents } from "../src/lib/events";
 import {
+  assertUniswapApprovalScope,
   inspectUniswapExecution,
   quoteUniswapExecution,
   swapRouter02Abi,
@@ -61,6 +62,18 @@ describe("Uniswap Sepolia execution boundary", () => {
       amountOutMinimum: quote.minimumBuy, sqrtPriceLimitX96: 0n,
     });
     expect(decoded.args[0].tokenOut.toLowerCase()).toBe(UNISWAP_SEPOLIA.weth.toLowerCase());
+  });
+  it("keeps exact approval scope independent of quote expiry while rejecting other intents", () => {
+    expect(() => assertUniswapApprovalScope({ ...quote, expiresAt: Date.now() - 1 })).not.toThrow();
+    for (const altered of [
+      { ...quote, chainId: 1 },
+      { ...quote, router: owner },
+      { ...quote, sellToken: UNISWAP_SEPOLIA.weth },
+      { ...quote, buyToken: UNISWAP_SEPOLIA.usdc },
+      { ...quote, sellAmount: 10_000_001n },
+      { ...quote, sellAmount: (1n << 256n) - 1n },
+    ]) expect(() => assertUniswapApprovalScope(altered as UniswapExecutionQuote))
+      .toThrow("INVALID_EXECUTION_QUOTE");
   });
   it("rejects forged display quotes before any wallet or network call", async () => {
     await expect(inspectUniswapExecution(quote)).rejects.toThrow("INVALID_EXECUTION_QUOTE");

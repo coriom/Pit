@@ -59,6 +59,7 @@ if (process.argv[1] && resolve(process.argv[1]) === self) {
       changedPaths, releaseGateRejected: true, loopbackOnly: true }));
     const runnerArgs = [join(repo, "scripts/audit/operator-uniswap.mjs")];
     if (process.argv.includes("--z3-read-only")) runnerArgs.push("--z3-read-only");
+    if (process.argv.includes("--z4-mock-checkpoint")) runnerArgs.push("--z4-mock-checkpoint");
     if (process.argv.includes("--z3-live")) runnerArgs.push("--z3-live");
     const live = process.argv.includes("--z3-live");
     const run = spawnSync("node", runnerArgs, {
