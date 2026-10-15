@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { validateTrackedFiles } from "../scripts/release/invariants.mjs";
 import {
   acceptancePath, fromLine, toLine, transformAcceptanceSource,
-  verifyAcceptanceDiff,
+  validateLiveMode, verifyAcceptanceDiff,
 } from "../scripts/audit/uniswap-acceptance-worktree.mjs";
 import { sourceGate } from "../scripts/audit/uniswap-runner-diagnostics.mjs";
 
@@ -28,5 +28,15 @@ describe("isolated Uniswap acceptance source", () => {
     expect(() => verifyAcceptanceDiff(original, transformed,
       [acceptancePath, "src/lib/config.ts"]))
       .toThrow("ACCEPTANCE_SOURCE_UNEXPECTED");
+  });
+  it("retires the consumed Z.3 live mode and requires a new Z.5 authorization marker", () => {
+    expect(() => validateLiveMode(["--z3-live"], {}))
+      .toThrow("Z3_AUTHORIZATION_CONSUMED");
+    expect(() => validateLiveMode(["--z5-live"], {}))
+      .toThrow("UNISWAP_LIVE_RUN_NOT_AUTHORIZED");
+    expect(() => validateLiveMode(["--z5-live"], { PIT_Z5_AUTHORIZED: "no" }))
+      .toThrow("UNISWAP_LIVE_RUN_NOT_AUTHORIZED");
+    expect(validateLiveMode(["--z3-read-only"], {})).toBe(false);
+    expect(validateLiveMode(["--z5-live"], { PIT_Z5_AUTHORIZED: "yes" })).toBe(true);
   });
 });

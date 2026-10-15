@@ -24,11 +24,19 @@ export function verifyAcceptanceDiff(original, transformed, changedPaths) {
   return { sourceSha256: sha256(original), transformedSha256: sha256(transformed),
     transformationId, transformedPath: acceptancePath };
 }
+export function validateLiveMode(args, env) {
+  if (args.includes("--z3-live")) throw Error("Z3_AUTHORIZATION_CONSUMED");
+  const live = args.includes("--z5-live");
+  if (live && env.PIT_Z5_AUTHORIZED !== "yes")
+    throw Error("UNISWAP_LIVE_RUN_NOT_AUTHORIZED");
+  return live;
+}
 
 const self = fileURLToPath(import.meta.url);
 if (process.argv[1] && resolve(process.argv[1]) === self) {
   const repo = resolve(fileURLToPath(new URL("../..", import.meta.url)));
   const git = (...args) => execFileSync("git", args, { cwd: repo, encoding: "utf8" }).trim();
+  const live = validateLiveMode(process.argv, process.env);
   const baseIndex = process.argv.indexOf("--base");
   const base = baseIndex >= 0 ? process.argv[baseIndex + 1] : git("rev-parse", "HEAD");
   if (!/^[0-9a-f]{40}$/.test(base) || git("status", "--short"))
@@ -60,14 +68,16 @@ if (process.argv[1] && resolve(process.argv[1]) === self) {
     const runnerArgs = [join(repo, "scripts/audit/operator-uniswap.mjs")];
     if (process.argv.includes("--z3-read-only")) runnerArgs.push("--z3-read-only");
     if (process.argv.includes("--z4-mock-checkpoint")) runnerArgs.push("--z4-mock-checkpoint");
-    if (process.argv.includes("--z3-live")) runnerArgs.push("--z3-live");
-    const live = process.argv.includes("--z3-live");
+    if (live) {
+      runnerArgs.push("--z5-live");
+    }
     const run = spawnSync("node", runnerArgs, {
       cwd: worktree, encoding: "utf8", timeout: live ? 600000 : 300000,
       maxBuffer: 2 * 1024 * 1024,
       env: { PATH: process.env.PATH ?? "/usr/bin:/bin", HOME: process.env.HOME ?? "/tmp",
         XDG_CACHE_HOME: process.env.XDG_CACHE_HOME ?? join(process.env.HOME ?? "/tmp", ".cache"),
-        ...(live ? { PIT_Z3_EVIDENCE_DIR: join(repo, "docs/audit/phase-z") } : {}) },
+        ...(live ? { PIT_Z5_EVIDENCE_DIR: join(repo, "docs/audit/phase-z"),
+          PIT_Z5_AUTHORIZED: "yes" } : {}) },
     });
     if (run.stdout) process.stdout.write(run.stdout);
     if (run.stderr) process.stderr.write(run.stderr);

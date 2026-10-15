@@ -10,11 +10,12 @@ import { assertReviewedTransaction, assertTestRelease, castTransport, createTest
 import { assertCheckpointValidity, assertFreshAfterApproval, assertLoopbackFree, mockReviewedSwapGasEstimate, safeRunnerFailure, verifyServedSource } from "./uniswap-runner-diagnostics.mjs";
 
 const origin = "http://127.0.0.1:4397";
-const evidenceDir = process.env.PIT_Z3_EVIDENCE_DIR ?? "docs/audit/phase-z";
+const evidenceDir = process.env.PIT_Z5_EVIDENCE_DIR ?? "docs/audit/phase-z";
 const reviewedSwapAbi = parseAbi([
   "function exactInputSingle((address tokenIn,address tokenOut,uint24 fee,address recipient,uint256 amountIn,uint256 amountOutMinimum,uint160 sqrtPriceLimitX96) params) payable returns (uint256 amountOut)",
 ]);
-const preflightOnly = !process.argv.includes("--z3-live");
+const z5Live = process.argv.includes("--z5-live");
+const preflightOnly = !z5Live;
 const z3ReadOnly = process.argv.includes("--z3-read-only");
 const z4Mock = process.argv.includes("--z4-mock-checkpoint");
 const syntheticApprovalHash = `0x${"ab".repeat(32)}`;
@@ -208,7 +209,10 @@ async function checkpointState(label, expiresAt) {
 try {
   assertTestRelease();
   requireFact(!process.argv.includes("--execute-reviewed") &&
-    !(z3ReadOnly && !preflightOnly), "UNISWAP_LIVE_RUN_NOT_AUTHORIZED");
+    !process.argv.includes("--z3-live") &&
+    !(z3ReadOnly && z5Live) && !(z4Mock && z5Live) &&
+    (!z5Live || process.env.PIT_Z5_AUTHORIZED === "yes"),
+  "UNISWAP_LIVE_RUN_NOT_AUTHORIZED");
   stage = "server_identity";
   server = await ownedServer();
   const head = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
@@ -315,7 +319,7 @@ try {
     sentHashes.push(hash);
     console.log(JSON.stringify({ stage: "TRANSACTION_HASH_RETURNED", action: reviewedAction,
       at: new Date().toISOString(), hash }));
-    await writeFile(`${evidenceDir}/Z3-${reviewedAction}-hash.json`, JSON.stringify({
+    await writeFile(`${evidenceDir}/Z5-${reviewedAction}-hash.json`, JSON.stringify({
       at: new Date().toISOString(), action: reviewedAction, hash,
     }, null, 2) + "\n", { flag: "wx" });
     return hash;
@@ -546,7 +550,7 @@ try {
       Date.parse(expiresAt) > Date.now(), "UNISWAP_QUOTE_ECONOMICS");
     await mkdir(evidenceDir, { recursive: true });
     activeQuoteExpiry = Date.parse(expiresAt);
-    await writeFile(`${evidenceDir}/Z3-preapproval.json`, JSON.stringify({
+    await writeFile(`${evidenceDir}/Z5-preapproval.json`, JSON.stringify({
       at: new Date().toISOString(), stage: "REVIEWED_PRE_APPROVAL",
       account: p.address, chainId, tokenIn: p.usdc, tokenOut: p.weth,
       router: p.uniswapRouter, pool: "0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1",
@@ -574,9 +578,10 @@ try {
       await page.getByRole("button", { name: /Continue to external wallet: Uniswap exact token approval/ }).click();
       await checkpointState("approval-continue-clicked", activeQuoteExpiry);
       await page.waitForFunction(() => {
-        const status = document.querySelector('[role="status"]')?.textContent ?? "";
-        return status.includes("Exact Uniswap approval confirmed:") ||
-          status.includes("Uniswap allowance already sufficient") ||
+        const statuses = [...document.querySelectorAll('[role="status"]')]
+          .map((entry) => entry.textContent ?? "");
+        return statuses.some((status) => status.includes("Exact Uniswap approval confirmed:") ||
+          status.includes("Uniswap allowance already sufficient")) ||
           !!document.querySelector('[role="alert"]');
       }, null, { timeout: 60000 });
       const approvalOutcome = await checkpointState("approval-handler-outcome", activeQuoteExpiry);
@@ -602,7 +607,7 @@ try {
       console.log(JSON.stringify({ stage: "APPROVAL_CONFIRMED", hash: approvalHash,
         blockNumber: approvalReceipt.blockNumber.toString(),
         allowance: approvedAllowance.toString() }));
-      await writeFile(`${evidenceDir}/Z3-approval.json`, JSON.stringify({
+      await writeFile(`${evidenceDir}/Z5-approval.json`, JSON.stringify({
         hash: approvalHash, status: approvalReceipt.status,
         blockNumber: approvalReceipt.blockNumber.toString(),
         blockHash: approvalReceipt.blockHash, gasUsed: approvalReceipt.gasUsed.toString(),
@@ -640,7 +645,7 @@ try {
     stage = "swap_checkpoint";
     signer.armReviewedUniswap({ action: "swap", minimumBuy: BigInt(nextMinimum),
       expectedBuy: BigInt(nextOutput), expiresAt: Date.parse(nextExpiry) });
-    await writeFile(`${evidenceDir}/Z3-preswap.json`, JSON.stringify({
+    await writeFile(`${evidenceDir}/Z5-preswap.json`, JSON.stringify({
       at: new Date().toISOString(), stage: "REVIEWED_PRE_SWAP", account: p.address,
       chainId, router: p.uniswapRouter, tokenIn: p.usdc, tokenOut: p.weth,
       feeTier: 500, sellAmount: p.uniswapSellCap.toString(),
@@ -688,7 +693,7 @@ try {
       stored.event.asset === `eip155:11155111/erc20:${p.usdc.toLowerCase()}` &&
       stored.event.counter_asset === `eip155:11155111/erc20:${p.weth.toLowerCase()}` &&
       stored.raw?.pitFee === "0", "UNISWAP_ACCOUNTING_RECONCILIATION");
-    await writeFile(`${evidenceDir}/Z3-fill.json`, JSON.stringify({
+    await writeFile(`${evidenceDir}/Z5-fill.json`, JSON.stringify({
       at: new Date().toISOString(), approvalHash, swapHash,
       blockNumber: receipt.blockNumber.toString(), blockHash: receipt.blockHash,
       gasUsed: receipt.gasUsed.toString(),
@@ -700,7 +705,7 @@ try {
       page.waitForEvent("download"),
       page.getByRole("button", { name: "Export for Taxlot" }).click(),
     ]);
-    await download.saveAs(`${evidenceDir}/Z3-taxlot.csv`);
+    await download.saveAs(`${evidenceDir}/Z5-taxlot.csv`);
     console.log(JSON.stringify({ stage: "CONFIRMED_AND_EXPORTED", swapHash,
       approvalHash, taxlotEventId: stored.event.id,
       sellQuantity: stored.event.quantity,

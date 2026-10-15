@@ -1,0 +1,205 @@
+{
+  "evidence": "ONE_AUTHORIZED_TESTNET_CAMPAIGN",
+  "rows": [
+    {
+      "stage": "ACCEPTANCE_SOURCE",
+      "base": "217de5e194d370fcf2c5605816b873c53609d8ec",
+      "sourceSha256": "545d0e2934fe49f9b7db90785966090e5715f8a2548c3c4153281b720851e9c8",
+      "transformedSha256": "b30d51732e4a3af997b91819e1f35f04d01fa910839cce5c5a4817d72b1113d6",
+      "transformationId": "PIT-Z2-EXACT-ONE-LINE-GATE-v1",
+      "transformedPath": "src/lib/uniswap-execution.ts",
+      "changedPaths": [
+        "src/lib/uniswap-execution.ts"
+      ],
+      "releaseGateRejected": true,
+      "loopbackOnly": true
+    },
+    {
+      "stage": "SERVED_SOURCE_IDENTITY",
+      "head": "217de5e194d370fcf2c5605816b873c53609d8ec",
+      "sourceSha256": "b30d51732e4a3af997b91819e1f35f04d01fa910839cce5c5a4817d72b1113d6",
+      "executionAccepted": true,
+      "origin": "http://127.0.0.1:4397"
+    },
+    {
+      "stage": "READ_ONLY_PREFLIGHT",
+      "address": "0x29d0B5939dcC4D0492D72ABd1210dEbd6c90cC96",
+      "chainId": 11155111,
+      "ethWei": "44999738966345580",
+      "usdcBaseUnits": "270299154",
+      "routerAllowance": "0",
+      "gasPriceWei": "1000017",
+      "intendedSellBaseUnits": "10000000",
+      "pitFee": "0",
+      "transactionCalls": 0
+    },
+    {
+      "stage": "WALLET_BOUND_QUOTE",
+      "gate": "GREEN: Preflight GREEN. Inspect every wallet prompt before confirming.",
+      "error": null,
+      "economics": "Uniswap wallet-paid swap economics\n\nRouter: 0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E · pool: 0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1 · fee tier: 500\n\nExact input: 10000000 base units. Quoted output: 219456597527126 base units.\n\nMinimum received after 0.50% slippage: 218359314539490 base units.\n\nPool fee is included in quoted output. Wallet swap gas and any approval gas are paid separately in Sepolia ETH; they are not included in route ranking.\n\nPIT fee: 0. Quote expires: 2026-10-15T07:19:35.878Z.\n\nApproval required: YES — exact sell amount only.\n\nToken approval is a separate exact-amount action. A new wallet-bound quote is required after confirmation; this quote never authorizes the later swap.",
+      "quoteAcquisitionMs": 15969,
+      "readinessMs": 7067,
+      "rpcMethods": {
+        "eth_getBalance": {
+          "calls": 4,
+          "totalMs": 7082
+        },
+        "eth_call": {
+          "calls": 42,
+          "totalMs": 62944
+        },
+        "eth_getCode": {
+          "calls": 23,
+          "totalMs": 43597
+        },
+        "eth_getBlockByNumber": {
+          "calls": 1,
+          "totalMs": 1666
+        },
+        "eth_estimateGas": {
+          "calls": 3,
+          "totalMs": 4878
+        },
+        "eth_gasPrice": {
+          "calls": 3,
+          "totalMs": 4785
+        },
+        "eth_chainId": {
+          "calls": 1,
+          "totalMs": 1276
+        }
+      },
+      "transactionCalls": 0
+    },
+    {
+      "stage": "Z4_CHECKPOINT_STATE",
+      "label": "approval-before-review",
+      "at": "2026-10-15T07:19:23.431Z",
+      "remainingMs": 12447,
+      "gate": "CHECKING",
+      "approvalGate": "GREEN",
+      "reviewPresent": true,
+      "reviewEnabled": true,
+      "dialogPresent": false,
+      "continuePresent": false,
+      "continueEnabled": null,
+      "alert": null,
+      "approvalStatusPresent": false,
+      "mockApprovalRequested": false,
+      "mockSwapRequested": false
+    },
+    {
+      "stage": "Z4_CHECKPOINT_STATE",
+      "label": "approval-review-open",
+      "at": "2026-10-15T07:19:23.478Z",
+      "remainingMs": 12400,
+      "gate": "CHECKING",
+      "approvalGate": "GREEN",
+      "reviewPresent": true,
+      "reviewEnabled": true,
+      "dialogPresent": true,
+      "continuePresent": true,
+      "continueEnabled": false,
+      "alert": null,
+      "approvalStatusPresent": false,
+      "mockApprovalRequested": false,
+      "mockSwapRequested": false
+    },
+    {
+      "stage": "Z4_CHECKPOINT_STATE",
+      "label": "approval-confirmed-checkbox",
+      "at": "2026-10-15T07:19:23.525Z",
+      "remainingMs": 12353,
+      "gate": "CHECKING",
+      "approvalGate": "GREEN",
+      "reviewPresent": true,
+      "reviewEnabled": true,
+      "dialogPresent": true,
+      "continuePresent": true,
+      "continueEnabled": true,
+      "alert": null,
+      "approvalStatusPresent": false,
+      "mockApprovalRequested": false,
+      "mockSwapRequested": false
+    },
+    {
+      "stage": "Z4_CHECKPOINT_STATE",
+      "label": "approval-continue-clicked",
+      "at": "2026-10-15T07:19:23.576Z",
+      "remainingMs": 12302,
+      "gate": "CHECKING",
+      "approvalGate": "GREEN",
+      "reviewPresent": true,
+      "reviewEnabled": false,
+      "dialogPresent": false,
+      "continuePresent": false,
+      "continueEnabled": null,
+      "alert": null,
+      "approvalStatusPresent": false,
+      "mockApprovalRequested": false,
+      "mockSwapRequested": false
+    },
+    {
+      "stage": "LIVE_WALLET_BOUNDARY",
+      "action": "uniswap-approve",
+      "at": "2026-10-15T07:19:48.477Z",
+      "remainingMs": null,
+      "latestNonce": 2,
+      "pendingNonce": 2,
+      "ethWei": "44999738966345580",
+      "sellBalance": "270299154",
+      "allowance": "0",
+      "gasEstimate": "140018",
+      "gasPriceWei": "1000017",
+      "signingAttempted": false,
+      "submissionAttempted": false
+    },
+    {
+      "stage": "TRANSACTION_HASH_RETURNED",
+      "action": "uniswap-approve",
+      "at": "2026-10-15T07:19:52.841Z",
+      "hash": "public-hash:5ce91888706102f31ad20c87df5f5603:c75fb5550a561f032be84b022b0670df"
+    },
+    {
+      "stage": "Z4_CHECKPOINT_STATE",
+      "label": "approval-handler-outcome",
+      "at": "2026-10-15T07:20:15.730Z",
+      "remainingMs": -39852,
+      "gate": "QUOTE_EXPIRED",
+      "approvalGate": null,
+      "reviewPresent": false,
+      "reviewEnabled": null,
+      "dialogPresent": false,
+      "continuePresent": false,
+      "continueEnabled": null,
+      "alert": null,
+      "approvalStatusPresent": true,
+      "mockApprovalRequested": false,
+      "mockSwapRequested": false
+    },
+    {
+      "stage": "APPROVAL_CONFIRMED",
+      "hash": "public-hash:5ce91888706102f31ad20c87df5f5603:c75fb5550a561f032be84b022b0670df",
+      "blockNumber": "11918899",
+      "allowance": "10000000"
+    },
+    {
+      "stage": "fresh_quote_after_approval",
+      "at": "2026-10-15T07:20:54.930Z",
+      "classification": "QUOTE_EXPIRED",
+      "errorName": "Error",
+      "safeCode": "QUOTE_EXPIRED",
+      "sanitizedCause": [
+        "QUOTE_EXPIRED"
+      ],
+      "httpStatus": null,
+      "signingAttempted": true,
+      "submissionAttempted": true,
+      "hashReturned": true,
+      "returnedTransactionHashes": [
+        "public-hash:5ce91888706102f31ad20c87df5f5603:c75fb5550a561f032be84b022b0670df"
+      ]
+    }
+  ]
+}
