@@ -1,0 +1,12 @@
+{
+  "status": "PASS — synthetic fixture absent after reload",
+  "evidence": "SYNTHETIC — no wallet, signature, trade or tax conclusion",
+  "origin": "https://pit-testnet-staging-corioms-projects.vercel.app",
+  "fixtureId": "pit-staging-synthetic-92c4578a-472e-452e-99f8-a47653bd1e26",
+  "counts": {
+    "events": 0,
+    "raw": 0,
+    "meta": 0
+  },
+  "readOnly": true
+}

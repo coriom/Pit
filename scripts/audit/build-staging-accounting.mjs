@@ -33,6 +33,7 @@ writeFileSync(join(directory, "index.html"), `<!doctype html>
 <li>Choose the downloaded CSV: <input id="csv-file" type="file" accept=".csv,text/csv"> <button id="validate" disabled>D. Validate downloaded CSV</button>
 <pre id="file-state" role="status"></pre></li>
 <li><button id="cleanup" disabled>E. Clean up only this synthetic fixture</button></li>
+<li>After cleanup, reopen this page with the original fixture ID in the URL and reload. <button id="absence">F. Verify synthetic fixture absent</button></li>
 </ol><pre id="report" role="status"></pre></main>
 <script type="module" src="/__pit-staging-accounting/audit.js"></script>
 </body></html>`);

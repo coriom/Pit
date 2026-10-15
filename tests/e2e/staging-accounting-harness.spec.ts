@@ -8,7 +8,17 @@ const html = `<!doctype html><title>Synthetic audit</title>
 <button id="create">Create</button><button id="verify">Verify</button>
 <button id="export">Export</button><input id="csv-file" type="file">
 <button id="validate" disabled>Validate</button><button id="cleanup" disabled>Cleanup</button>
+<button id="absence">Verify synthetic fixture absent</button>
 <pre id="file-state"></pre><pre id="report"></pre><script src="${path}audit.js"></script>`;
+const phaseFixtureId = "pit-staging-synthetic-92c4578a-472e-452e-99f8-a47653bd1e26";
+async function usePhaseFixtureId(page: any) {
+  await page.addInitScript(() => {
+    Object.defineProperty(Crypto.prototype, "randomUUID", {
+      configurable: true,
+      value: () => "92c4578a-472e-452e-99f8-a47653bd1e26",
+    });
+  });
+}
 let code: string;
 test.beforeAll(async () => {
   const result = await build({
@@ -32,6 +42,7 @@ async function open(page: any, base = origin) {
   await page.goto(base + path);
 }
 test("staging-only synthetic event survives reload, downloads actual PIT CSV, then cleans only itself", async ({ page }) => {
+  await usePhaseFixtureId(page);
   const requests: string[] = [];
   page.on("request", (request) => requests.push(request.url()));
   await page.addInitScript(() => {
@@ -48,7 +59,7 @@ test("staging-only synthetic event survives reload, downloads actual PIT CSV, th
   await page.getByRole("button", { name: "Create" }).click();
   await expect(page.locator("#report")).toContainText("CREATED");
   await page.reload();
-  await page.getByRole("button", { name: "Verify" }).click();
+  await page.locator("#verify").click();
   await expect(page.locator("#report")).toContainText("PERSISTED");
   const pending = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export" }).click();
@@ -82,8 +93,77 @@ test("staging-only synthetic event survives reload, downloads actual PIT CSV, th
     })));
   });
   expect(counts).toEqual([0, 0, 0]);
+  await page.goto(origin + path + "#" + phaseFixtureId);
+  await page.reload();
+  await page.evaluate(() => {
+    (window as any).__fWriteTx = 0;
+    const original = IDBDatabase.prototype.transaction;
+    IDBDatabase.prototype.transaction = function (...args: Parameters<IDBDatabase["transaction"]>) {
+      if (args[1] === "readwrite") (window as any).__fWriteTx++;
+      return original.apply(this, args);
+    };
+  });
+  await page.getByRole("button", { name: "Verify synthetic fixture absent" }).click();
+  await expect(page.locator("#report")).toContainText("PASS — synthetic fixture absent after reload");
+  await expect(page.locator("#report")).toContainText('"events": 0');
+  expect(await page.evaluate(() => (window as any).__fWriteTx)).toBe(0);
   expect(await page.evaluate(() => (window as any).__walletCalls)).toBe(0);
   expect(requests.every((url) => new URL(url).origin === origin)).toBe(true);
+});
+
+test("absence check fails when the exact fixture remains", async ({ page }) => {
+  await usePhaseFixtureId(page);
+  await open(page);
+  await page.getByRole("button", { name: "Create" }).click();
+  await expect(page.locator("#report")).toContainText("CREATED");
+  await page.reload();
+  await page.getByRole("button", { name: "Verify synthetic fixture absent" }).click();
+  await expect(page.locator("#report")).toContainText("FAIL — synthetic fixture still present");
+});
+
+test("absence check rejects wrong fixture ID and unexpected records", async ({ page }) => {
+  await open(page);
+  await page.goto(origin + path + "#pit-staging-synthetic-00000000-0000-0000-0000-000000000000");
+  await page.getByRole("button", { name: "Verify synthetic fixture absent" }).click();
+  await expect(page.locator("#report")).toContainText("exact Phase Y-D fixture ID required");
+
+  await page.goto(origin + path + "#" + phaseFixtureId);
+  await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("pit-taxlot-v1", 1);
+      request.onupgradeneeded = () => {
+        request.result.createObjectStore("events", { keyPath: "id" });
+        request.result.createObjectStore("raw", { keyPath: "id" });
+        request.result.createObjectStore("meta");
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction("events", "readwrite");
+      tx.objectStore("events").add({ id: "unrelated" });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  });
+  await page.getByRole("button", { name: "Verify synthetic fixture absent" }).click();
+  await expect(page.locator("#report")).toContainText("FAIL — unexpected PIT records remain");
+});
+
+test("absence check blocks on missing database or unavailable IndexedDB inspection", async ({ page }) => {
+  await open(page);
+  await page.goto(origin + path + "#" + phaseFixtureId);
+  await page.getByRole("button", { name: "Verify synthetic fixture absent" }).click();
+  await expect(page.locator("#report")).toContainText("existing PIT IndexedDB database not found");
+  await page.evaluate(() => {
+    Object.defineProperty(indexedDB, "databases", {
+      configurable: true,
+      value: () => Promise.reject(Error("storage read unavailable")),
+    });
+  });
+  await page.getByRole("button", { name: "Verify synthetic fixture absent" }).click();
+  await expect(page.locator("#report")).toContainText("storage read unavailable");
 });
 
 test("preexisting records and unapproved origins fail closed", async ({ page }) => {

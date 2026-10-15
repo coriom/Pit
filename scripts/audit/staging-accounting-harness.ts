@@ -14,6 +14,7 @@ const ORIGIN = "https://pit-testnet-staging-corioms-projects.vercel.app";
 const PATH = "/__pit-staging-accounting/";
 const ACCOUNT = "pit-staging-synthetic-account";
 const ID_PREFIX = "pit-staging-synthetic-";
+const CLEANUP_TARGET_ID = "pit-staging-synthetic-92c4578a-472e-452e-99f8-a47653bd1e26";
 const SELL = "0.005";
 const BUY = "10.25";
 const output = document.getElementById("report") as HTMLPreElement;
@@ -220,12 +221,49 @@ async function cleanup() {
   });
 }
 
+async function verifyAbsent() {
+  assertSite();
+  const id = fixtureId();
+  if (id !== CLEANUP_TARGET_ID)
+    throw Error("BLOCKED: exact Phase Y-D fixture ID required in URL fragment");
+  if (typeof indexedDB.databases !== "function")
+    throw Error("BLOCKED: IndexedDB database inspection unavailable");
+  const databases = await indexedDB.databases();
+  if (!databases.some((database) => database.name === "pit-taxlot-v1" && database.version === 1))
+    throw Error("BLOCKED: existing PIT IndexedDB database not found at version 1");
+
+  // The database must already exist at v1, so eventDB() opens it without an upgrade.
+  const db = await eventDB();
+  try {
+    const tx = db.transaction(["events", "raw", "meta"], "readonly");
+    const [event, raw, eventCount, rawCount, metaCount] = await Promise.all([
+      tx.objectStore("events").get(id),
+      tx.objectStore("raw").get(id),
+      tx.objectStore("events").count(),
+      tx.objectStore("raw").count(),
+      tx.objectStore("meta").count(),
+    ]);
+    await tx.done;
+    const counts = { events: eventCount, raw: rawCount, meta: metaCount };
+    if (event || raw) {
+      report("FAIL — synthetic fixture still present", { fixtureId: id, counts, readOnly: true });
+    } else if (eventCount || rawCount || metaCount) {
+      report("FAIL — unexpected PIT records remain", { fixtureId: id, counts, readOnly: true });
+    } else {
+      report("PASS — synthetic fixture absent after reload", { fixtureId: id, counts, readOnly: true });
+    }
+  } finally {
+    db.close();
+  }
+}
+
 const actions: Record<string, () => Promise<void>> = {
   create,
   verify,
   export: exportCSV,
   validate: validateDownload,
   cleanup,
+  absence: verifyAbsent,
 };
 for (const [action, run] of Object.entries(actions)) {
   document.getElementById(action)?.addEventListener("click", () => {
