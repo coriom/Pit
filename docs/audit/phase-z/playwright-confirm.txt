@@ -1,0 +1,77 @@
+
+> pit@0.1.0 test:e2e /home/corio/PIT
+> playwright test
+
+[WebServer] (node:151428) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:151441) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 37 tests using 6 workers
+
+(node:151489) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:151495) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:151497) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:151509) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:151503) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:151516) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:151489) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:151495) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:151516) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:151509) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:151497) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:151503) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Dedicated origin https://pit.example: reload persistence and CSV passed; https://sibling.example: no PIT database.
+  ✓   5 tests/e2e/origin-guard.spec.ts:54:1 › approved dedicated HTTPS origin persists and exports; sibling origin cannot read records (1.4s)
+  ✓   6 tests/e2e/operator-readiness.spec.ts:3:1 › local public-address observer is available without connecting a wallet (3.1s)
+Shared path: eventDB, appendEvent, listEvents, downloadCSV rejected; existing valid event preserved.
+  ✓   7 tests/e2e/origin-guard.spec.ts:96:1 › unsafe path denies open/write/read/download and preserves pre-existing valid records (2.1s)
+  ✓   4 tests/e2e/staging-accounting-harness.spec.ts:44:1 › staging-only synthetic event survives reload, downloads actual PIT CSV, then cleans only itself (4.4s)
+  ✓   2 tests/e2e/preflight.spec.ts:3:3 › CoW UI refuses chain 84532 before any signature (8.1s)
+  ✓   9 tests/e2e/origin-guard.spec.ts:136:1 › unapproved production origin never creates PIT storage; approved stable IPNS origin works (1.6s)
+  ✓  10 tests/e2e/staging-accounting-harness.spec.ts:114:1 › absence check fails when the exact fixture remains (1.5s)
+  ✓   1 tests/e2e/interface.spec.ts:10:1 › production swap, wallet dialog, navigation and CSP (8.5s)
+  ✓  13 tests/e2e/staging-accounting-harness.spec.ts:124:1 › absence check rejects wrong fixture ID and unexpected records (553ms)
+  ✓  12 tests/e2e/origin-guard.spec.ts:166:1 › dedicated-origin derivative evidence never enters Taxlot events and unsafe origins cannot open its store (820ms)
+  ✓   3 tests/e2e/quote-comparison.spec.ts:4:1 › CoW quote failure leaves the read-only Uniswap quote visible and signing gated (9.4s)
+Attack reproduction: {"stolen":{"event":{"account":"fixture","quantity":"1"},"raw":{"fill":"original"},"sequence":1},"poisoned":{"account":"fixture","quantity":"999"},"deleted":true,"sequence":999,"origin":"http://127.0.0.1:4398"}
+  ✓  17 tests/e2e/storage-origin.spec.ts:2:1 › shared-origin attack reads, poisons and deletes events raw and meta (273ms)
+  ✓  15 tests/e2e/staging-accounting-harness.spec.ts:154:1 › absence check blocks on missing database or unavailable IndexedDB inspection (2.4s)
+  ✓  16 tests/e2e/origin-guard.spec.ts:223:1 › shared-origin query, encoded path and reload cannot enable accounting (3.1s)
+  ✓  11 tests/e2e/preflight.spec.ts:3:3 › CoW UI refuses chain 1 before any signature (4.3s)
+  ✓  19 tests/e2e/staging-accounting-harness.spec.ts:169:1 › preexisting records and unapproved origins fail closed (2.0s)
+  ✓   8 tests/e2e/operator-readiness.spec.ts:44:1 › disconnected dry-run rehearses both checkpoints without wallet or exchange actions (8.2s)
+  ✓  21 tests/e2e/staging-accounting-harness.spec.ts:206:1 › CSV selection is retained before asynchronous fixture readback (532ms)
+  ✓  14 tests/e2e/interface.spec.ts:50:1 › perps fields render against public info fixture and mobile does not overflow (5.9s)
+  ✓  18 tests/e2e/toolbox.spec.ts:12:1 › every registered tool has a production URL (4.3s)
+  ✓  23 tests/e2e/staging-accounting-harness.spec.ts:220:1 › CSV selection survives report updates and input replacement without re-reading a stale filename (901ms)
+  ✓  22 tests/e2e/operator-readiness.spec.ts:141:1 › acceptance evidence view is local, testnet-labelled, and dry run makes no evidence session (1.6s)
+  ✓  20 tests/e2e/preflight.spec.ts:3:3 › CoW UI refuses chain 8453 before any signature (3.1s)
+  ✓  25 tests/e2e/toolbox.spec.ts:57:1 › unverified-origin robots policy withholds a sitemap (558ms)
+  ✓  26 tests/e2e/staging-accounting-harness.spec.ts:237:1 › missing, cancelled, or reloaded file selection cannot enable validation or cleanup (724ms)
+  ✓  30 tests/e2e/staging-accounting-harness.spec.ts:253:1 › invalid downloaded-file bytes fail without unlocking cleanup (605ms)
+  ✓  29 tests/e2e/toolbox.spec.ts:74:1 › landing search, category and direct reload lead to a local calculation (1.2s)
+  ✓  31 tests/e2e/toolbox.spec.ts:141:3 › /tools/pnl/ calculates offline after assets load without network calls (581ms)
+  ✓  27 tests/e2e/operator-readiness.spec.ts:176:1 › connected testnet operator can start and export a local evidence session without signing (2.8s)
+  ✓  28 tests/e2e/preflight.spec.ts:3:3 › CoW UI refuses chain 42161 before any signature (2.7s)
+  ✓  32 tests/e2e/toolbox.spec.ts:141:3 › /tools/liquidation/ calculates offline after assets load without network calls (803ms)
+  ✓  34 tests/e2e/toolbox.spec.ts:141:3 › /tools/impermanent-loss/ calculates offline after assets load without network calls (571ms)
+  ✓  24 tests/e2e/interface.spec.ts:77:1 › injected test provider connects without secrets; invalid swaps cannot sign (4.9s)
+  ✓  33 tests/e2e/preflight.spec.ts:3:3 › CoW UI refuses chain 999 before any signature (2.1s)
+  ✓  35 tests/e2e/toolbox.spec.ts:179:1 › direct execution URLs keep signing controls behind existing preflight (1.8s)
+  ✓  36 tests/e2e/interface.spec.ts:187:1 › IPFS-style subpath hydrates and links stay beneath the CID (1.5s)
+  ✓  37 tests/e2e/interface.spec.ts:254:1 › Cloudflare static artifact emits a response CSP alongside Astro meta CSP (104ms)
+
+  37 passed (26.2s)

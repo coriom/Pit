@@ -9,6 +9,7 @@ import {
   decodeFunctionData,
   encodeFunctionData,
   erc20Abi,
+  parseAbi,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
@@ -23,8 +24,13 @@ export const TEST_OPERATOR = Object.freeze({
   relayer: "0xC92E8bdf79f0507f65a392b0ab4667716BFE0110",
   settlement: "0x9008D19f58AAbD9eD0D60971565AA8510560ab41",
   sellBudget: 5000000000000000n,
+  uniswapRouter: "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E",
+  uniswapSellCap: 10000000n,
   maxEthValue: 20000000000000000n,
 });
+const uniswapRouterAbi = parseAbi([
+  "function exactInputSingle((address tokenIn,address tokenOut,uint24 fee,address recipient,uint256 amountIn,uint256 amountOutMinimum,uint160 sqrtPriceLimitX96) params) payable returns (uint256 amountOut)",
+]);
 const keyPath = "/home/corio/.pit/test-operator/key";
 const lower = (value) => String(value).toLowerCase();
 const same = (a, b) => lower(a) === lower(b);
@@ -73,16 +79,35 @@ export function assertTestRelease(source = readFileSync(configPath, "utf8")) {
     throw Error("AUTONOMOUS_RELEASE_GATE");
 }
 
-export function assertReviewedTransaction(tx) {
+/** @param {any} tx @param {any} [uniswapSpec] */
+export function assertReviewedTransaction(tx, uniswapSpec = null) {
   assertTestRelease();
   if (!same(tx.from, TEST_OPERATOR.address) ||
-      (tx.chainId !== undefined && Number(tx.chainId) !== TEST_OPERATOR.chainId) ||
-      !same(tx.to, TEST_OPERATOR.weth))
+      (tx.chainId !== undefined && Number(tx.chainId) !== TEST_OPERATOR.chainId))
     throw Error("AUTONOMOUS_TRANSACTION_CONTEXT");
   const value = BigInt(tx.value ?? 0);
   if (value < 0n || value > TEST_OPERATOR.maxEthValue)
     throw Error("AUTONOMOUS_VALUE_CAP");
   const data = lower(tx.data ?? tx.input ?? "0x");
+  if (uniswapSpec?.action === "approve" && same(tx.to, TEST_OPERATOR.usdc) && value === 0n) {
+    const expected = lower(encodeFunctionData({ abi: erc20Abi, functionName: "approve",
+      args: [TEST_OPERATOR.uniswapRouter, TEST_OPERATOR.uniswapSellCap] }));
+    if (data !== expected) throw Error("AUTONOMOUS_UNISWAP_APPROVAL_INTENT");
+    return "uniswap-approve";
+  }
+  if (uniswapSpec?.action === "swap" && same(tx.to, TEST_OPERATOR.uniswapRouter) && value === 0n) {
+    if (Date.now() >= uniswapSpec.expiresAt || data !== uniswapSpec.data)
+      throw Error("AUTONOMOUS_UNISWAP_SWAP_INTENT");
+    const decoded = decodeFunctionData({ abi: uniswapRouterAbi, data });
+    const p = decoded.args?.[0];
+    if (decoded.functionName !== "exactInputSingle" || !same(p.tokenIn, TEST_OPERATOR.usdc) ||
+        !same(p.tokenOut, TEST_OPERATOR.weth) || !same(p.recipient, TEST_OPERATOR.address) ||
+        p.fee !== 500 || p.amountIn !== TEST_OPERATOR.uniswapSellCap ||
+        p.amountOutMinimum !== uniswapSpec.minimumBuy || p.sqrtPriceLimitX96 !== 0n)
+      throw Error("AUTONOMOUS_UNISWAP_SWAP_INTENT");
+    return "uniswap-swap";
+  }
+  if (!same(tx.to, TEST_OPERATOR.weth)) throw Error("AUTONOMOUS_TRANSACTION_CONTEXT");
   if (data === "0xd0e30db0" && value === TEST_OPERATOR.sellBudget)
     return "deposit";
   if (value !== 0n) throw Error("AUTONOMOUS_CALLDATA");
@@ -125,6 +150,7 @@ export function createTestProvider({ account = loadTestAccount(), transport = ca
   let sent = false;
   let signed = false;
   let orderSpec = null;
+  let uniswapSpec = null;
   const readMethods = new Set([
     "eth_blockNumber", "eth_call", "eth_estimateGas", "eth_feeHistory",
     "eth_gasPrice", "eth_getBalance", "eth_getBlockByNumber", "eth_getCode",
@@ -148,10 +174,10 @@ export function createTestProvider({ account = loadTestAccount(), transport = ca
       if (!allowTransactions) throw Error("AUTONOMOUS_TRANSACTION_NOT_ARMED");
       if (sent) throw Error("AUTONOMOUS_NO_TRANSACTION_RETRY");
       const tx = params[0];
-      assertReviewedTransaction(tx);
+      assertReviewedTransaction(tx, uniswapSpec);
       sent = true; // Set before broadcast; ambiguity must never trigger a retry.
       return walletClient.sendTransaction({
-        account, chain: sepolia, to: TEST_OPERATOR.weth,
+        account, chain: sepolia, to: tx.to,
         data: tx.data ?? tx.input, value: BigInt(tx.value ?? 0),
       });
     }
@@ -199,6 +225,30 @@ export function createTestProvider({ account = loadTestAccount(), transport = ca
           Date.parse(spec.expiresAt) <= Date.now())
         throw Error("AUTONOMOUS_ORDER_ARMING");
       orderSpec = { appDataHash: spec.appDataHash, minimumBuy: BigInt(spec.minimumBuy), quoteId: spec.quoteId };
+    },
+    armReviewedUniswap(spec) {
+      assertTestRelease();
+      if (!allowTransactions || sent || uniswapSpec || !["approve", "swap"].includes(spec?.action))
+        throw Error("AUTONOMOUS_UNISWAP_ARMING");
+      if (spec.action === "approve") {
+        uniswapSpec = { action: "approve" };
+        return;
+      }
+      const minimumBuy = BigInt(spec.minimumBuy ?? 0);
+      const expectedBuy = BigInt(spec.expectedBuy ?? 0);
+      if (minimumBuy <= 0n || minimumBuy > expectedBuy ||
+          !Number.isSafeInteger(spec.expiresAt) || spec.expiresAt <= Date.now() ||
+          spec.expiresAt > Date.now() + 30000)
+        throw Error("AUTONOMOUS_UNISWAP_ARMING");
+      const data = lower(encodeFunctionData({ abi: uniswapRouterAbi,
+        functionName: "exactInputSingle", args: [{
+          tokenIn: TEST_OPERATOR.usdc, tokenOut: TEST_OPERATOR.weth,
+          fee: 500, recipient: TEST_OPERATOR.address,
+          amountIn: TEST_OPERATOR.uniswapSellCap,
+          amountOutMinimum: minimumBuy, sqrtPriceLimitX96: 0n,
+        }],
+      }));
+      uniswapSpec = { action: "swap", data, minimumBuy, expiresAt: spec.expiresAt };
     },
     get sent() { return sent; },
     get signed() { return signed; },

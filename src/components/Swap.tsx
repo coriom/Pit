@@ -23,11 +23,22 @@ import {
   type QuoteIntent,
 } from "../lib/swap-quotes";
 import { uniswapV3QuoteProvider } from "../lib/uniswap-quote";
+import {
+  approveUniswap,
+  inspectUniswapExecution,
+  invalidateUniswapQuote,
+  quoteUniswapExecution,
+  submitUniswap,
+  UNISWAP_SEPOLIA,
+  UNISWAP_EXECUTION_ACCEPTED,
+  type UniswapExecutionQuote,
+} from "../lib/uniswap-execution";
+import { recordUniswapFill } from "../lib/uniswap-fill";
 import { DiagnosticQuotes } from "./DiagnosticQuotes";
 import { OperatorObserver } from "./OperatorObserver";
 import { config } from "../lib/config";
 import { storageEnabled } from "../lib/storage-policy";
-import { cowOperatorReadiness } from "../lib/operator-readiness";
+import { cowOperatorReadiness, uniswapOperatorReadiness } from "../lib/operator-readiness";
 import { ReadinessPanel } from "./ReadinessPanel";
 import { OperatorCheckpoint } from "./OperatorCheckpoint";
 import { useAcceptanceEvidence } from "./AcceptanceEvidence";
@@ -39,7 +50,10 @@ export function Swap() {
   const [sell, setSell] = useState("");
   const [buy, setBuy] = useState("");
   const [amount, setAmount] = useState("");
+  const [venue, setVenue] = useState<"cow" | "uniswap-v3">("cow");
   const [quote, setQuote] = useState<SwapQuote>();
+  const [uniswapQuote, setUniswapQuote] = useState<UniswapExecutionQuote>();
+  const [uniswapApprovalNeeded, setUniswapApprovalNeeded] = useState(false);
   const [quoteEvidenceIdentity, setQuoteEvidenceIdentity] = useState("");
   const [comparison, setComparison] = useState<QuoteOutcome[]>([]);
   const [clock, setClock] = useState(Date.now());
@@ -58,14 +72,17 @@ export function Swap() {
     revision.current++;
     requestSequence.current++;
     invalidateSwapQuote(quote);
+    invalidateUniswapQuote(uniswapQuote);
     setQuote(undefined);
+    setUniswapQuote(undefined);
+    setUniswapApprovalNeeded(false);
     setQuoteEvidenceIdentity("");
     setComparison([]);
     setApproved(false);
     setDryStage("approval");
     setError("");
     setStatus("");
-  }, [address, chainId, sell, buy, amount]);
+  }, [address, chainId, sell, buy, amount, venue]);
   useEffect(() => {
     if (!comparison.length) return;
     const id = setInterval(() => setClock(Date.now()), 1000);
@@ -134,6 +151,7 @@ export function Swap() {
     }
   }
   const check = useCallback(async () => {
+    if (venue !== "cow") throw new PreflightError("QUOTE_EXPIRED");
     if (!wallet) throw new PreflightError("DISCONNECTED");
     if (!quote) {
       await inspectCow(wallet, sell, buy, amount);
@@ -158,11 +176,30 @@ export function Swap() {
     )
       throw new PreflightError("INVALID_EXECUTION_QUOTE");
     await inspectSwap(quote);
-  }, [wallet, quote, sell, buy, amount]);
+  }, [venue, wallet, quote, sell, buy, amount]);
   const gate = useExecutionPreflight(
     `${address}:${chainId}:${sell}:${buy}:${amount}:${quote?.obtainedAt}`,
     check,
   );
+  const checkUniswap = useCallback(async () => {
+    if (venue !== "uniswap-v3") throw new PreflightError("QUOTE_EXPIRED");
+    if (!wallet) throw new PreflightError("DISCONNECTED");
+    if (!uniswapQuote) throw new PreflightError("QUOTE_EXPIRED");
+    if (wallet.account?.address.toLowerCase() !== uniswapQuote.owner.toLowerCase() ||
+        wallet.chain?.id !== uniswapQuote.chainId)
+      throw new PreflightError("WALLET_CHANGED");
+    if (sell.toLowerCase() !== uniswapQuote.sellToken.toLowerCase() ||
+        buy.toLowerCase() !== uniswapQuote.buyToken.toLowerCase() ||
+        !/^\d+(?:\.\d+)?$/.test(amount) ||
+        parseUnits(amount, uniswapQuote.normalized.sellDecimals) !== uniswapQuote.sellAmount)
+      throw new PreflightError("INVALID_EXECUTION_QUOTE");
+    return inspectUniswapExecution(uniswapQuote);
+  }, [venue, wallet, uniswapQuote, sell, buy, amount]);
+  const uniswapGate = useExecutionPreflight(
+    `${address}:${chainId}:${sell}:${buy}:${amount}:${uniswapQuote?.obtainedAt}`,
+    checkUniswap,
+  );
+  const activeGate = venue === "cow" ? gate : uniswapGate;
   const readiness = cowOperatorReadiness({
     connected: !!wallet?.account,
     chainId,
@@ -178,6 +215,12 @@ export function Swap() {
       true,
     quoteObtainedAt: quote?.obtainedAt,
     now: clock,
+  });
+  const uniswapReadiness = uniswapOperatorReadiness({
+    connected: !!wallet?.account, chainId,
+    feesEnabled: config.FEES_ENABLED, mainnetEnabled: config.MAINNET_ENABLED,
+    storage: storageEnabled(), gate: uniswapGate,
+    quotePresent: !!uniswapQuote, quoteExpiresAt: uniswapQuote?.expiresAt, now: clock,
   });
   const quoteIdentity = quote ? quoteEvidenceIdentity : "";
   const disclosure =
@@ -195,6 +238,7 @@ export function Swap() {
     : approved
       ? "order signature and submission"
       : "token approval";
+  const uniswapAction = uniswapApprovalNeeded ? "Uniswap exact token approval" : "Uniswap swap submission";
   const checkpointDetails = [
     "Protocol: CoW Protocol · Ethereum Sepolia (11155111)",
     `Account: ${address ?? "not connected"}`,
@@ -209,7 +253,7 @@ export function Swap() {
     <>
       <div className="row">
         <h2>Swap tokens</h2>
-        <span className="tag">CoW Protocol</span>
+        <span className="tag">Best Swap · CoW and Uniswap v3</span>
       </div>
       <p className="muted">
         Ethereum Sepolia only (11155111), not Base Sepolia (84532) · 0.50%
@@ -217,6 +261,19 @@ export function Swap() {
       </p>
       <DiagnosticQuotes />
       <OperatorObserver />
+      <label>
+        Executable venue
+        <select aria-label="Executable venue" value={venue}
+          onChange={(event) => setVenue(event.target.value as "cow" | "uniswap-v3")}>
+          <option value="cow">CoW Protocol</option>
+          <option value="uniswap-v3" disabled={!UNISWAP_EXECUTION_ACCEPTED}>
+            Uniswap v3 · execution pending live acceptance
+          </option>
+        </select>
+      </label>
+      {!UNISWAP_EXECUTION_ACCEPTED && (
+        <p className="notice">Uniswap v3 500-tier quotes are available for comparison; Uniswap wallet execution remains disabled pending testnet acceptance.</p>
+      )}
       <label>
         Sell token address
         <input
@@ -250,7 +307,10 @@ export function Swap() {
             const r = revision.current;
             const s = ++requestSequence.current;
             invalidateSwapQuote(quote);
+            invalidateUniswapQuote(uniswapQuote);
             setQuote(undefined);
+            setUniswapQuote(undefined);
+            setUniswapApprovalNeeded(false);
             setQuoteEvidenceIdentity("");
             setApproved(false);
             if (
@@ -268,15 +328,22 @@ export function Swap() {
               direction: "exact-in",
             };
             let cowCandidate: SwapQuote | undefined;
+            let uniswapCandidate: UniswapExecutionQuote | undefined;
             const outcomes = await collectQuotes(
               [
                 cowQuoteProvider(async () => {
                   cowCandidate = await quoteSwap(wallet!, sell, buy, amount);
                   return cowCandidate;
                 }),
-                uniswapV3QuoteProvider(),
+                venue === "uniswap-v3"
+                  ? { id: "uniswap-v3", quote: async () => {
+                    uniswapCandidate = await quoteUniswapExecution(wallet!, sell, buy, amount);
+                    return uniswapCandidate.normalized;
+                  } } as ReturnType<typeof uniswapV3QuoteProvider>
+                  : uniswapV3QuoteProvider(undefined, [500]),
               ],
               intent,
+              venue === "uniswap-v3" ? 30000 : undefined,
             );
             if (r === revision.current && s === requestSequence.current) {
               setComparison(outcomes);
@@ -286,7 +353,7 @@ export function Swap() {
                   outcome.provider === "cow" &&
                   outcome.availability === "available",
               );
-              if (executableAvailable && cowCandidate) {
+              if (venue === "cow" && executableAvailable && cowCandidate) {
                 const costs = cowCandidate.quoteResults.amountsAndCosts;
                 const identity = `cowquote:${crypto.randomUUID()}`;
                 await evidence.capture("cow", `quote:${identity}`, {
@@ -305,7 +372,7 @@ export function Swap() {
                 setQuoteEvidenceIdentity(identity);
               }
               setQuote(
-                outcomes.some(
+                venue === "cow" && outcomes.some(
                   (outcome) =>
                     outcome.provider === "cow" &&
                     outcome.availability === "available",
@@ -313,6 +380,16 @@ export function Swap() {
                   ? cowCandidate
                   : undefined,
               );
+              if (venue === "uniswap-v3") {
+                invalidateSwapQuote(cowCandidate);
+                const uniswapAvailable = outcomes.some((outcome) =>
+                  outcome.provider === "uniswap-v3" && outcome.availability === "available");
+                if (uniswapAvailable && uniswapCandidate) {
+                  setUniswapQuote(uniswapCandidate);
+                  const checked = await inspectUniswapExecution(uniswapCandidate);
+                  setUniswapApprovalNeeded(checked.allowance < uniswapCandidate.sellAmount);
+                }
+              }
               setApproved(false);
               if (
                 outcomes.every(
@@ -329,10 +406,10 @@ export function Swap() {
         {busy ? "Working…" : "Get quote"}
       </button>
       {!wallet && <p className="empty">Connect your wallet to get started.</p>}
-      <p data-testid="cow-preflight">
-        {gate}: {preflightMessage[gate]}
+      <p data-testid={venue === "cow" ? "cow-preflight" : "uniswap-preflight"}>
+        {activeGate}: {preflightMessage[activeGate]}
       </p>
-      <ReadinessPanel protocol="cow" items={readiness} />
+      <ReadinessPanel protocol={venue} items={venue === "cow" ? readiness : uniswapReadiness} />
       <label>
         <input
           type="checkbox"
@@ -390,11 +467,10 @@ export function Swap() {
                           <p>Network cost: {detail.networkCost}</p>
                           <p>PIT fee: {detail.pitFee}</p>
                           <p>Quote age: {detail.age}</p>
-                          <p>
-                            {outcome.quote.executableThroughPit
-                              ? "CoW execution available only through its separate preflight below."
-                              : "Quote-only: PIT cannot execute this Uniswap quote."}
-                          </p>
+                          <p>{outcome.provider === venue &&
+                            (venue === "cow" ? !!quote : !!uniswapQuote)
+                            ? "Selected execution route; review its separate wallet checkpoint below."
+                            : "Comparison quote only; select this venue and request a new wallet-bound quote to execute."}</p>
                         </>
                       );
                     })()
@@ -403,7 +479,7 @@ export function Swap() {
               ))}
               <p data-testid="quote-ranking">
                 {ranking.comparable
-                  ? `Best quoted output (separately paid gas excluded; cost coverage differs): ${ranking.bestProviderIds.join(" and ")}${ranking.bestProviderIds.includes("uniswap-v3") ? ". Uniswap is quote-only; PIT cannot execute it." : "."}`
+                  ? `Best quoted output (separately paid gas excluded; cost coverage differs): ${ranking.bestProviderIds.join(" and ")}. Select a venue explicitly before execution.`
                   : ranking.fresh.length === 1
                     ? "Only one fresh quote; no best-output comparison."
                     : ranking.fresh.length === 0
@@ -436,7 +512,18 @@ export function Swap() {
           </details>
         </div>
       )}
-      {(quote || dryRun) && (!dryRun || dryStage !== "done") && (
+      {uniswapQuote && venue === "uniswap-v3" && (
+        <div className="rule" data-testid="uniswap-execution-economics">
+          <h3>Uniswap wallet-paid swap economics</h3>
+          <p>Router: {UNISWAP_SEPOLIA.router} · pool: {uniswapQuote.pool} · fee tier: 500</p>
+          <p>Exact input: {uniswapQuote.sellAmount.toString()} base units. Quoted output: {uniswapQuote.expectedBuy.toString()} base units.</p>
+          <p>Minimum received after 0.50% slippage: {uniswapQuote.minimumBuy.toString()} base units.</p>
+          <p>Pool fee is included in quoted output. Wallet swap gas and any approval gas are paid separately in Sepolia ETH; they are not included in route ranking.</p>
+          <p>PIT fee: 0. Quote expires: {new Date(uniswapQuote.expiresAt).toISOString()}.</p>
+          <p>Approval required: {uniswapApprovalNeeded ? "YES — exact sell amount only" : "NO"}.</p>
+        </div>
+      )}
+      {venue === "cow" && (quote || dryRun) && (!dryRun || dryStage !== "done") && (
         <OperatorCheckpoint
           key={`${address}:${chainId}:${sell}:${buy}:${amount}:${quote?.obtainedAt}:${approved}:${dryRun}:${dryStage}`}
           action={action}
@@ -479,6 +566,40 @@ export function Swap() {
                 });
                 setQuote(undefined);
                 setQuoteEvidenceIdentity("");
+              }
+            });
+          }}
+        />
+      )}
+      {venue === "uniswap-v3" && uniswapQuote && (
+        <OperatorCheckpoint
+          key={`${uniswapQuote.obtainedAt}:${uniswapApprovalNeeded}`}
+          action={uniswapAction}
+          details={[
+            "Uniswap v3 · Ethereum Sepolia 11155111 · exact 500-tier pool",
+            `Wallet: ${uniswapQuote.owner}`,
+            `Sell: ${uniswapQuote.sellAmount} base units of ${uniswapQuote.sellToken}`,
+            `Quoted receive: ${uniswapQuote.expectedBuy} base units of ${uniswapQuote.buyToken}`,
+            `Minimum receive: ${uniswapQuote.minimumBuy} base units`,
+            `Pool fee: 500 ppm, included in quote; wallet gas paid separately; PIT fee: 0`,
+            `Quote expiry: ${new Date(uniswapQuote.expiresAt).toISOString()}`,
+            "Only a confirmed swap produces a Taxlot spot trade.",
+          ]}
+          gate={uniswapGate} dryRun={dryRun} busy={busy}
+          onDryRun={() => setDryStage("done")}
+          onConfirm={async () => {
+            await act(async () => {
+              await checkUniswap();
+              if (uniswapApprovalNeeded) {
+                const hash = await approveUniswap(uniswapQuote);
+                setStatus(`Exact Uniswap approval confirmed: ${hash}. Request a fresh quote before swapping.`);
+                setUniswapQuote(undefined);
+              } else {
+                const result = await submitUniswap(uniswapQuote);
+                setStatus(`Uniswap Sepolia swap confirmed: ${result.hash}. Reconciling Taxlot…`);
+                const fill = await recordUniswapFill(uniswapQuote, result.receipt, result.client);
+                setStatus(`Uniswap swap ${result.hash} recorded as Taxlot trade ${fill.event.id}; wallet gas ${fill.gasWei} wei; PIT fee 0.`);
+                setUniswapQuote(undefined);
               }
             });
           }}

@@ -21,6 +21,8 @@ export type PreflightCode =
   | "MAINNET_ENABLED"
   | "WRONG_CHAIN"
   | "COW_CONFIGURATION"
+  | "UNISWAP_CONFIGURATION"
+  | "UNISWAP_NOT_ACCEPTED"
   | "HL_CONFIGURATION"
   | "STORAGE_UNAVAILABLE"
   | "UNSUPPORTED_ASSETS"
@@ -124,6 +126,8 @@ export const preflightMessage: Record<PreflightCode, string> = {
   WRONG_CHAIN:
     "CoW requires Ethereum Sepolia (11155111). Base Sepolia (84532) is not supported.",
   COW_CONFIGURATION: "CoW Sepolia endpoint or contract mismatch.",
+  UNISWAP_CONFIGURATION: "Uniswap Sepolia router, factory or 500-tier pool mismatch.",
+  UNISWAP_NOT_ACCEPTED: "Uniswap execution remains disabled until real testnet acceptance passes.",
   HL_CONFIGURATION: "Hyperliquid testnet endpoint mismatch.",
   STORAGE_UNAVAILABLE:
     "Accounting storage unavailable. Use an approved origin with working IndexedDB.",

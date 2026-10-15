@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { encodeFunctionData, erc20Abi } from "viem";
+import { encodeFunctionData, erc20Abi, parseAbi } from "viem";
 import {
   TEST_OPERATOR,
   assertReviewedTransaction,
@@ -70,6 +70,44 @@ describe("test-only autonomous signer gates", () => {
     chain = "0x1";
     await expect(provider.request({ method: "eth_accounts" })).rejects.toThrow("AUTONOMOUS_WRONG_CHAIN");
     expect(account.signTypedData).not.toHaveBeenCalled();
+  });
+  it("arms only one exact Sepolia Uniswap approval or reviewed 500-tier swap", async () => {
+    const transport = () => ({ request: vi.fn(async () => "0xaa36a7") });
+    const account = { address: from, signTypedData: vi.fn() };
+    const approvalProvider = createTestProvider({ account: account as never,
+      transport: transport as never, allowTransactions: true });
+    approvalProvider.armReviewedUniswap({ action: "approve" });
+    const uniApproval = { from, to: TEST_OPERATOR.usdc, chainId: 11155111, value: 0n,
+      data: encodeFunctionData({ abi: erc20Abi, functionName: "approve",
+        args: [TEST_OPERATOR.uniswapRouter, TEST_OPERATOR.uniswapSellCap] }) };
+    expect(assertReviewedTransaction(uniApproval, { action: "approve" })).toBe("uniswap-approve");
+    expect(() => assertReviewedTransaction(uniApproval)).toThrow();
+    expect(() => assertReviewedTransaction({ ...uniApproval, chainId: 1 }, { action: "approve" })).toThrow();
+    expect(() => assertReviewedTransaction({ ...uniApproval, data: encodeFunctionData({
+      abi: erc20Abi, functionName: "approve",
+      args: [TEST_OPERATOR.uniswapRouter, (1n << 256n) - 1n],
+    }) }, { action: "approve" })).toThrow();
+    const swapProvider = createTestProvider({ account: account as never,
+      transport: transport as never, allowTransactions: true });
+    const expiresAt = Date.now() + 20000;
+    swapProvider.armReviewedUniswap({ action: "swap", minimumBuy: 1000n,
+      expectedBuy: 1100n, expiresAt });
+    const abi = parseAbi(["function exactInputSingle((address tokenIn,address tokenOut,uint24 fee,address recipient,uint256 amountIn,uint256 amountOutMinimum,uint160 sqrtPriceLimitX96) params) payable returns (uint256)"]);
+    const swap = { from, to: TEST_OPERATOR.uniswapRouter, chainId: 11155111, value: 0n,
+      data: encodeFunctionData({ abi, functionName: "exactInputSingle", args: [{
+        tokenIn: TEST_OPERATOR.usdc, tokenOut: TEST_OPERATOR.weth, fee: 500,
+        recipient: from, amountIn: TEST_OPERATOR.uniswapSellCap,
+        amountOutMinimum: 1000n, sqrtPriceLimitX96: 0n,
+      }] }) };
+    const spec = { action: "swap", minimumBuy: 1000n, expiresAt,
+      data: swap.data.toLowerCase() };
+    expect(assertReviewedTransaction(swap, spec)).toBe("uniswap-swap");
+    expect(() => assertReviewedTransaction(swap)).toThrow();
+    expect(() => assertReviewedTransaction({ ...swap, data: "0x12345678" }, spec)).toThrow();
+    expect(() => assertReviewedTransaction({ ...swap, value: 1n }, spec)).toThrow();
+    expect(() => assertReviewedTransaction(swap, { ...spec, expiresAt: 0 })).toThrow();
+    expect(() => swapProvider.armReviewedUniswap({ action: "swap", minimumBuy: 1n,
+      expectedBuy: 2n, expiresAt })).toThrow("AUTONOMOUS_UNISWAP_ARMING");
   });
   it("requires an armed, exact CoW typed order and permits only one signature", async () => {
     const transport = () => ({ request: vi.fn(async () => "0xaa36a7") });

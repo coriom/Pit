@@ -161,6 +161,41 @@ export function cowObservationReadiness({
   });
 }
 
+export function uniswapOperatorReadiness(f: {
+  connected: boolean;
+  chainId?: number;
+  feesEnabled: boolean;
+  mainnetEnabled: boolean;
+  storage: boolean;
+  gate: PreflightCode;
+  quotePresent: boolean;
+  quoteExpiresAt?: number;
+  now: number;
+}): ReadinessItem[] {
+  return [
+    item("wallet", "External wallet connected", f.connected ? "PASS" : "FAIL",
+      "The selected account is rechecked before every wallet action."),
+    item("chain", "Ethereum Sepolia 11155111", f.chainId === 11155111 ? "PASS" : "FAIL",
+      "Mainnet and Base Sepolia are not supported."),
+    item("environment", "Official router, factory and initialized 500-tier pool",
+      f.gate === "UNISWAP_CONFIGURATION" ? "FAIL" : f.gate === "GREEN" ? "PASS" : "UNKNOWN",
+      "Contract code, identities and pool state are read again before action."),
+    item("fees", "PIT fees and mainnet disabled",
+      !f.feesEnabled && !f.mainnetEnabled ? "PASS" : "FAIL", "PIT fee is zero."),
+    item("funds", "Sell balance and Sepolia gas headroom",
+      f.gate === "INSUFFICIENT_BALANCE" ? "FAIL" : f.gate === "GREEN" ? "PASS" : "UNKNOWN",
+      "Approval and swap gas are wallet-paid separately from quoted output."),
+    item("storage", "Approved accounting origin",
+      f.storage && f.gate !== "STORAGE_UNAVAILABLE" ? "PASS" : "FAIL",
+      "Confirmed fills are recorded in the existing IndexedDB Taxlot store."),
+    item("quote", "Original fresh wallet-bound execution quote",
+      !f.quotePresent || !f.quoteExpiresAt || f.quoteExpiresAt <= f.now ||
+        f.gate === "QUOTE_EXPIRED" || f.gate === "INVALID_EXECUTION_QUOTE"
+        ? "FAIL" : f.gate === "GREEN" ? "PASS" : "UNKNOWN",
+      "Comparison-display quotes never authorize a swap."),
+  ];
+}
+
 export function perpOperatorReadiness(f: {
   connected: boolean;
   feesEnabled: boolean;

@@ -141,7 +141,7 @@ test("CoW quote failure leaves the read-only Uniswap quote visible and signing g
     "wallet swap/approval gas unknown",
   );
   await expect(page.getByTestId("quote-uniswap-v3")).toContainText(
-    "Quote-only: PIT cannot execute this Uniswap quote.",
+    "Comparison quote only; select this venue and request a new wallet-bound quote to execute.",
   );
   await expect(page.getByTestId("quote-ranking")).toContainText(
     "Only one fresh quote",
@@ -152,6 +152,9 @@ test("CoW quote failure leaves the read-only Uniswap quote visible and signing g
   await expect(
     page.getByRole("button", { name: "Approve exact sell amount" }),
   ).toHaveCount(0);
+  await expect(page.getByLabel("Executable venue").locator('option[value="uniswap-v3"]')).toHaveAttribute("disabled", "");
+  await expect(page.getByText(/Uniswap wallet execution remains disabled/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Review Uniswap swap submission" })).toHaveCount(0);
   signingCalls = await page.evaluate(() => (window as any).__signingCalls);
   expect(signingCalls).toBe(0);
   expect([...new Set(records.map((record) => record.origin))].sort()).toEqual([

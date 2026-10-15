@@ -4,7 +4,7 @@ export function ReadinessPanel({
   protocol,
   items,
 }: {
-  protocol: "cow" | "hyperliquid";
+  protocol: "cow" | "hyperliquid" | "uniswap-v3";
   items: readonly ReadinessItem[];
 }) {
   return (
