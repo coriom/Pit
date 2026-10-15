@@ -4,6 +4,11 @@ const protectedFiles = JSON.parse(
   readFileSync(new URL("./protected.json", import.meta.url)),
 );
 export function validateTrackedFiles(files) {
+  const uniswapSource = files.get("src/lib/uniswap-execution.ts")?.toString();
+  if (!uniswapSource ||
+      !/^export const UNISWAP_EXECUTION_ACCEPTED = false;$/m.test(uniswapSource) ||
+      /^export const UNISWAP_EXECUTION_ACCEPTED = true;$/m.test(uniswapSource))
+    throw Error("Uniswap execution acceptance gate must remain disabled in release source");
   for (const [file, expected] of Object.entries(protectedFiles)) {
     if (
       !files.has(file) ||

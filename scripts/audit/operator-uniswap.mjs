@@ -1,14 +1,57 @@
 // PIT_AUTONOMOUS_SIGNER_TEST_ONLY — local Sepolia acceptance; never import from src/.
 import { chromium } from "@playwright/test";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { createPublicClient, erc20Abi } from "viem";
 import { sepolia } from "viem/chains";
 import { assertTestRelease, castTransport, createTestProvider, TEST_OPERATOR as p } from "./autonomous-signer.mjs";
+import { assertFreshAfterApproval, safeRunnerFailure, verifyServedSource } from "./uniswap-runner-diagnostics.mjs";
 
 const origin = "http://127.0.0.1:4397";
 const evidenceDir = "docs/audit/phase-z";
 const preflightOnly = !process.argv.includes("--execute-reviewed");
 const requireFact = (ok, code) => { if (!ok) throw Error(code); };
+async function ownedServer() {
+  // Never attach to a pre-existing listener, even if it looks like PIT.
+  try {
+    await fetch(origin, { signal: AbortSignal.timeout(1000), redirect: "manual" });
+    throw Error("STALE_OR_WRONG_BUILD");
+  } catch (error) {
+    if (error?.message === "STALE_OR_WRONG_BUILD" ||
+        error?.name === "TimeoutError" ||
+        error?.cause?.code !== "ECONNREFUSED") throw Error("STALE_OR_WRONG_BUILD");
+  }
+  const child = spawn("pnpm", ["exec", "astro", "dev", "--host", "127.0.0.1", "--port", "4397"],
+    { cwd: process.cwd(), detached: true, stdio: ["ignore", "pipe", "pipe"] });
+  let output = "";
+  const collect = (chunk) => { output = (output + chunk.toString()).slice(-4000); };
+  child.stdout.on("data", collect);
+  child.stderr.on("data", collect);
+  try {
+    const deadline = Date.now() + 30000;
+    while (Date.now() < deadline) {
+      if (child.exitCode !== null || child.signalCode !== null) throw Error("STALE_OR_WRONG_BUILD");
+      if (/127\.0\.0\.1:4397\//.test(output)) {
+        const localSource = await readFile("src/lib/uniswap-execution.ts", "utf8");
+        const [pageResponse, sourceResponse] = await Promise.all([
+          fetch(`${origin}/tools/swap/`, { redirect: "manual" }),
+          fetch(`${origin}/@fs${process.cwd()}/src/lib/uniswap-execution.ts?raw`, { redirect: "manual" }),
+        ]);
+        if (pageResponse.status !== 200 || sourceResponse.status !== 200 ||
+            !(await pageResponse.text()).includes("<title>Swap · PIT Toolbox</title>"))
+          throw Error("STALE_OR_WRONG_BUILD");
+        const identity = verifyServedSource(localSource, await sourceResponse.text());
+        return { child, identity };
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    throw Error("STALE_OR_WRONG_BUILD");
+  } catch (error) {
+    try { process.kill(-child.pid, "SIGTERM"); } catch { /* Process already exited. */ }
+    throw error;
+  }
+}
 const readMethods = new Set([
   "eth_blockNumber", "eth_call", "eth_estimateGas", "eth_feeHistory",
   "eth_gasPrice", "eth_getBalance", "eth_getBlockByNumber", "eth_getCode",
@@ -23,8 +66,21 @@ let browser;
 let page;
 let signer = null;
 const sentHashes = [];
+let server;
+let stage = "authorization_gate";
+let signingAttempted = false;
+let submissionAttempted = false;
 try {
   assertTestRelease();
+  requireFact(preflightOnly, "UNISWAP_LIVE_RUN_NOT_AUTHORIZED");
+  stage = "server_identity";
+  server = await ownedServer();
+  const head = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  console.log(JSON.stringify({ stage: "SERVED_SOURCE_IDENTITY", head,
+    sourceSha256: server.identity.sourceSha256,
+    executionAccepted: server.identity.executionAccepted, origin }));
+  requireFact(server.identity.executionAccepted, "UNISWAP_NOT_ACCEPTED");
+  stage = "read_only_preflight";
   const [chainId, eth, usdc, allowance, gasPrice] = await Promise.all([
     client.getChainId(), client.getBalance({ address: p.address }),
     client.readContract({ address: p.usdc, abi: erc20Abi, functionName: "balanceOf", args: [p.address] }),
@@ -54,7 +110,10 @@ try {
     if (readMethods.has(method)) return rpc({ method, params });
     requireFact(!preflightOnly && method === "eth_sendTransaction" && signer,
       "UNISWAP_BROWSER_SIGNING_NOT_ARMED");
+    signingAttempted = true;
+    stage = "wallet_transaction_request";
     const hash = await signer.request({ method, params });
+    submissionAttempted ||= signer.sent;
     sentHashes.push(hash);
     return hash;
   });
@@ -80,6 +139,7 @@ try {
       !route.request().url().includes("/orders"), "UNISWAP_COW_ORDER_DENIED");
     return route.continue();
   });
+  stage = "browser_initialization";
   await page.goto(`${origin}/tools/swap/`);
   requireFact(new URL(page.url()).origin === origin, "UNISWAP_ORIGIN");
   await page.getByRole("button", { name: "Connect Wallet", exact: true }).click();
@@ -88,6 +148,7 @@ try {
   await page.getByLabel("Sell token address").fill(p.usdc);
   await page.getByLabel("You sell").fill("10");
   await page.getByLabel("Buy token address").fill(p.weth);
+  stage = "wallet_bound_quote";
   await page.getByRole("button", { name: "Get quote", exact: true }).click();
   await page.waitForFunction(() => {
     const gate = document.querySelector('[data-testid="uniswap-preflight"]')?.textContent;
@@ -127,6 +188,7 @@ try {
     }, null, 2) + "\n", { flag: "wx" });
     let approvalHash = null;
     if (allowance < p.uniswapSellCap) {
+      stage = "approval_checkpoint";
       signer = createTestProvider({ allowTransactions: true });
       signer.armReviewedUniswap({ action: "approve" });
       await page.getByRole("button", { name: "Review Uniswap exact token approval" }).click();
@@ -136,6 +198,7 @@ try {
       requireFact(signer.sent && sentHashes.length === 1, "UNISWAP_APPROVAL_NOT_SENT_ONCE");
       approvalHash = sentHashes[0];
       signer = null;
+      stage = "approval_receipt";
       const [approvalTx, approvalReceipt, approvedAllowance] = await Promise.all([
         client.getTransaction({ hash: approvalHash }),
         client.getTransactionReceipt({ hash: approvalHash }),
@@ -157,6 +220,7 @@ try {
         allowance: approvedAllowance.toString(),
       }, null, 2) + "\n", { flag: "wx" });
     }
+    stage = "fresh_quote_after_approval";
     await page.getByRole("button", { name: "Get quote", exact: true }).click();
     await page.waitForFunction((prior) => {
       const gate = document.querySelector('[data-testid="uniswap-preflight"]')?.textContent;
@@ -168,6 +232,7 @@ try {
     const nextOutput = fresh.match(/Quoted output: (\d+) base units\./)?.[1];
     const nextMinimum = fresh.match(/Minimum received after 0\.50% slippage: (\d+) base units\./)?.[1];
     const nextExpiry = fresh.match(/Quote expires: ([^\s]+)\./)?.[1];
+    assertFreshAfterApproval(Date.parse(expiresAt), Date.parse(nextExpiry));
     requireFact(fresh.includes("PIT fee: 0") &&
       fresh.includes(`Exact input: ${p.uniswapSellCap} base units`) &&
       fresh.includes("pool: 0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1") &&
@@ -175,6 +240,7 @@ try {
       BigInt(nextMinimum) === BigInt(nextOutput) * 9950n / 10000n &&
       Date.parse(nextExpiry) > Date.now(), "UNISWAP_FRESH_QUOTE_MISMATCH");
     signer = createTestProvider({ allowTransactions: true });
+    stage = "swap_checkpoint";
     signer.armReviewedUniswap({ action: "swap", minimumBuy: BigInt(nextMinimum),
       expectedBuy: BigInt(nextOutput), expiresAt: Date.parse(nextExpiry) });
     await writeFile(`${evidenceDir}/swap-attempt.json`, JSON.stringify({
@@ -192,6 +258,7 @@ try {
       "UNISWAP_SWAP_NOT_SENT_ONCE");
     const swapHash = sentHashes.at(-1);
     signer = null;
+    stage = "swap_receipt";
     const [tx, receipt] = await Promise.all([
       client.getTransaction({ hash: swapHash }),
       client.getTransactionReceipt({ hash: swapHash }),
@@ -242,21 +309,17 @@ try {
       csvFile: download.suggestedFilename(), transactionCalls: sentHashes.length }));
   }
 } catch (error) {
-  const message = String(error?.message ?? "");
-  const reason = /^(UNISWAP_|AUTONOMOUS_|QUOTE_EXPIRED|INVALID_EXECUTION_QUOTE|INSUFFICIENT_BALANCE|WRONG_CHAIN|UNSUPPORTED_ASSETS)[A-Z0-9_]*$/.test(message)
-    ? message : "UNISWAP_RUNTIME_BLOCKED";
-  let uiText = "";
-  try {
-    if (page && await page.getByRole("alert").count())
-      uiText = await page.getByRole("alert").innerText();
-  } catch { /* Preserve the original failure classification. */ }
-  const uiCode = /^(QUOTE_EXPIRED|INVALID_EXECUTION_QUOTE|INSUFFICIENT_BALANCE|UNISWAP_NOT_ACCEPTED|WRONG_CHAIN)$/.test(uiText)
-    ? uiText : null;
-  console.error(JSON.stringify({ stage: "BLOCKED", reason, uiCode,
-    signingAttempted: signer?.sent ?? false,
-    transactionCalls: sentHashes.length }));
+  submissionAttempted ||= signer?.sent === true;
+  const failure = safeRunnerFailure(error, stage, {
+    signingAttempted, submissionAttempted, hashReturned: sentHashes.length > 0,
+  });
+  console.error(JSON.stringify({ stage: "BLOCKED", ...failure,
+    returnedTransactionHashes: sentHashes.length }));
   process.exitCode = 2;
 } finally {
   if (browser) await browser.close();
+  if (server) {
+    try { process.kill(-server.child.pid, "SIGTERM"); } catch { /* Already exited. */ }
+  }
   await rm(profile, { recursive: true, force: true });
 }

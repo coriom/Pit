@@ -4,9 +4,22 @@ import { validateTrackedFiles } from "../scripts/release/invariants.mjs";
 const paths = Object.keys(
   JSON.parse(readFileSync("scripts/release/protected.json", "utf8")),
 );
-const original = () => new Map(paths.map((p) => [p, readFileSync(p)]));
+const original = () => new Map([
+  ...paths.map((p) => [p, readFileSync(p)] as const),
+  ["src/lib/uniswap-execution.ts", readFileSync("src/lib/uniswap-execution.ts")] as const,
+]);
 it("release invariant verifier accepts the exact protected configuration", () => {
-  expect(() => validateTrackedFiles(original())).not.toThrow();
+  const files = original();
+  files.set("src/lib/uniswap-execution.ts", readFileSync("src/lib/uniswap-execution.ts"));
+  expect(() => validateTrackedFiles(files)).not.toThrow();
+});
+it("release refuses an accepted Uniswap execution gate", () => {
+  const files = original();
+  files.set("src/lib/uniswap-execution.ts", Buffer.from(
+    readFileSync("src/lib/uniswap-execution.ts", "utf8")
+      .replace("UNISWAP_EXECUTION_ACCEPTED = false", "UNISWAP_EXECUTION_ACCEPTED = true"),
+  ));
+  expect(() => validateTrackedFiles(files)).toThrow("Uniswap execution acceptance gate");
 });
 it.each(paths)("release invariant fails closed when %s changes", (path) => {
   const files = original();
