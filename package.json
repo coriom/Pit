@@ -19,6 +19,7 @@
     "operator:observe": "node scripts/audit/operator-observe.mjs",
     "operator:verify": "node scripts/audit/operator-verify.mjs",
     "operator:autonomous": "node scripts/audit/operator-autonomous.mjs",
+    "uniswap:acceptance": "node scripts/audit/uniswap-acceptance-worktree.mjs",
     "staging:acceptance": "node scripts/audit/staging-acceptance.mjs",
     "staging:preflight": "node scripts/audit/staging-preflight.mjs"
   },

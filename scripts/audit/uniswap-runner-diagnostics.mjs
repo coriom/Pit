@@ -1,6 +1,7 @@
 // Test-only diagnostics. Never import this module from src/ or a browser bundle.
 import { createHash } from "node:crypto";
 import { runInNewContext } from "node:vm";
+import { decodeFunctionData, parseAbi } from "viem";
 
 const knownCodes = new Set([
   "UNISWAP_NOT_ACCEPTED", "UNISWAP_QUOTE_NOT_READY", "UNISWAP_QUOTE_ECONOMICS",
@@ -20,6 +21,26 @@ const knownCodes = new Set([
 ]);
 const safeName = /^(?:Error|TypeError|RangeError|TimeoutError|RpcRequestError|HttpRequestError|ContractFunctionExecutionError)$/;
 const digest = (value) => createHash("sha256").update(value).digest("hex");
+const exactInputSingleAbi = parseAbi([
+  "function exactInputSingle((address tokenIn,address tokenOut,uint24 fee,address recipient,uint256 amountIn,uint256 amountOutMinimum,uint160 sqrtPriceLimitX96) params) payable returns (uint256 amountOut)",
+]);
+
+/** A gas number for a simulated post-approval state, never an on-chain estimate. */
+export function mockReviewedSwapGasEstimate(tx, spec) {
+  let decoded;
+  try { decoded = decodeFunctionData({ abi: exactInputSingleAbi, data: tx?.data ?? tx?.input }); }
+  catch { throw Error("UNISWAP_MOCK_GAS_SCOPE"); }
+  const args = decoded.args?.[0];
+  const same = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
+  if (decoded.functionName !== "exactInputSingle" ||
+      !same(tx.from, spec.owner) || !same(tx.to, spec.router) ||
+      BigInt(tx.value ?? "0x0") !== 0n ||
+      !same(args.tokenIn, spec.sellToken) || !same(args.tokenOut, spec.buyToken) ||
+      !same(args.recipient, spec.owner) || args.fee !== 500 ||
+      args.amountIn !== spec.sellAmount || args.amountOutMinimum <= 0n ||
+      args.sqrtPriceLimitX96 !== 0n) throw Error("UNISWAP_MOCK_GAS_SCOPE");
+  return "0x3d090"; // 250,000 simulated gas units; not a live RPC estimate.
+}
 
 export function sourceGate(source) {
   const matches = [...source.matchAll(/^export const UNISWAP_EXECUTION_ACCEPTED = (true|false);$/gm)];
@@ -43,6 +64,17 @@ export function assertFreshAfterApproval(priorExpiry, nextExpiry, now = Date.now
   if (!Number.isFinite(priorExpiry) || !Number.isFinite(nextExpiry) ||
       nextExpiry <= priorExpiry || nextExpiry <= now)
     throw Error("QUOTE_EXPIRED");
+}
+
+export async function assertLoopbackFree(origin, probe = fetch) {
+  try {
+    await probe(origin, { signal: AbortSignal.timeout(1000), redirect: "manual" });
+    throw Error("STALE_OR_WRONG_BUILD");
+  } catch (error) {
+    if (error?.message === "STALE_OR_WRONG_BUILD" ||
+        error?.name === "TimeoutError" ||
+        error?.cause?.code !== "ECONNREFUSED") throw Error("STALE_OR_WRONG_BUILD");
+  }
 }
 
 /** Return only allowlisted diagnostics, even when an RPC/browser error nests secrets. */

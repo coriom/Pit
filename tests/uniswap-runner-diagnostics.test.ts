@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs";
+import { encodeFunctionData, parseAbi } from "viem";
 import { describe, expect, it } from "vitest";
 import {
   assertFreshAfterApproval,
+  assertLoopbackFree,
+  mockReviewedSwapGasEstimate,
   safeRunnerFailure,
   sourceGate,
   verifyServedSource,
@@ -9,6 +12,16 @@ import {
 
 const source = readFileSync("src/lib/uniswap-execution.ts", "utf8");
 const served = (value: string) => `export default ${JSON.stringify(value)};\n`;
+const abi = parseAbi(["function exactInputSingle((address tokenIn,address tokenOut,uint24 fee,address recipient,uint256 amountIn,uint256 amountOutMinimum,uint160 sqrtPriceLimitX96) params) payable returns (uint256 amountOut)"]);
+const owner = "0x29d0B5939dcC4D0492D72ABd1210dEbd6c90cC96";
+const router = "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E";
+const usdc = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
+const weth = "0xfff9976782d46cc05630d1f6ebab18b2324d6b14";
+const spec = { owner, router, sellToken: usdc, buyToken: weth, sellAmount: 10000000n };
+const calldata = (overrides = {}) => encodeFunctionData({ abi, functionName: "exactInputSingle",
+  args: [{ tokenIn: usdc, tokenOut: weth, fee: 500, recipient: owner,
+    amountIn: 10000000n, amountOutMinimum: 216929911610444n,
+    sqrtPriceLimitX96: 0n, ...overrides }] });
 
 describe("test-only Uniswap runner diagnostics", () => {
   it("rejects disabled execution before wallet access and verifies exact served source", () => {
@@ -25,6 +38,31 @@ describe("test-only Uniswap runner diagnostics", () => {
     expect(() => assertFreshAfterApproval(1000, 1000, 900)).toThrow("QUOTE_EXPIRED");
     expect(() => assertFreshAfterApproval(1000, 2000, 2000)).toThrow("QUOTE_EXPIRED");
     expect(() => assertFreshAfterApproval(1000, Number.NaN, 900)).toThrow("QUOTE_EXPIRED");
+  });
+
+  it("mocks gas only for the exact reviewed post-approval swap scope", () => {
+    const tx = { from: owner, to: router, value: "0x0", data: calldata() };
+    expect(mockReviewedSwapGasEstimate(tx, spec)).toBe("0x3d090");
+    for (const altered of [
+      { ...tx, from: weth }, { ...tx, to: usdc }, { ...tx, value: "0x1" },
+      { ...tx, data: calldata({ tokenOut: usdc }) },
+      { ...tx, data: calldata({ fee: 3000 }) },
+      { ...tx, data: calldata({ amountIn: 10000001n }) },
+      { ...tx, data: calldata({ recipient: weth }) },
+      { ...tx, data: calldata({ amountOutMinimum: 0n }) },
+      { ...tx, data: calldata({ sqrtPriceLimitX96: 1n }) },
+      { ...tx, data: "0x" },
+    ]) expect(() => mockReviewedSwapGasEstimate(altered, spec)).toThrow("UNISWAP_MOCK_GAS_SCOPE");
+  });
+
+  it("refuses an existing listener and fails closed on an uncertain probe", async () => {
+    await expect(assertLoopbackFree("http://127.0.0.1:4397", async () => ({ status: 200 }) as never))
+      .rejects.toThrow("STALE_OR_WRONG_BUILD");
+    await expect(assertLoopbackFree("http://127.0.0.1:4397", async () => { throw Error("timeout"); }))
+      .rejects.toThrow("STALE_OR_WRONG_BUILD");
+    await expect(assertLoopbackFree("http://127.0.0.1:4397", async () => {
+      throw Object.assign(Error("refused"), { cause: { code: "ECONNREFUSED" } });
+    })).resolves.toBeUndefined();
   });
 
   it("classifies disabled, expired, wallet, timeout and receipt failures without inventing success", () => {

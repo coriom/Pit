@@ -3,10 +3,10 @@ import { chromium } from "@playwright/test";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { execFileSync } from "node:child_process";
-import { createPublicClient, erc20Abi } from "viem";
+import { createPublicClient, encodeFunctionData, erc20Abi } from "viem";
 import { sepolia } from "viem/chains";
 import { assertTestRelease, castTransport, createTestProvider, TEST_OPERATOR as p } from "./autonomous-signer.mjs";
-import { assertFreshAfterApproval, safeRunnerFailure, verifyServedSource } from "./uniswap-runner-diagnostics.mjs";
+import { assertFreshAfterApproval, assertLoopbackFree, mockReviewedSwapGasEstimate, safeRunnerFailure, verifyServedSource } from "./uniswap-runner-diagnostics.mjs";
 
 const origin = "http://127.0.0.1:4397";
 const evidenceDir = "docs/audit/phase-z";
@@ -14,14 +14,7 @@ const preflightOnly = !process.argv.includes("--execute-reviewed");
 const requireFact = (ok, code) => { if (!ok) throw Error(code); };
 async function ownedServer() {
   // Never attach to a pre-existing listener, even if it looks like PIT.
-  try {
-    await fetch(origin, { signal: AbortSignal.timeout(1000), redirect: "manual" });
-    throw Error("STALE_OR_WRONG_BUILD");
-  } catch (error) {
-    if (error?.message === "STALE_OR_WRONG_BUILD" ||
-        error?.name === "TimeoutError" ||
-        error?.cause?.code !== "ECONNREFUSED") throw Error("STALE_OR_WRONG_BUILD");
-  }
+  await assertLoopbackFree(origin);
   const child = spawn("pnpm", ["exec", "astro", "dev", "--host", "127.0.0.1", "--port", "4397"],
     { cwd: process.cwd(), detached: true, stdio: ["ignore", "pipe", "pipe"] });
   let output = "";
@@ -59,7 +52,36 @@ const readMethods = new Set([
   "eth_getTransactionReceipt", "eth_maxPriorityFeePerGas",
 ]);
 const transport = castTransport();
-const rpc = transport({ chain: sepolia }).request;
+const rawRpc = transport({ chain: sepolia }).request;
+const allowanceData = encodeFunctionData({ abi: erc20Abi, functionName: "allowance",
+  args: [p.address, p.uniswapRouter] }).toLowerCase();
+let mockedAllowance = false;
+let mockedAllowanceReads = 0;
+let mockedSwapGasEstimates = 0;
+const rpcDurations = [];
+const rpc = async ({ method, params = [] }) => {
+  const started = performance.now();
+  try {
+    if (preflightOnly && mockedAllowance && method === "eth_call" &&
+        String(params[0]?.to ?? "").toLowerCase() === p.usdc.toLowerCase() &&
+        String(params[0]?.data ?? params[0]?.input ?? "").toLowerCase() === allowanceData) {
+      mockedAllowanceReads++;
+      return `0x${p.uniswapSellCap.toString(16).padStart(64, "0")}`;
+    }
+    if (preflightOnly && mockedAllowance && method === "eth_estimateGas" &&
+        String(params[0]?.to ?? "").toLowerCase() === p.uniswapRouter.toLowerCase()) {
+      const result = mockReviewedSwapGasEstimate(params[0], {
+        owner: p.address, router: p.uniswapRouter,
+        sellToken: p.usdc, buyToken: p.weth, sellAmount: p.uniswapSellCap,
+      });
+      mockedSwapGasEstimates++;
+      return result;
+    }
+    return await rawRpc({ method, params });
+  } finally {
+    rpcDurations.push({ method, durationMs: Math.round(performance.now() - started) });
+  }
+};
 const client = createPublicClient({ chain: sepolia, transport });
 const profile = await mkdtemp("/tmp/pit-uniswap-operator-");
 let browser;
@@ -148,24 +170,77 @@ try {
   await page.getByLabel("Sell token address").fill(p.usdc);
   await page.getByLabel("You sell").fill("10");
   await page.getByLabel("Buy token address").fill(p.weth);
+  if (preflightOnly) await page.getByLabel(/Dry run only/).check();
   stage = "wallet_bound_quote";
+  const quoteStarted = performance.now();
   await page.getByRole("button", { name: "Get quote", exact: true }).click();
+  await page.getByTestId("uniswap-execution-economics").waitFor({ timeout: 90000 });
+  const quoteReady = performance.now();
   await page.waitForFunction(() => {
     const gate = document.querySelector('[data-testid="uniswap-preflight"]')?.textContent;
     const error = document.querySelector('[role="alert"]')?.textContent;
     return gate?.startsWith("GREEN") || !!error;
   }, null, { timeout: 90000 });
+  const readinessReady = performance.now();
   const gate = await page.getByTestId("uniswap-preflight").innerText();
   const error = await page.getByRole("alert").count()
     ? await page.getByRole("alert").innerText() : null;
   const economics = await page.getByTestId("uniswap-execution-economics").count()
     ? await page.getByTestId("uniswap-execution-economics").innerText() : null;
   console.log(JSON.stringify({ stage: "WALLET_BOUND_QUOTE", gate, error, economics,
+    quoteAcquisitionMs: Math.round(quoteReady - quoteStarted),
+    readinessMs: Math.round(readinessReady - quoteReady),
+    rpcMethods: Object.fromEntries([...new Set(rpcDurations.map((row) => row.method))]
+      .map((method) => [method, { calls: rpcDurations.filter((row) => row.method === method).length,
+        totalMs: rpcDurations.filter((row) => row.method === method)
+          .reduce((sum, row) => sum + row.durationMs, 0) }])),
     transactionCalls: sentHashes.length }));
   requireFact(gate.startsWith("GREEN") && economics?.includes("PIT fee: 0") &&
     economics.includes("Approval required: "), "UNISWAP_QUOTE_NOT_READY");
   if (preflightOnly) {
-    console.log(JSON.stringify({ stage: "READ_ONLY_COMPLETE", transactionCalls: 0 }));
+    const firstExpiry = Date.parse(economics.match(/Quote expires: ([^\s]+)\./)?.[1] ?? "");
+    requireFact(Number.isFinite(firstExpiry) && firstExpiry > Date.now(), "QUOTE_EXPIRED");
+    const approvalNeeded = economics.includes("Approval required: YES");
+    const checkpointStarted = performance.now();
+    if (approvalNeeded) {
+      stage = "mock_approval_checkpoint";
+      await page.getByRole("button", { name: "Preview Uniswap exact token approval · dry run" }).click();
+      await page.getByLabel(/I reviewed the network/).check();
+      await page.getByRole("button", { name: "Advance dry run" }).click();
+      requireFact(sentHashes.length === 0 && !signingAttempted, "UNISWAP_BROWSER_SIGNING_NOT_ARMED");
+      console.log(JSON.stringify({ stage: "MOCK_APPROVAL_CHECKPOINT", outcome: "PASS",
+        actualApprovalSubmitted: false, elapsedMs: Math.round(performance.now() - checkpointStarted) }));
+    }
+    // Simulate *only* the exact router allowance read. This is not a chain
+    // write or an approval receipt; all other reads and the new quote stay live.
+    mockedAllowance = true;
+    stage = "fresh_quote_after_mock_approval";
+    const secondStarted = performance.now();
+    await page.getByRole("button", { name: "Get quote", exact: true }).click();
+    await page.waitForFunction((prior) => {
+      const gate = document.querySelector('[data-testid="uniswap-preflight"]')?.textContent;
+      const text = document.querySelector('[data-testid="uniswap-execution-economics"]')?.textContent ?? "";
+      return gate?.startsWith("GREEN") && text.includes("Approval required: NO") &&
+        !text.includes(`Quote expires: ${prior}`);
+    }, new Date(firstExpiry).toISOString(), { timeout: 90000 });
+    const secondEconomics = await page.getByTestId("uniswap-execution-economics").innerText();
+    const nextExpiry = Date.parse(secondEconomics.match(/Quote expires: ([^\s]+)\./)?.[1] ?? "");
+    assertFreshAfterApproval(firstExpiry, nextExpiry);
+    requireFact(mockedAllowanceReads > 0 && mockedSwapGasEstimates > 0 &&
+      secondEconomics.includes("PIT fee: 0"),
+      "UNISWAP_FRESH_QUOTE_MISMATCH");
+    stage = "mock_swap_checkpoint";
+    await page.getByRole("button", { name: "Preview Uniswap swap submission · dry run" }).click();
+    await page.getByLabel(/I reviewed the network/).check();
+    await page.getByRole("button", { name: "Advance dry run" }).click();
+    requireFact(sentHashes.length === 0 && !signingAttempted, "UNISWAP_BROWSER_SIGNING_NOT_ARMED");
+    console.log(JSON.stringify({ stage: "MOCK_SWAP_CHECKPOINT", outcome: "PASS",
+      simulatedAllowanceReads: mockedAllowanceReads,
+      simulatedSwapGasEstimates: mockedSwapGasEstimates,
+      freshQuoteMs: Math.round(performance.now() - secondStarted),
+      freshExpiry: new Date(nextExpiry).toISOString(), actualSwapSubmitted: false }));
+    console.log(JSON.stringify({ stage: "READ_ONLY_COMPLETE", transactionCalls: 0,
+      signingAttempted: false, submissionAttempted: false }));
   } else {
     const [quotedOutput, minimumBuy, expiresAt] = [
       /Quoted output: (\d+) base units\./,
@@ -309,6 +384,19 @@ try {
       csvFile: download.suggestedFilename(), transactionCalls: sentHashes.length }));
   }
 } catch (error) {
+  if (preflightOnly && page && stage === "fresh_quote_after_mock_approval") {
+    try {
+      const browserState = await page.evaluate(() => ({
+        gate: document.querySelector('[data-testid="uniswap-preflight"]')?.textContent ?? null,
+        economics: document.querySelector('[data-testid="uniswap-execution-economics"]')?.textContent ?? null,
+        alertPresent: !!document.querySelector('[role="alert"]'),
+        quoteButton: [...document.querySelectorAll("button")]
+          .find((button) => button.textContent?.trim() === "Get quote")?.disabled ?? null,
+      }));
+      console.log(JSON.stringify({ stage: "FRESH_QUOTE_BROWSER_STATE", ...browserState,
+        simulatedAllowanceReads: mockedAllowanceReads }));
+    } catch { /* The original failure remains authoritative. */ }
+  }
   submissionAttempted ||= signer?.sent === true;
   const failure = safeRunnerFailure(error, stage, {
     signingAttempted, submissionAttempted, hashReturned: sentHashes.length > 0,
