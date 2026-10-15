@@ -1,0 +1,38 @@
+{
+  "evidence": "READ_ONLY_SEPOLIA_RPC",
+  "observedAt": "2026-10-15T10:50:15.855892+00:00",
+  "chainId": 11155111,
+  "blockNumber": 11919946,
+  "blockTimestampUTC": "2026-10-15T10:50:12+00:00",
+  "owner": "0x29d0B5939dcC4D0492D72ABd1210dEbd6c90cC96",
+  "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
+  "readMethods": ["eth_chainId", "eth_getBlockByNumber", "eth_getCode", "eth_call"],
+  "codePresent": {
+    "circleTestUSDC": true,
+    "weth": true,
+    "uniswapRouter02": true,
+    "cowRelayer": true
+  },
+  "tokens": {
+    "circleTestUSDC": {
+      "address": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+      "decimals": 6,
+      "balanceBaseUnits": "270299154",
+      "allowances": {
+        "uniswapRouter02": "10000000",
+        "cowRelayer": "0"
+      }
+    },
+    "weth": {
+      "address": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+      "decimals": 18,
+      "balanceBaseUnits": "0",
+      "allowances": {
+        "uniswapRouter02": "0",
+        "cowRelayer": "0"
+      }
+    }
+  },
+  "coverage": "Exactly the four listed token/spender pairs; not exhaustive wallet approval coverage",
+  "stateChangingCalls": 0
+}

@@ -1,0 +1,97 @@
+
+> pit@0.1.0 release:check /home/corio/PIT
+> node scripts/release/check.mjs
+
+Clean release source: 4482ace95d555be1a03787d0a21677e438db1d4c
+PASS protected fee/network configuration: FEES_ENABLED=false; MAINNET_ENABLED=false; recipients/rates unchanged
+PASS exact Taxlot v1 schema SHA256 d8eb339ed7acd7da3b68ef09fe5c1b01c4cc3258cb401a4f2ba8805e7a3b07d7
+PASS origin policy: default-deny; exact reviewed PIT staging alias only; legal page unchanged
+PASS tracked-file credential patterns and environment-file policy (not a proof against encoded secrets)
+PASS no direct analytics dependency or app-source analytics import
+
+$ pnpm test
+
+> pit@0.1.0 test /home/corio/PIT
+> vitest run
+
+
+ RUN  v3.2.7 /home/corio/PIT
+
+ ✓ tests/unit/static-artifacts.test.ts (33 tests) 34ms
+ ❯ tests/unit/discoverability.test.ts (8 tests | 1 failed) 52ms
+   × registry-driven discoverability release gate > accepts the default noindex artifact and an explicitly approved HTTPS-origin fixture 27ms
+     → expected { routes: 12, toolPages: 8, …(1) } to deeply equal { routes: 11, toolPages: 7, …(1) }
+   ✓ registry-driven discoverability release gate > rejects enabled indexing without exact versioned HTTPS approval 4ms
+   ✓ registry-driven discoverability release gate > rejects duplicate SEO identities and missing registry metadata 2ms
+   ✓ registry-driven discoverability release gate > rejects sitemap or registry route divergence 1ms
+   ✓ registry-driven discoverability release gate > rejects a canonical host different from the approved origin 1ms
+   ✓ registry-driven discoverability release gate > rejects indexing leaks in an unverified-origin build 3ms
+   ✓ registry-driven discoverability release gate > rejects missing title, description, H1, structured data or testnet disclosure 7ms
+   ✓ registry-driven discoverability release gate > rejects local wallet bundles and calculator network code 3ms
+ ✓ tests/uniswap-runner-diagnostics.test.ts (8 tests) 60ms
+ ✓ tests/events.test.ts (4 tests) 148ms
+ ✓ tests/acceptance-evidence.test.ts (5 tests) 86ms
+ ✓ tests/derivative-boundary.test.ts (6 tests) 113ms
+ ✓ tests/audit-taxlot.test.ts (1 test) 158ms
+ ✓ tests/staging-access.test.ts (26 tests) 72ms
+ ✓ tests/release-invariants.test.ts (16 tests) 42ms
+ ✓ tests/storage-policy.test.ts (5 tests) 33ms
+ ✓ tests/uniswap-execution.test.ts (6 tests) 63ms
+ ✓ tests/schema-capabilities.test.ts (3 tests) 17ms
+ ✓ tests/quote-probe-runtime.test.ts (4 tests) 422ms
+   ✓ bounds a transient retry and preserves a rate-limit Retry-After beyond the budget  319ms
+ ✓ tests/staging-lifecycle.test.ts (18 tests) 64ms
+ ✓ tests/execution-paths.test.ts (7 tests) 136ms
+ ✓ tests/execution-preflight.test.ts (24 tests) 71ms
+ ✓ tests/calculators.test.ts (19 tests) 32ms
+ ✓ tests/operator-verification.test.ts (3 tests) 46ms
+ ✓ tests/autonomous-signer.test.ts (13 tests) 51ms
+ ✓ tests/uniswap-acceptance-worktree.test.ts (3 tests) 13ms
+ ✓ tests/swap-quotes.test.ts (7 tests) 51ms
+ ✓ tests/tool-registry.test.ts (3 tests) 17ms
+ ✓ tests/operator-readiness.test.ts (4 tests) 13ms
+ ✓ tests/cow.test.ts (6 tests) 21ms
+ ✓ tests/audit-builder-path.test.ts (1 test) 8ms
+ ✓ tests/hyperliquid-release-path.test.ts (3 tests) 28ms
+ ✓ tests/operator-observer.test.ts (4 tests) 31ms
+ ✓ tests/token-approvals.test.ts (14 tests) 28ms
+ ✓ tests/schema-provenance.test.ts (1 test) 4ms
+ ✓ tests/diagnostic-quotes.test.ts (3 tests) 12ms
+ ✓ tests/hyperliquid.test.ts (2 tests) 7ms
+ ✓ tests/audit-fees.test.ts (4 tests) 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unit/discoverability.test.ts > registry-driven discoverability release gate > accepts the default noindex artifact and an explicitly approved HTTPS-origin fixture
+AssertionError: expected { routes: 12, toolPages: 8, …(1) } to deeply equal { routes: 11, toolPages: 7, …(1) }
+
+- Expected
++ Received
+
+  {
+    "isolatedPages": 4,
+-   "routes": 11,
+-   "toolPages": 7,
++   "routes": 12,
++   "toolPages": 8,
+  }
+
+ ❯ tests/unit/discoverability.test.ts:79:7
+     77|         disabled,
+     78|       ),
+     79|     ).toEqual({ routes: 11, toolPages: 7, isolatedPages: 4 });
+       |       ^
+     80|     expect(
+     81|       validateDiscoverabilityArtifacts(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 31 passed (32)
+      Tests  1 failed | 263 passed (264)
+   Start at  18:59:38
+   Duration  4.61s (transform 2.04s, setup 818ms, collect 24.38s, tests 1.94s, environment 16ms, prepare 5.58s)
+
+ ELIFECYCLE  Test failed. See above for more details.
+RELEASE CHECK FAILED: Required command failed: pnpm test (exit 1)
+ ELIFECYCLE  Command failed with exit code 1.

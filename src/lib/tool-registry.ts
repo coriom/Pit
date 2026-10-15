@@ -82,6 +82,20 @@ export const TOOLS = [
     relatedToolIds: ["swap", "taxlot-export"],
   },
   {
+    id: "token-approvals",
+    slug: "token-approvals",
+    path: "/tools/token-approvals/",
+    title: "Token Approval Inspector",
+    description:
+      "Inspect four reviewed ERC-20 allowance pairs for any public Ethereum Sepolia address without connecting a wallet.",
+    category: "Wallet",
+    executionMode: "read-only",
+    walletRequirement: "none",
+    networkRequirement: "ethereum-sepolia",
+    status: "testnet-only",
+    relatedToolIds: ["wallet", "swap"],
+  },
+  {
     id: "pnl",
     slug: "pnl",
     path: "/tools/pnl/",

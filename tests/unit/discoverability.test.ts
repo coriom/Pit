@@ -35,7 +35,7 @@ function fixtures(policy: typeof disabled | typeof enabled = disabled) {
   }
   files.set(
     "tools/index.html",
-    `<html><head>${head(policy, "/tools/")}<title>${TOOLBOX_PAGE.title}</title><meta name="description" content="${TOOLBOX_PAGE.description}"></head><body><h1>Choose a tool.</h1><script type="module">const count = 7;</script></body></html>`,
+    `<html><head>${head(policy, "/tools/")}<title>${TOOLBOX_PAGE.title}</title><meta name="description" content="${TOOLBOX_PAGE.description}"></head><body><h1>Choose a tool.</h1><script type="module">const count = ${TOOLS.length};</script></body></html>`,
   );
   for (const tool of TOOLS) {
     const seo = toolDiscoverability(tool);
@@ -76,7 +76,11 @@ describe("registry-driven discoverability release gate", () => {
         TOOLBOX_PAGE,
         disabled,
       ),
-    ).toEqual({ routes: 11, toolPages: 7, isolatedPages: 4 });
+    ).toEqual({
+      routes: TOOLS.length + 4,
+      toolPages: TOOLS.length,
+      isolatedPages: 4,
+    });
     expect(
       validateDiscoverabilityArtifacts(
         fixtures(enabled),
@@ -84,7 +88,11 @@ describe("registry-driven discoverability release gate", () => {
         TOOLBOX_PAGE,
         enabled,
       ),
-    ).toEqual({ routes: 11, toolPages: 7, isolatedPages: 4 });
+    ).toEqual({
+      routes: TOOLS.length + 4,
+      toolPages: TOOLS.length,
+      isolatedPages: 4,
+    });
   });
   it("rejects enabled indexing without exact versioned HTTPS approval", () => {
     for (const approvedOrigin of [

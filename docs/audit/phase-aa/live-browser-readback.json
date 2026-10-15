@@ -1,0 +1,28 @@
+{
+  "evidence": "LOCAL_PRODUCTION_BUILD_REAL_SEPOLIA_READ_ONLY",
+  "sourceBlock": 11919981,
+  "blockTimestampUTC": "2026-10-15T10:57:36Z",
+  "observedAtUTC": "2026-10-15T10:57:45.260Z",
+  "origin": "http://127.0.0.1:4399",
+  "rpcOrigin": "https://ethereum-sepolia-rpc.publicnode.com",
+  "chainId": 11155111,
+  "owner": "0x29d0B5939dcC4D0492D72ABd1210dEbd6c90cC96",
+  "pageStatus": "Four reviewed allowance pairs checked at one Sepolia block.",
+  "rows": [
+    { "token": "USDC", "spender": "Uniswap SwapRouter02", "state": "NONZERO", "rawAllowance": "10000000", "readableAllowance": "10", "rawBalance": "270299154", "readableBalance": "270.299154", "verifiedDecimals": 6 },
+    { "token": "USDC", "spender": "CoW relayer", "state": "ZERO", "rawAllowance": "0", "readableAllowance": "0", "rawBalance": "270299154", "readableBalance": "270.299154", "verifiedDecimals": 6 },
+    { "token": "WETH", "spender": "Uniswap SwapRouter02", "state": "ZERO", "rawAllowance": "0", "readableAllowance": "0", "rawBalance": "0", "readableBalance": "0", "verifiedDecimals": 18 },
+    { "token": "WETH", "spender": "CoW relayer", "state": "ZERO", "rawAllowance": "0", "readableAllowance": "0", "rawBalance": "0", "readableBalance": "0", "verifiedDecimals": 18 }
+  ],
+  "rpcMethods": {
+    "eth_chainId": 1,
+    "eth_getBlockByNumber": 1,
+    "eth_getCode": 4,
+    "eth_call": 8
+  },
+  "walletCalls": 0,
+  "signingCalls": 0,
+  "transactionCalls": 0,
+  "browserProfile": "isolated Playwright Chromium",
+  "deployment": "NOT DEPLOYED — local production build only"
+}

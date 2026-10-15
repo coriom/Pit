@@ -1,0 +1,6 @@
+---
+import ToolLayout from "../../../components/ToolLayout.astro";
+import TokenApprovalInspector from "../../../components/TokenApprovalInspector";
+import { toolById } from "../../../lib/tool-registry";
+---
+<ToolLayout tool={toolById("token-approvals")}><TokenApprovalInspector client:only="react" /></ToolLayout>
