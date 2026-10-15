@@ -57,10 +57,16 @@ if (process.argv[1] && resolve(process.argv[1]) === self) {
     if (!gateRejected) throw Error("ACCEPTANCE_RELEASE_GUARD_FAILED");
     console.log(JSON.stringify({ stage: "ACCEPTANCE_SOURCE", base, ...identity,
       changedPaths, releaseGateRejected: true, loopbackOnly: true }));
-    const run = spawnSync("node", [join(repo, "scripts/audit/operator-uniswap.mjs")], {
-      cwd: worktree, encoding: "utf8", timeout: 300000, maxBuffer: 1024 * 1024,
+    const runnerArgs = [join(repo, "scripts/audit/operator-uniswap.mjs")];
+    if (process.argv.includes("--z3-read-only")) runnerArgs.push("--z3-read-only");
+    if (process.argv.includes("--z3-live")) runnerArgs.push("--z3-live");
+    const live = process.argv.includes("--z3-live");
+    const run = spawnSync("node", runnerArgs, {
+      cwd: worktree, encoding: "utf8", timeout: live ? 600000 : 300000,
+      maxBuffer: 2 * 1024 * 1024,
       env: { PATH: process.env.PATH ?? "/usr/bin:/bin", HOME: process.env.HOME ?? "/tmp",
-        XDG_CACHE_HOME: process.env.XDG_CACHE_HOME ?? join(process.env.HOME ?? "/tmp", ".cache") },
+        XDG_CACHE_HOME: process.env.XDG_CACHE_HOME ?? join(process.env.HOME ?? "/tmp", ".cache"),
+        ...(live ? { PIT_Z3_EVIDENCE_DIR: join(repo, "docs/audit/phase-z") } : {}) },
     });
     if (run.stdout) process.stdout.write(run.stdout);
     if (run.stderr) process.stderr.write(run.stderr);

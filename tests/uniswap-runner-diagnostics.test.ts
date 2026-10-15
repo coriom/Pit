@@ -3,6 +3,7 @@ import { encodeFunctionData, parseAbi } from "viem";
 import { describe, expect, it } from "vitest";
 import {
   assertFreshAfterApproval,
+  assertCheckpointValidity,
   assertLoopbackFree,
   mockReviewedSwapGasEstimate,
   safeRunnerFailure,
@@ -38,6 +39,13 @@ describe("test-only Uniswap runner diagnostics", () => {
     expect(() => assertFreshAfterApproval(1000, 1000, 900)).toThrow("QUOTE_EXPIRED");
     expect(() => assertFreshAfterApproval(1000, 2000, 2000)).toThrow("QUOTE_EXPIRED");
     expect(() => assertFreshAfterApproval(1000, Number.NaN, 900)).toThrow("QUOTE_EXPIRED");
+  });
+
+  it("requires ten actual seconds remaining at the wallet checkpoint", () => {
+    expect(assertCheckpointValidity(20_000, 10_000)).toBe(10_000);
+    expect(() => assertCheckpointValidity(19_999, 10_000)).toThrow("QUOTE_EXPIRED");
+    expect(() => assertCheckpointValidity(20_000, 20_000)).toThrow("QUOTE_EXPIRED");
+    expect(() => assertCheckpointValidity(Number.NaN, 10_000)).toThrow("QUOTE_EXPIRED");
   });
 
   it("mocks gas only for the exact reviewed post-approval swap scope", () => {

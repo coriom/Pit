@@ -3,14 +3,18 @@ import { chromium } from "@playwright/test";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { execFileSync } from "node:child_process";
-import { createPublicClient, encodeFunctionData, erc20Abi } from "viem";
+import { createPublicClient, encodeFunctionData, erc20Abi, parseAbi } from "viem";
 import { sepolia } from "viem/chains";
-import { assertTestRelease, castTransport, createTestProvider, TEST_OPERATOR as p } from "./autonomous-signer.mjs";
-import { assertFreshAfterApproval, assertLoopbackFree, mockReviewedSwapGasEstimate, safeRunnerFailure, verifyServedSource } from "./uniswap-runner-diagnostics.mjs";
+import { assertReviewedTransaction, assertTestRelease, castTransport, createTestProvider, TEST_OPERATOR as p } from "./autonomous-signer.mjs";
+import { assertCheckpointValidity, assertFreshAfterApproval, assertLoopbackFree, mockReviewedSwapGasEstimate, safeRunnerFailure, verifyServedSource } from "./uniswap-runner-diagnostics.mjs";
 
 const origin = "http://127.0.0.1:4397";
-const evidenceDir = "docs/audit/phase-z";
-const preflightOnly = !process.argv.includes("--execute-reviewed");
+const evidenceDir = process.env.PIT_Z3_EVIDENCE_DIR ?? "docs/audit/phase-z";
+const reviewedSwapAbi = parseAbi([
+  "function exactInputSingle((address tokenIn,address tokenOut,uint24 fee,address recipient,uint256 amountIn,uint256 amountOutMinimum,uint160 sqrtPriceLimitX96) params) payable returns (uint256 amountOut)",
+]);
+const preflightOnly = !process.argv.includes("--z3-live");
+const z3ReadOnly = process.argv.includes("--z3-read-only");
 const requireFact = (ok, code) => { if (!ok) throw Error(code); };
 async function ownedServer() {
   // Never attach to a pre-existing listener, even if it looks like PIT.
@@ -92,9 +96,13 @@ let server;
 let stage = "authorization_gate";
 let signingAttempted = false;
 let submissionAttempted = false;
+let activeQuoteExpiry = 0;
+let activeQuoteMinimumBuy = 0n;
+let activeSwapData = "0x";
 try {
   assertTestRelease();
-  requireFact(preflightOnly, "UNISWAP_LIVE_RUN_NOT_AUTHORIZED");
+  requireFact(!process.argv.includes("--execute-reviewed") &&
+    !(z3ReadOnly && !preflightOnly), "UNISWAP_LIVE_RUN_NOT_AUTHORIZED");
   stage = "server_identity";
   server = await ownedServer();
   const head = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
@@ -132,11 +140,54 @@ try {
     if (readMethods.has(method)) return rpc({ method, params });
     requireFact(!preflightOnly && method === "eth_sendTransaction" && signer,
       "UNISWAP_BROWSER_SIGNING_NOT_ARMED");
+    assertCheckpointValidity(activeQuoteExpiry);
+    const tx = params[0];
+    requireFact(!!tx && tx.from?.toLowerCase() === p.address.toLowerCase(),
+      "UNISWAP_BROWSER_SIGNING_NOT_ARMED");
+    const reviewedAction = assertReviewedTransaction(tx, {
+      action: String(tx.to).toLowerCase() === p.usdc.toLowerCase() ? "approve" : "swap",
+      ...(String(tx.to).toLowerCase() === p.uniswapRouter.toLowerCase() ? {
+        minimumBuy: activeQuoteMinimumBuy,
+        data: activeSwapData,
+        expiresAt: activeQuoteExpiry,
+      } : {}),
+    });
+    requireFact(reviewedAction === "uniswap-approve" || reviewedAction === "uniswap-swap",
+      "UNISWAP_BROWSER_SIGNING_NOT_ARMED");
+    const [freshChain, latestNonce, pendingNonce, freshEth, freshSell, freshAllowance, freshGasPrice,
+      freshGas] = await Promise.all([
+      client.getChainId(),
+      client.getTransactionCount({ address: p.address, blockTag: "latest" }),
+      client.getTransactionCount({ address: p.address, blockTag: "pending" }),
+      client.getBalance({ address: p.address }),
+      client.readContract({ address: p.usdc, abi: erc20Abi, functionName: "balanceOf", args: [p.address] }),
+      client.readContract({ address: p.usdc, abi: erc20Abi, functionName: "allowance",
+        args: [p.address, p.uniswapRouter] }),
+      client.getGasPrice(),
+      client.estimateGas({ account: p.address, to: tx.to,
+        data: tx.data ?? tx.input, value: BigInt(tx.value ?? 0) }),
+    ]);
+    requireFact(freshChain === 11155111 && latestNonce === pendingNonce &&
+      freshSell >= p.uniswapSellCap && freshEth >= freshGas * freshGasPrice * 10n &&
+      (reviewedAction === "uniswap-approve" || freshAllowance >= p.uniswapSellCap),
+    "UNISWAP_PREFLIGHT_FUNDS_OR_CHAIN");
+    const remainingMs = assertCheckpointValidity(activeQuoteExpiry);
+    console.log(JSON.stringify({ stage: "LIVE_WALLET_BOUNDARY", action: reviewedAction,
+      at: new Date().toISOString(), remainingMs, latestNonce, pendingNonce,
+      ethWei: freshEth.toString(), sellBalance: freshSell.toString(),
+      allowance: freshAllowance.toString(), gasEstimate: freshGas.toString(),
+      gasPriceWei: freshGasPrice.toString(), signingAttempted: false,
+      submissionAttempted: false }));
     signingAttempted = true;
     stage = "wallet_transaction_request";
     const hash = await signer.request({ method, params });
     submissionAttempted ||= signer.sent;
     sentHashes.push(hash);
+    console.log(JSON.stringify({ stage: "TRANSACTION_HASH_RETURNED", action: reviewedAction,
+      at: new Date().toISOString(), hash }));
+    await writeFile(`${evidenceDir}/Z3-${reviewedAction}-hash.json`, JSON.stringify({
+      at: new Date().toISOString(), action: reviewedAction, hash,
+    }, null, 2) + "\n", { flag: "wx" });
     return hash;
   });
   await page.addInitScript(() => {
@@ -202,6 +253,25 @@ try {
     requireFact(Number.isFinite(firstExpiry) && firstExpiry > Date.now(), "QUOTE_EXPIRED");
     const approvalNeeded = economics.includes("Approval required: YES");
     const checkpointStarted = performance.now();
+    if (z3ReadOnly) {
+      const action = approvalNeeded ? "approval" : "swap";
+      stage = "z3_read_only_checkpoint";
+      await page.getByRole("button", { name: approvalNeeded
+        ? "Preview Uniswap exact token approval · dry run"
+        : "Preview Uniswap swap submission · dry run" }).click();
+      await page.getByLabel(/I reviewed the network/).check();
+      const checkpointAt = Date.now();
+      const remainingMs = assertCheckpointValidity(firstExpiry, checkpointAt);
+      console.log(JSON.stringify({ stage: "Z3_READ_ONLY_CHECKPOINT", action,
+        quoteObtainedAt: new Date(firstExpiry - 30000).toISOString(),
+        quoteExpiresAt: new Date(firstExpiry).toISOString(),
+        checkpointAt: new Date(checkpointAt).toISOString(), remainingMs,
+        minimumRequiredMs: 10000,
+        quoteAcquisitionMs: Math.round(quoteReady - quoteStarted),
+        identityAndReadinessMs: Math.round(readinessReady - quoteReady),
+        providerPreparationMs: Math.round(performance.now() - checkpointStarted),
+        signingAttempted: false, submissionAttempted: false, transactionCalls: 0 }));
+    } else {
     if (approvalNeeded) {
       stage = "mock_approval_checkpoint";
       await page.getByRole("button", { name: "Preview Uniswap exact token approval · dry run" }).click();
@@ -241,6 +311,7 @@ try {
       freshExpiry: new Date(nextExpiry).toISOString(), actualSwapSubmitted: false }));
     console.log(JSON.stringify({ stage: "READ_ONLY_COMPLETE", transactionCalls: 0,
       signingAttempted: false, submissionAttempted: false }));
+    }
   } else {
     const [quotedOutput, minimumBuy, expiresAt] = [
       /Quoted output: (\d+) base units\./,
@@ -251,7 +322,9 @@ try {
       BigInt(minimumBuy) === BigInt(quotedOutput) * 9950n / 10000n &&
       Date.parse(expiresAt) > Date.now(), "UNISWAP_QUOTE_ECONOMICS");
     await mkdir(evidenceDir, { recursive: true });
-    await writeFile(`${evidenceDir}/live-attempt.json`, JSON.stringify({
+    activeQuoteExpiry = Date.parse(expiresAt);
+    assertCheckpointValidity(activeQuoteExpiry);
+    await writeFile(`${evidenceDir}/Z3-preapproval.json`, JSON.stringify({
       at: new Date().toISOString(), stage: "REVIEWED_PRE_APPROVAL",
       account: p.address, chainId, tokenIn: p.usdc, tokenOut: p.weth,
       router: p.uniswapRouter, pool: "0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1",
@@ -281,13 +354,16 @@ try {
           args: [p.address, p.uniswapRouter] }),
       ]);
       requireFact(approvalReceipt.status === "success" &&
+        approvalTx.chainId === 11155111 &&
         approvalTx.from.toLowerCase() === p.address.toLowerCase() &&
         approvalTx.to?.toLowerCase() === p.usdc.toLowerCase() && approvalTx.value === 0n &&
+        approvalTx.input.toLowerCase() === encodeFunctionData({ abi: erc20Abi,
+          functionName: "approve", args: [p.uniswapRouter, p.uniswapSellCap] }).toLowerCase() &&
         approvedAllowance >= p.uniswapSellCap, "UNISWAP_APPROVAL_VERIFICATION");
       console.log(JSON.stringify({ stage: "APPROVAL_CONFIRMED", hash: approvalHash,
         blockNumber: approvalReceipt.blockNumber.toString(),
         allowance: approvedAllowance.toString() }));
-      await writeFile(`${evidenceDir}/approval.json`, JSON.stringify({
+      await writeFile(`${evidenceDir}/Z3-approval.json`, JSON.stringify({
         hash: approvalHash, status: approvalReceipt.status,
         blockNumber: approvalReceipt.blockNumber.toString(),
         blockHash: approvalReceipt.blockHash, gasUsed: approvalReceipt.gasUsed.toString(),
@@ -314,11 +390,18 @@ try {
       !!nextOutput && !!nextMinimum && !!nextExpiry &&
       BigInt(nextMinimum) === BigInt(nextOutput) * 9950n / 10000n &&
       Date.parse(nextExpiry) > Date.now(), "UNISWAP_FRESH_QUOTE_MISMATCH");
+    activeQuoteExpiry = Date.parse(nextExpiry);
+    assertCheckpointValidity(activeQuoteExpiry);
+    activeQuoteMinimumBuy = BigInt(nextMinimum);
+    activeSwapData = encodeFunctionData({ abi: reviewedSwapAbi,
+      functionName: "exactInputSingle", args: [{ tokenIn: p.usdc, tokenOut: p.weth,
+        fee: 500, recipient: p.address, amountIn: p.uniswapSellCap,
+        amountOutMinimum: activeQuoteMinimumBuy, sqrtPriceLimitX96: 0n }] }).toLowerCase();
     signer = createTestProvider({ allowTransactions: true });
     stage = "swap_checkpoint";
     signer.armReviewedUniswap({ action: "swap", minimumBuy: BigInt(nextMinimum),
       expectedBuy: BigInt(nextOutput), expiresAt: Date.parse(nextExpiry) });
-    await writeFile(`${evidenceDir}/swap-attempt.json`, JSON.stringify({
+    await writeFile(`${evidenceDir}/Z3-preswap.json`, JSON.stringify({
       at: new Date().toISOString(), stage: "REVIEWED_PRE_SWAP", account: p.address,
       chainId, router: p.uniswapRouter, tokenIn: p.usdc, tokenOut: p.weth,
       feeTier: 500, sellAmount: p.uniswapSellCap.toString(),
@@ -339,8 +422,10 @@ try {
       client.getTransactionReceipt({ hash: swapHash }),
     ]);
     requireFact(receipt.status === "success" &&
+      tx.chainId === 11155111 &&
       tx.from.toLowerCase() === p.address.toLowerCase() &&
-      tx.to?.toLowerCase() === p.uniswapRouter.toLowerCase() && tx.value === 0n,
+      tx.to?.toLowerCase() === p.uniswapRouter.toLowerCase() && tx.value === 0n &&
+      tx.input.toLowerCase() === activeSwapData,
       "UNISWAP_SWAP_VERIFICATION");
     const stored = await page.evaluate(async (expectedHash) => new Promise((resolve, reject) => {
       const opened = indexedDB.open("pit-taxlot-v1");
@@ -364,7 +449,7 @@ try {
       stored.event.asset === `eip155:11155111/erc20:${p.usdc.toLowerCase()}` &&
       stored.event.counter_asset === `eip155:11155111/erc20:${p.weth.toLowerCase()}` &&
       stored.raw?.pitFee === "0", "UNISWAP_ACCOUNTING_RECONCILIATION");
-    await writeFile(`${evidenceDir}/live-fill.json`, JSON.stringify({
+    await writeFile(`${evidenceDir}/Z3-fill.json`, JSON.stringify({
       at: new Date().toISOString(), approvalHash, swapHash,
       blockNumber: receipt.blockNumber.toString(), blockHash: receipt.blockHash,
       gasUsed: receipt.gasUsed.toString(),
@@ -376,7 +461,7 @@ try {
       page.waitForEvent("download"),
       page.getByRole("button", { name: "Export for Taxlot" }).click(),
     ]);
-    await download.saveAs(`${evidenceDir}/live-taxlot.csv`);
+    await download.saveAs(`${evidenceDir}/Z3-taxlot.csv`);
     console.log(JSON.stringify({ stage: "CONFIRMED_AND_EXPORTED", swapHash,
       approvalHash, taxlotEventId: stored.event.id,
       sellQuantity: stored.event.quantity,
@@ -402,7 +487,7 @@ try {
     signingAttempted, submissionAttempted, hashReturned: sentHashes.length > 0,
   });
   console.error(JSON.stringify({ stage: "BLOCKED", ...failure,
-    returnedTransactionHashes: sentHashes.length }));
+    returnedTransactionHashes: sentHashes }));
   process.exitCode = 2;
 } finally {
   if (browser) await browser.close();

@@ -66,6 +66,12 @@ export function assertFreshAfterApproval(priorExpiry, nextExpiry, now = Date.now
     throw Error("QUOTE_EXPIRED");
 }
 
+export function assertCheckpointValidity(expiresAt, now = Date.now(), minimumMs = 10000) {
+  if (!Number.isFinite(expiresAt) || !Number.isFinite(now) ||
+      expiresAt - now < minimumMs) throw Error("QUOTE_EXPIRED");
+  return expiresAt - now;
+}
+
 export async function assertLoopbackFree(origin, probe = fetch) {
   try {
     await probe(origin, { signal: AbortSignal.timeout(1000), redirect: "manual" });

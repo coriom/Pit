@@ -1,0 +1,14 @@
+Preparing worktree (detached HEAD 01a39d1)
+{"stage":"ACCEPTANCE_SOURCE","base":"01a39d158277fcd55a5194eb698d35dbb13d1e7e","sourceSha256":"3d823582b7b02a41ad82e7c81ccee9e995047df072e230cc0b8892b56d1ab11e","transformedSha256":"0b4520ca4e606892804f0292bd5f9f27c95799956804206f05994d380d007bfe","transformationId":"PIT-Z2-EXACT-ONE-LINE-GATE-v1","transformedPath":"src/lib/uniswap-execution.ts","changedPaths":["src/lib/uniswap-execution.ts"],"releaseGateRejected":true,"loopbackOnly":true}
+{"stage":"SERVED_SOURCE_IDENTITY","head":"01a39d158277fcd55a5194eb698d35dbb13d1e7e","sourceSha256":"0b4520ca4e606892804f0292bd5f9f27c95799956804206f05994d380d007bfe","executionAccepted":true,"origin":"http://127.0.0.1:4397"}
+{"stage":"READ_ONLY_PREFLIGHT","address":"0x29d0B5939dcC4D0492D72ABd1210dEbd6c90cC96","chainId":11155111,"ethWei":"44999738966345580","usdcBaseUnits":"270299154","routerAllowance":"0","gasPriceWei":"1000012","intendedSellBaseUnits":"10000000","pitFee":"0","transactionCalls":0}
+{"stage":"WALLET_BOUND_QUOTE","gate":"GREEN: Preflight GREEN. Inspect every wallet prompt before confirming.","error":null,"economics":"Uniswap wallet-paid swap economics\n\nRouter: 0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E · pool: 0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1 · fee tier: 500\n\nExact input: 10000000 base units. Quoted output: 218025348716474 base units.\n\nMinimum received after 0.50% slippage: 216935221972891 base units.\n\nPool fee is included in quoted output. Wallet swap gas and any approval gas are paid separately in Sepolia ETH; they are not included in route ranking.\n\nPIT fee: 0. Quote expires: 2026-10-15T04:30:58.414Z.\n\nApproval required: YES — exact sell amount only.","quoteAcquisitionMs":12514,"readinessMs":5942,"rpcMethods":{"eth_getCode":{"calls":23,"totalMs":32106},"eth_getBalance":{"calls":4,"totalMs":5574},"eth_call":{"calls":42,"totalMs":55446},"eth_getBlockByNumber":{"calls":1,"totalMs":1669},"eth_gasPrice":{"calls":3,"totalMs":4314},"eth_estimateGas":{"calls":3,"totalMs":3744},"eth_chainId":{"calls":1,"totalMs":1292}},"transactionCalls":0}
+{"stage":"approval_checkpoint","at":"2026-10-15T04:32:07.610Z","classification":"PREFLIGHT_FAILURE","errorName":"TimeoutError","safeCode":null,"sanitizedCause":["REDACTED_UNKNOWN"],"httpStatus":null,"signingAttempted":false,"submissionAttempted":false,"hashReturned":false,"returnedTransactionHashes":[]}
+file:///home/corio/PIT/scripts/audit/uniswap-acceptance-worktree.mjs:73
+    if (run.error || run.status !== 0) throw Error("ACCEPTANCE_BROWSER_BLOCKED");
+                                             ^
+
+Error: ACCEPTANCE_BROWSER_BLOCKED
+    at file:///home/corio/PIT/scripts/audit/uniswap-acceptance-worktree.mjs:73:46
+
+Node.js v22.22.3
