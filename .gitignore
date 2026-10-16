@@ -1,6 +1,7 @@
 node_modules/
 dist/
 dist-readonly-beta/
+dist-readonly-beta-host/
 .astro/
 .env*
 !.env.example

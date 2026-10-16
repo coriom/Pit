@@ -19,7 +19,8 @@ async function walk(dir, root = dir) {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
     if (entry.isDirectory()) files.push(...await walk(path, root));
-    else files.push(relative(root, path).replaceAll("\\", "/"));
+    else if (entry.isFile()) files.push(relative(root, path).replaceAll("\\", "/"));
+    else throw Error(`Read-only beta contains non-regular file: ${path}`);
   }
   return files.sort();
 }
@@ -80,7 +81,7 @@ export async function prepareAndValidateBeta(root = BETA_ROOT) {
   }
   if (policies.size !== 1) throw Error("Read-only beta pages have divergent CSP policies");
   const policy = [...policies][0] + "; frame-ancestors 'none'";
-  const headers = `/*\n  Content-Security-Policy: ${policy}\n  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: no-referrer\n  X-Frame-Options: DENY\n  X-Robots-Tag: noindex\n  Permissions-Policy: camera=(), microphone=(), geolocation=()\n`;
+  const headers = `/*\n  Content-Security-Policy: ${policy}\n  Strict-Transport-Security: max-age=86400\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: no-referrer\n  X-Frame-Options: DENY\n  X-Robots-Tag: noindex\n  Permissions-Policy: camera=(), microphone=(), geolocation=()\n`;
   await writeFile(join(root, "_headers"), headers);
   if (headerNames.some((name) => !headers.includes(`${name}:`))) throw Error("Read-only beta security header missing");
   const hash = createHash("sha256");

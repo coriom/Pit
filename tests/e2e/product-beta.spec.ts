@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { readFile } from "node:fs/promises";
 
 test.beforeEach(async ({ page }) => {
   await page.route(/^https?:\/\//, (route) =>
@@ -60,5 +61,43 @@ test("separate read-only artifact calculates in a browser without executable chu
   await page.getByRole("button", { name: /Try illustrative example/ }).click();
   await expect(page.getByRole("status").last()).toContainText("Impermanent loss: -20%");
   expect(await page.locator("script[src]").count()).toBe(0);
+  expect(network).toEqual([]);
+});
+
+test("separate read-only artifact imports a local CSV and downloads a local report", async ({ page }) => {
+  const network: string[] = [];
+  page.on("request", (request) => { if (new URL(request.url()).protocol !== "file:") network.push(request.url()); });
+  await page.addInitScript(() => {
+    (window as any).__walletCalls = [];
+    (window as any).ethereum = { request: async ({ method }: { method: string }) => {
+      (window as any).__walletCalls.push(method);
+      throw Error("WALLET_FORBIDDEN");
+    } };
+    (window as any).__dbOpens = 0;
+    const open = indexedDB.open.bind(indexedDB);
+    indexedDB.open = ((...args: Parameters<typeof indexedDB.open>) => {
+      (window as any).__dbOpens++;
+      return open(...args);
+    }) as typeof indexedDB.open;
+  });
+  await page.goto(pathToFileURL(resolve("dist-readonly-beta/tools/portfolio-exposure/index.html")).href);
+  const csv = `accountLabel,chainId,assetType,tokenAddress,symbol,decimals,quantity,unitPriceUsd,priceObservedAt,exposureGroup\nExample,1,native,,ETH,18,1,2000,2026-10-16T00:00:00.000Z,ETH exposure\n`;
+  await page.getByLabel("Choose local portfolio CSV").setInputFiles({
+    name: "illustrative.csv", mimeType: "text/csv", buffer: Buffer.from(csv),
+  });
+  await expect(page.locator("[data-import-status]")).toContainText("1 rows previewed");
+  await expect(page.locator("[data-row-count]")).toHaveText("0 positions");
+  await page.getByRole("button", { name: "Accept valid preview" }).click();
+  await page.getByRole("button", { name: "Analyze current positions" }).click();
+  await expect(page.locator("[data-report]")).toContainText("$2000");
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Download local JSON report" }).click(),
+  ]);
+  const report = JSON.parse(await readFile(await download.path()!, "utf8"));
+  expect(report.positions).toHaveLength(1);
+  expect(report.knownSubtotalUsdRaw).toBe("2000000000000000000000");
+  expect(await page.evaluate(() => (window as any).__walletCalls)).toEqual([]);
+  expect(await page.evaluate(() => (window as any).__dbOpens)).toBe(0);
   expect(network).toEqual([]);
 });
