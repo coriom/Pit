@@ -108,7 +108,7 @@ test("CoW quote failure leaves the read-only Uniswap quote visible and signing g
       await route.fulfill({ json: { jsonrpc: "2.0", id: payload.id, result } });
     },
   );
-  await page.goto("/");
+  await page.goto("/tools/swap/");
   await page
     .getByRole("button", { name: "Connect Wallet", exact: true })
     .click();

@@ -11,8 +11,10 @@ const { kind } = Astro.props as { kind: Kind };
   </>}
   {kind === "impermanent-loss" && <>
     <p class="notice">Fee-free 50/50 constant-product pool versus holding the initial assets. One asset's price changes against a stable quote unit; no fees, rewards, depeg, deposits or withdrawals are modeled.</p>
+    <p>Enter initial and final prices plus an initial pool value. PIT compares the modeled pool with holding the same assets; it cannot predict pool fees, rewards or actual future prices.</p>
   </>}
   <form data-calculator={kind} novalidate>
+    {kind === "impermanent-loss" && <button type="button" data-il-sample>Try illustrative example: price 100 → 400, pool value 1,000</button>}
     {kind !== "impermanent-loss" && <label>Position side
       <select name="side" aria-label="Position side"><option value="long">Long</option><option value="short">Short</option></select>
     </label>}
@@ -55,6 +57,11 @@ const { kind } = Astro.props as { kind: Kind };
   }
 
   document.querySelectorAll<HTMLFormElement>("form[data-calculator]").forEach((form) => {
+    form.querySelector<HTMLButtonElement>("[data-il-sample]")?.addEventListener("click", () => {
+      for (const [name, value] of Object.entries({ initialPrice: "100", finalPrice: "400", initialPoolValue: "1000" }))
+        (form.elements.namedItem(name) as HTMLInputElement).value = value;
+      form.requestSubmit();
+    });
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       const values = new FormData(form);

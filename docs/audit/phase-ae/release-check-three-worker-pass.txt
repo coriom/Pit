@@ -1,0 +1,470 @@
+
+> pit@0.1.0 release:check /home/corio/PIT
+> node scripts/release/check.mjs
+
+Clean release source: a55260c4a05c71b3810cc526000f5893d58915aa
+PASS protected fee/network configuration: FEES_ENABLED=false; MAINNET_ENABLED=false; recipients/rates unchanged
+PASS exact Taxlot v1 schema SHA256 d8eb339ed7acd7da3b68ef09fe5c1b01c4cc3258cb401a4f2ba8805e7a3b07d7
+PASS origin policy: default-deny; exact reviewed PIT staging alias only; legal page unchanged
+PASS tracked-file credential patterns and environment-file policy (not a proof against encoded secrets)
+PASS no direct analytics dependency or app-source analytics import
+
+$ pnpm test
+
+> pit@0.1.0 test /home/corio/PIT
+> vitest run
+
+
+ RUN  v3.2.7 /home/corio/PIT
+
+ ✓ tests/release-invariants.test.ts (16 tests) 61ms
+ ✓ tests/unit/static-artifacts.test.ts (34 tests) 89ms
+ ✓ tests/staging-access.test.ts (26 tests) 146ms
+ ✓ tests/unit/read-only-beta.test.ts (8 tests) 345ms
+ ✓ tests/uniswap-runner-diagnostics.test.ts (8 tests) 121ms
+ ✓ tests/events.test.ts (4 tests) 300ms
+ ✓ tests/acceptance-evidence.test.ts (5 tests) 160ms
+ ✓ tests/derivative-boundary.test.ts (6 tests) 157ms
+ ✓ tests/portfolio-exposure.test.ts (16 tests) 109ms
+ ✓ tests/audit-taxlot.test.ts (1 test) 239ms
+ ✓ tests/unit/discoverability.test.ts (8 tests) 36ms
+ ✓ tests/staging-lifecycle.test.ts (18 tests) 60ms
+ ✓ tests/storage-policy.test.ts (5 tests) 53ms
+ ✓ tests/bridge-cost.test.ts (15 tests) 60ms
+ ✓ tests/execution-paths.test.ts (7 tests) 206ms
+ ✓ tests/quote-probe-runtime.test.ts (4 tests) 455ms
+   ✓ bounds a transient retry and preserves a rate-limit Retry-After beyond the budget  355ms
+ ✓ tests/autonomous-signer.test.ts (13 tests) 53ms
+ ✓ tests/schema-capabilities.test.ts (3 tests) 27ms
+ ✓ tests/swap-cost.test.ts (12 tests) 41ms
+ ✓ tests/calculators.test.ts (19 tests) 16ms
+ ✓ tests/token-approvals.test.ts (14 tests) 45ms
+ ✓ tests/uniswap-execution.test.ts (6 tests) 70ms
+ ✓ tests/hyperliquid-release-path.test.ts (3 tests) 86ms
+ ✓ tests/tool-registry.test.ts (3 tests) 32ms
+ ✓ tests/execution-preflight.test.ts (24 tests) 73ms
+ ✓ tests/operator-verification.test.ts (3 tests) 89ms
+ ✓ tests/diagnostic-quotes.test.ts (3 tests) 44ms
+ ✓ tests/schema-provenance.test.ts (1 test) 5ms
+ ✓ tests/swap-quotes.test.ts (7 tests) 63ms
+ ✓ tests/operator-readiness.test.ts (4 tests) 24ms
+ ✓ tests/uniswap-acceptance-worktree.test.ts (3 tests) 18ms
+ ✓ tests/audit-builder-path.test.ts (1 test) 10ms
+ ✓ tests/operator-observer.test.ts (4 tests) 65ms
+ ✓ tests/hyperliquid.test.ts (2 tests) 7ms
+ ✓ tests/cow.test.ts (6 tests) 30ms
+ ✓ tests/audit-fees.test.ts (4 tests) 7ms
+
+ Test Files  36 passed (36)
+      Tests  316 passed (316)
+   Start at  12:15:36
+   Duration  7.38s (transform 3.67s, setup 1.06s, collect 38.55s, tests 3.40s, environment 26ms, prepare 9.76s)
+
+
+$ pnpm check
+
+> pit@0.1.0 check /home/corio/PIT
+> astro check
+
+12:15:46 [content] Syncing content
+12:15:46 [content] Astro config changed
+12:15:46 [content] Clearing content store
+12:15:46 [content] Synced content
+12:15:46 [types] Generated 81ms
+12:15:46 [check] Getting diagnostics for Astro files in /home/corio/PIT...
+[96mscripts/audit/verify-live-setup.mjs[0m:[93m30[0m:[93m35[0m - [93mwarning[0m[90m ts(2568): [0mProperty 'value' may not exist on type 'string | { hash: string; value: 5000000000000000n; data: string; } | { hash: string; value: bigint; data: `0x${string}`; }'. Did you mean 'valueOf'?
+  Property 'value' does not exist on type 'string'.
+
+[7m30[0m   assert.equal(tx.value, expected.value);
+[7m  [0m [93m                                  ~~~~~[0m
+
+Result (170 files): 
+- 0 errors
+- 0 warnings
+- 1 hint
+
+
+$ pnpm build
+
+> pit@0.1.0 build /home/corio/PIT
+> node scripts/generate-validator.mjs && astro build && node scripts/prepare-static.mjs && node scripts/discoverability.mjs && node scripts/add-static-csp.mjs && node scripts/add-vercel-config.mjs && node scripts/build-manifest.mjs
+
+12:16:28 [content] Syncing content
+12:16:28 [content] Synced content
+12:16:28 [types] Generated 56ms
+12:16:28 [build] output: "static"
+12:16:28 [build] mode: "static"
+12:16:28 [build] directory: /home/corio/PIT/dist/
+12:16:28 [build] Collecting build info...
+12:16:28 [build] ✓ Completed in 102ms.
+12:16:28 [build] Building static entrypoints...
+12:16:30 [vite] ✓ built in 1.99s
+12:16:30 [build] ✓ Completed in 2.04s.
+
+ building client (vite) 
+12:16:30 [vite] transforming...
+12:16:35 [WARN] [vite] node_modules/.pnpm/ox@0.6.9_typescript@5.9.3_zod@4.6.5/node_modules/ox/_esm/core/Base64.js (6:27): A comment
+
+"/*#__PURE__*/"
+
+in "node_modules/.pnpm/ox@0.6.9_typescript@5.9.3_zod@4.6.5/node_modules/ox/_esm/core/Base64.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+12:16:35 [WARN] [vite] node_modules/.pnpm/ox@0.6.9_typescript@5.9.3_zod@4.6.5/node_modules/ox/_esm/core/Address.js (6:21): A comment
+
+"/*#__PURE__*/"
+
+in "node_modules/.pnpm/ox@0.6.9_typescript@5.9.3_zod@4.6.5/node_modules/ox/_esm/core/Address.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+12:16:35 [WARN] [vite] node_modules/.pnpm/ox@0.9.17_typescript@5.9.3_zod@4.6.5/node_modules/ox/_esm/core/Base64.js (6:27): A comment
+
+"/*#__PURE__*/"
+
+in "node_modules/.pnpm/ox@0.9.17_typescript@5.9.3_zod@4.6.5/node_modules/ox/_esm/core/Base64.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+12:16:37 [WARN] [vite] node_modules/.pnpm/ox@0.6.9_typescript@5.9.3_zod@4.6.5/node_modules/ox/_esm/core/internal/cursor.js (2:21): A comment
+
+"/*#__PURE__*/"
+
+in "node_modules/.pnpm/ox@0.6.9_typescript@5.9.3_zod@4.6.5/node_modules/ox/_esm/core/internal/cursor.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+12:16:37 [WARN] [vite] node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/util.js (400:0): A comment
+
+"// Wrapped in a `@__PURE__` IIFE: esbuild never tree-shakes a top-level initializer that contains a member access on `Number`, so the bare object literal survived into every bundle."
+
+in "node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/util.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+12:16:37 [WARN] [vite] node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/regexes.js (74:0): A comment
+
+"/** Anchors a pattern source. The interpolation lives here rather than at the call site because
+ * esbuild will not drop a `@__PURE__` call whose own argument interpolates a variable, but it
+ * will drop `anchor(dateSource)`. Keeping it inline pinned `date` into every bundle. */"
+
+in "node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/regexes.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+12:16:40 [WARN] [vite] node_modules/.pnpm/ox@0.6.7_typescript@5.9.3_zod@4.6.5/node_modules/ox/_esm/core/Address.js (6:21): A comment
+
+"/*#__PURE__*/"
+
+in "node_modules/.pnpm/ox@0.6.7_typescript@5.9.3_zod@4.6.5/node_modules/ox/_esm/core/Address.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+12:16:40 [WARN] [vite] node_modules/.pnpm/ox@0.6.7_typescript@5.9.3_zod@4.6.5/node_modules/ox/_esm/core/internal/cursor.js (2:21): A comment
+
+"/*#__PURE__*/"
+
+in "node_modules/.pnpm/ox@0.6.7_typescript@5.9.3_zod@4.6.5/node_modules/ox/_esm/core/internal/cursor.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+12:16:45 [vite] ✓ 5319 modules transformed.
+12:16:46 [vite] rendering chunks...
+12:16:47 [vite] computing gzip size...
+12:16:47 [vite] dist/_astro/base16.BPd3-eEf.js                       0.33 kB │ gzip:   0.24 kB
+12:16:47 [vite] dist/_astro/AccountingTool.BzCzI8Yu.js               0.35 kB │ gzip:   0.25 kB
+12:16:47 [vite] dist/_astro/WalletTool.Csqt4Xjy.js                   0.38 kB │ gzip:   0.28 kB
+12:16:47 [vite] dist/_astro/cursor.BmIYSznN.js                       0.43 kB │ gzip:   0.29 kB
+12:16:47 [vite] dist/_astro/chevron-left.Dx4QZupl.js                 0.57 kB │ gzip:   0.35 kB
+12:16:47 [vite] dist/_astro/chevron-top.BjF6OtuF.js                  0.57 kB │ gzip:   0.35 kB
+12:16:47 [vite] dist/_astro/external-link.ZKjQCgu8.js                0.57 kB │ gzip:   0.35 kB
+12:16:47 [vite] dist/_astro/chevron-bottom.D0GNGabd.js               0.57 kB │ gzip:   0.35 kB
+12:16:47 [vite] dist/_astro/chevron-right.BpZiJMSO.js                0.57 kB │ gzip:   0.34 kB
+12:16:47 [vite] dist/_astro/arrow-top.DEMicTxi.js                    0.58 kB │ gzip:   0.35 kB
+12:16:47 [vite] dist/_astro/arrow-bottom.BgvLIVPK.js                 0.59 kB │ gzip:   0.36 kB
+12:16:47 [vite] dist/_astro/arrow-left.CGbX34FR.js                   0.59 kB │ gzip:   0.35 kB
+12:16:47 [vite] dist/_astro/arrow-right.B2OlefQ4.js                  0.59 kB │ gzip:   0.36 kB
+12:16:47 [vite] dist/_astro/off.VzeoUVa7.js                          0.61 kB │ gzip:   0.36 kB
+12:16:47 [vite] dist/_astro/search.CZpn8H3P.js                       0.61 kB │ gzip:   0.37 kB
+12:16:47 [vite] dist/_astro/close.dyu7OK37.js                        0.61 kB │ gzip:   0.36 kB
+12:16:47 [vite] dist/_astro/all-wallets.BqPA-Q9o.js                  0.62 kB │ gzip:   0.33 kB
+12:16:47 [vite] dist/_astro/filters.m4inAf6U.js                      0.62 kB │ gzip:   0.35 kB
+12:16:47 [vite] dist/_astro/info-circle.BPANWDCE.js                  0.65 kB │ gzip:   0.37 kB
+12:16:47 [vite] dist/_astro/more.BZI7Bvgo.js                         0.66 kB │ gzip:   0.38 kB
+12:16:47 [vite] dist/_astro/refresh.DKa_IAyR.js                      0.66 kB │ gzip:   0.40 kB
+12:16:47 [vite] dist/_astro/warning-circle.ULmRcC1h.js               0.67 kB │ gzip:   0.39 kB
+12:16:47 [vite] dist/_astro/coinPlaceholder.9IeCahgg.js              0.67 kB │ gzip:   0.42 kB
+12:16:47 [vite] dist/_astro/compass.B1mFIMaS.js                      0.69 kB │ gzip:   0.41 kB
+12:16:47 [vite] dist/_astro/swapVertical.DrcPHEOn.js                 0.72 kB │ gzip:   0.41 kB
+12:16:47 [vite] dist/_astro/swapHorizontal.02JViGBs.js               0.72 kB │ gzip:   0.40 kB
+12:16:47 [vite] dist/_astro/x.DZk6Ov2_.js                            0.74 kB │ gzip:   0.46 kB
+12:16:47 [vite] dist/_astro/cursor-transparent.BQ5dTPdX.js           0.75 kB │ gzip:   0.43 kB
+12:16:47 [vite] dist/_astro/twitterIcon.DwW7pVWY.js                  0.76 kB │ gzip:   0.45 kB
+12:16:47 [vite] dist/_astro/mobile.CwE5oxfe.js                       0.77 kB │ gzip:   0.39 kB
+12:16:47 [vite] dist/_astro/checkmark-bold.DdWHj59p.js               0.82 kB │ gzip:   0.51 kB
+12:16:47 [vite] dist/_astro/etherscan.CqUTKYbC.js                    0.88 kB │ gzip:   0.52 kB
+12:16:47 [vite] dist/_astro/checkmark.DPqcfP_V.js                    0.88 kB │ gzip:   0.54 kB
+12:16:47 [vite] dist/_astro/help-circle.D3jd95Vr.js                  0.88 kB │ gzip:   0.50 kB
+12:16:47 [vite] dist/_astro/wallet.CtM3Wktr.js                       0.89 kB │ gzip:   0.49 kB
+12:16:47 [vite] dist/_astro/plus.CoLlbRHd.js                         0.94 kB │ gzip:   0.49 kB
+12:16:47 [vite] dist/_astro/verify-filled.oXKB5FsL.js                0.94 kB │ gzip:   0.54 kB
+12:16:47 [vite] dist/_astro/add.DU2RdX7u.js                          0.94 kB │ gzip:   0.50 kB
+12:16:47 [vite] dist/_astro/google.D_X4L5eT.js                       0.98 kB │ gzip:   0.52 kB
+12:16:47 [vite] dist/_astro/three-dots.Do6uWPdJ.js                   1.01 kB │ gzip:   0.48 kB
+12:16:47 [vite] dist/_astro/clock.B6SViZXJ.js                        1.01 kB │ gzip:   0.55 kB
+12:16:47 [vite] dist/_astro/disconnect.BeIZm_Jz.js                   1.06 kB │ gzip:   0.58 kB
+12:16:47 [vite] dist/_astro/twitch.CnUJVVc6.js                       1.07 kB │ gzip:   0.57 kB
+12:16:47 [vite] dist/_astro/bank.iCim3CmS.js                         1.11 kB │ gzip:   0.59 kB
+12:16:47 [vite] dist/_astro/apple.DrlLtmkn.js                        1.13 kB │ gzip:   0.60 kB
+12:16:47 [vite] dist/_astro/play-store.Ckzhd7N6.js                   1.18 kB │ gzip:   0.59 kB
+12:16:47 [vite] dist/_astro/farcaster.a11IVJD2.js                    1.19 kB │ gzip:   0.61 kB
+12:16:47 [vite] dist/_astro/arrow-bottom-circle.B4QyhNSt.js          1.30 kB │ gzip:   0.60 kB
+12:16:47 [vite] dist/_astro/github.BdTpDTCk.js                       1.30 kB │ gzip:   0.67 kB
+12:16:47 [vite] dist/_astro/v0.1.0-452JMA5G.CxDlBNav.js              1.33 kB │ gzip:   0.64 kB
+12:16:47 [vite] dist/_astro/swapHorizontalBold.kBknBQCV.js           1.34 kB │ gzip:   0.69 kB
+12:16:47 [vite] dist/_astro/app-store.Nq5islSC.js                    1.37 kB │ gzip:   0.75 kB
+12:16:47 [vite] dist/_astro/mail.CZYKUXlP.js                         1.38 kB │ gzip:   0.73 kB
+12:16:47 [vite] dist/_astro/facebook.DPGXvlig.js                     1.41 kB │ gzip:   0.71 kB
+12:16:47 [vite] dist/_astro/wallet-placeholder.DNiVXI9_.js           1.44 kB │ gzip:   0.66 kB
+12:16:47 [vite] dist/_astro/desktop.Cik8NMDV.js                      1.44 kB │ gzip:   0.72 kB
+12:16:47 [vite] dist/_astro/discord.DIR9Z0wH.js                      1.47 kB │ gzip:   0.73 kB
+12:16:47 [vite] dist/_astro/swapHorizontalMedium.JnnlqkC7.js         1.48 kB │ gzip:   0.75 kB
+12:16:47 [vite] dist/_astro/base32.l_RPZY32.js                       1.50 kB │ gzip:   0.51 kB
+12:16:47 [vite] dist/_astro/recycle-horizontal.BZnMDh3T.js           1.52 kB │ gzip:   0.78 kB
+12:16:47 [vite] dist/_astro/extension.DtlQIBB0.js                    1.60 kB │ gzip:   0.77 kB
+12:16:47 [vite] dist/_astro/telegram.CoulIMVj.js                     1.62 kB │ gzip:   0.91 kB
+12:16:47 [vite] dist/_astro/swapHorizontalRoundedBold.RSquRWl7.js    1.63 kB │ gzip:   0.84 kB
+12:16:47 [vite] dist/_astro/verify.6uJ6KRuK.js                       1.64 kB │ gzip:   0.79 kB
+12:16:47 [vite] dist/_astro/qr-code.DcxiFnNf.js                      1.69 kB │ gzip:   0.60 kB
+12:16:47 [vite] dist/_astro/browser.CQMIMhqM.js                      1.75 kB │ gzip:   0.86 kB
+12:16:47 [vite] dist/_astro/network-placeholder.BHvKYyiI.js          1.83 kB │ gzip:   0.81 kB
+12:16:47 [vite] dist/_astro/client.B4-nHTi7.js                       1.87 kB │ gzip:   0.92 kB
+12:16:47 [vite] dist/_astro/v0.2.0-RZSAEYWJ.BO42Ib25.js              1.90 kB │ gzip:   0.80 kB
+12:16:47 [vite] dist/_astro/id.u-2mrX_e.js                           1.92 kB │ gzip:   0.89 kB
+12:16:47 [vite] dist/_astro/nftPlaceholder.dxItu8oq.js               1.92 kB │ gzip:   0.94 kB
+12:16:47 [vite] dist/_astro/v0.4.0-XWYIU6OQ.dtmZJ7oB.js              2.00 kB │ gzip:   0.86 kB
+12:16:47 [vite] dist/_astro/v0.3.0-QEEYHNXA.C8R-2dRU.js              2.09 kB │ gzip:   0.87 kB
+12:16:47 [vite] dist/_astro/info.CjfJKVrr.js                         2.43 kB │ gzip:   1.22 kB
+12:16:47 [vite] dist/_astro/v0.5.0-6JWER4SU.B0qvJgU-.js              2.44 kB │ gzip:   0.93 kB
+12:16:47 [vite] dist/_astro/exclamation-triangle.DczEAmbd.js         2.59 kB │ gzip:   1.21 kB
+12:16:47 [vite] dist/_astro/send.BmHlLu-i.js                         2.60 kB │ gzip:   1.36 kB
+12:16:47 [vite] dist/_astro/card.Dia-dp8G.js                         2.76 kB │ gzip:   1.25 kB
+12:16:47 [vite] dist/_astro/chrome-store.C85EpgsB.js                 2.76 kB │ gzip:   1.09 kB
+12:16:47 [vite] dist/_astro/reown-logo.Da_ZMSMx.js                   2.78 kB │ gzip:   1.14 kB
+12:16:47 [vite] dist/_astro/lightbulb.CPyKxJaB.js                    2.89 kB │ gzip:   1.30 kB
+12:16:47 [vite] dist/_astro/ccip.F4vJEnG2.js                         2.93 kB │ gzip:   1.36 kB
+12:16:47 [vite] dist/_astro/v0.8.0-MA4RCSXJ.BzWVU6mD.js              3.40 kB │ gzip:   1.22 kB
+12:16:47 [vite] dist/_astro/v0.6.0-DCUHOIX6.D0nK_KNa.js              3.44 kB │ gzip:   1.21 kB
+12:16:47 [vite] dist/_astro/v0.7.0-WUIYE67P.DHAtTBPF.js              3.46 kB │ gzip:   1.22 kB
+12:16:47 [vite] dist/_astro/image.0BNiC330.js                        3.66 kB │ gzip:   1.59 kB
+12:16:47 [vite] dist/_astro/copy.BvPM-UOB.js                         3.99 kB │ gzip:   1.56 kB
+12:16:47 [vite] dist/_astro/walletconnect.VJhCLPps.js                4.23 kB │ gzip:   1.74 kB
+12:16:47 [vite] dist/_astro/base.DMz8QJ2S.js                         4.32 kB │ gzip:   1.80 kB
+12:16:47 [vite] dist/_astro/v0.9.0-MODYXNNJ.CW56i5Hn.js              4.79 kB │ gzip:   1.60 kB
+12:16:47 [vite] dist/_astro/v0.10.0-OHB5VFCY.BxLkbVOM.js             5.20 kB │ gzip:   1.71 kB
+12:16:47 [vite] dist/_astro/v0.11.0-YC4BNGSG.ZJUKLJPn.js             5.72 kB │ gzip:   1.77 kB
+12:16:47 [vite] dist/_astro/cid.DuD6wXc4.js                          5.83 kB │ gzip:   2.45 kB
+12:16:47 [vite] dist/_astro/v1.0.0-LO3INJ7G.Cn81q8wR.js              6.36 kB │ gzip:   1.93 kB
+12:16:47 [vite] dist/_astro/v1.1.0-VDZLWY4U.BWHazOd8.js              6.82 kB │ gzip:   2.08 kB
+12:16:47 [vite] dist/_astro/v1.2.0-J7HBJ6X3.DAO9TS_K.js              6.98 kB │ gzip:   2.15 kB
+12:16:47 [vite] dist/_astro/v1.3.0-YE5Z6DA7.WxjICRnn.js              7.32 kB │ gzip:   2.29 kB
+12:16:47 [vite] dist/_astro/index.CE1A8OJQ.js                        7.56 kB │ gzip:   2.99 kB
+12:16:47 [vite] dist/_astro/TokenApprovalInspector.B48eYCRG.js       8.65 kB │ gzip:   3.61 kB
+12:16:47 [vite] dist/_astro/v1.4.0-XW4S4BWH.BE1DD-uT.js              8.88 kB │ gzip:   2.53 kB
+12:16:47 [vite] dist/_astro/v1.5.0-RPBY3HCV.BChBsCfx.js              9.72 kB │ gzip:   2.83 kB
+12:16:47 [vite] dist/_astro/v1.6.0-WTOLS5Y6.BrJvDjHz.js             10.73 kB │ gzip:   3.03 kB
+12:16:47 [vite] dist/_astro/v1.7.0-7V2ZPHKV.1d-zW9eS.js             10.98 kB │ gzip:   3.07 kB
+12:16:47 [vite] dist/_astro/v1.8.0-UKWSFP36.wayCITfA.js             10.98 kB │ gzip:   3.06 kB
+12:16:47 [vite] dist/_astro/v1.9.0-SQYL3FIK.ehOfOIud.js             11.19 kB │ gzip:   3.12 kB
+12:16:47 [vite] dist/_astro/v1.10.0-HV5QAMRI.DtfFbtUQ.js            11.67 kB │ gzip:   3.32 kB
+12:16:47 [vite] dist/_astro/v1.11.0-7OORRXZT.CGwSLHNc.js            12.77 kB │ gzip:   3.58 kB
+12:16:47 [vite] dist/_astro/v1.13.0-F46Z6ASK.CtOs43cv.js            13.89 kB │ gzip:   3.96 kB
+12:16:47 [vite] dist/_astro/v1.12.0-JRP6T6PK.BrocjUYM.js            13.89 kB │ gzip:   3.96 kB
+12:16:47 [vite] dist/_astro/v1.15.0-4YFUPOOT.Bi1u4Jfv.js            13.90 kB │ gzip:   4.00 kB
+12:16:47 [vite] dist/_astro/v1.14.0-4GFOYRNY.B8nGQ1Rg.js            13.92 kB │ gzip:   4.01 kB
+12:16:47 [vite] dist/_astro/secp256k1.fgdwh43i.js                   31.55 kB │ gzip:  12.61 kB
+12:16:47 [vite] dist/_astro/w3m-modal.BjIfthnK.js                   39.55 kB │ gzip:   9.27 kB
+12:16:47 [vite] dist/_astro/index.BNYfL-Yl.js                       40.02 kB │ gzip:   9.40 kB
+12:16:47 [vite] dist/_astro/TradeTool.xIUhllPj.js                   70.16 kB │ gzip:  22.06 kB
+12:16:47 [vite] dist/_astro/ajv.BBpbbP0q.js                        124.94 kB │ gzip:  39.27 kB
+12:16:47 [vite] dist/_astro/index.CWqalEbG.js                      134.65 kB │ gzip:  43.22 kB
+12:16:47 [vite] dist/_astro/basic.CHN7KD6w.js                      141.82 kB │ gzip:  32.79 kB
+12:16:47 [vite] dist/_astro/FillRecorder.CyXHOK9z.js               265.01 kB │ gzip:  73.60 kB
+12:16:47 [vite] dist/_astro/config.DIL6R5mF.js                     278.10 kB │ gzip:  85.56 kB
+12:16:47 [vite] dist/_astro/index.es.B5ZUoNG-.js                   398.95 kB │ gzip: 115.68 kB
+12:16:47 [vite] dist/_astro/core.B4TlpoLL.js                       471.57 kB │ gzip: 129.03 kB
+12:16:47 [vite] dist/_astro/Wallet.C8u9L5Qo.js                     905.14 kB │ gzip: 285.22 kB
+12:16:47 [WARN] [vite] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+12:16:47 [vite] ✓ built in 17.32s
+
+ generating static routes 
+12:16:47 ▶ src/pages/fees.astro
+12:16:47   └─ /fees/index.html (+13ms) 
+12:16:47 ▶ src/pages/index.astro
+12:16:47   └─ /index.html (+4ms) 
+12:16:48 ▶ src/pages/legal.astro
+12:16:48   └─ /legal/index.html (+2ms) 
+12:16:48 ▶ src/pages/tools/bridge-cost/index.astro
+12:16:48   └─ /tools/bridge-cost/index.html (+16ms) 
+12:16:48 ▶ src/pages/tools/impermanent-loss/index.astro
+12:16:48   └─ /tools/impermanent-loss/index.html (+42ms) 
+12:16:48 ▶ src/pages/tools/index.astro
+12:16:48   └─ /tools/index.html (+2ms) 
+12:16:48 ▶ src/pages/tools/liquidation/index.astro
+12:16:48   └─ /tools/liquidation/index.html (+2ms) 
+12:16:48 ▶ src/pages/tools/perps/index.astro
+12:16:48   └─ /tools/perps/index.html (+4ms) 
+12:16:48 ▶ src/pages/tools/pnl/index.astro
+12:16:48   └─ /tools/pnl/index.html (+3ms) 
+12:16:48 ▶ src/pages/tools/portfolio-exposure/index.astro
+12:16:48   └─ /tools/portfolio-exposure/index.html (+9ms) 
+12:16:48 ▶ src/pages/tools/swap-cost/index.astro
+12:16:48   └─ /tools/swap-cost/index.html (+8ms) 
+12:16:48 ▶ src/pages/tools/swap/index.astro
+12:16:48   └─ /tools/swap/index.html (+2ms) 
+12:16:48 ▶ src/pages/tools/taxlot-export/index.astro
+12:16:48   └─ /tools/taxlot-export/index.html (+1ms) 
+12:16:48 ▶ src/pages/tools/token-approvals/index.astro
+12:16:48   └─ /tools/token-approvals/index.html (+2ms) 
+12:16:48 ▶ src/pages/tools/wallet/index.astro
+12:16:48   └─ /tools/wallet/index.html (+8ms) 
+12:16:48 ✓ Completed in 538ms.
+
+12:16:48 [build] 15 page(s) built in 20.07s
+12:16:48 [build] Complete!
+Discoverability: 15 noindex pages; robots.txt; sitemap withheld
+Static Pages HTTP CSP generated from Astro meta CSP, with frame-ancestors 'none'.
+Vercel static response headers generated from built CSP hashes.
+Build SHA-256: 9aecfcc3a8ba9a0ea03481c24a59db7377e335321272e2190a27bdda9365df1b
+
+$ node scripts/release/artifacts.mjs
+PASS static artifacts: 143 files; 15 HTML pages; 0 external scripts/styles; project-root Vercel CSP, SRI, telemetry, secret, source-map and mainnet endpoint guards
+
+$ node scripts/release/discoverability.mjs
+PASS discoverability: 15 routes; 11 registry tool pages; 7 local/discovery pages without wallet or protocol JS; indexing policy and sitemap guards
+
+$ pnpm beta:check
+
+> pit@0.1.0 beta:check /home/corio/PIT
+> astro build --config astro.readonly-beta.config.mjs && node scripts/release/read-only-beta.mjs
+
+12:16:51 [content] Syncing content
+12:16:51 [content] Astro config changed
+12:16:51 [content] Clearing content store
+12:16:51 [content] Synced content
+12:16:51 [types] Generated 72ms
+12:16:51 [build] output: "static"
+12:16:51 [build] mode: "static"
+12:16:51 [build] directory: /home/corio/PIT/dist-readonly-beta/
+12:16:51 [build] Collecting build info...
+12:16:51 [build] ✓ Completed in 118ms.
+12:16:51 [build] Building static entrypoints...
+12:16:53 [vite] ✓ built in 1.49s
+12:16:53 [build] ✓ Completed in 1.55s.
+
+ building client (vite) 
+12:16:53 [vite] transforming...
+12:16:53 [vite] ✓ 2 modules transformed.
+12:16:53 [vite] rendering chunks...
+12:16:53 [vite] ✓ built in 37ms
+
+ generating static routes 
+12:16:53 ▶ src/read-only-beta/pages/index.astro
+12:16:53   └─ /index.html (+10ms) 
+12:16:53 ▶ src/read-only-beta/pages/tools/[slug]/index.astro
+12:16:53   ├─ /tools/portfolio-exposure/index.html (+15ms) 
+12:16:53   ├─ /tools/swap-cost/index.html (+11ms) 
+12:16:53   ├─ /tools/impermanent-loss/index.html (+5ms) 
+12:16:53   ├─ /tools/pnl/index.html (+3ms) 
+12:16:53   ├─ /tools/bridge-cost/index.html (+16ms) 
+12:16:53   └─ /tools/liquidation/index.html (+3ms) 
+12:16:53 ▶ src/read-only-beta/pages/tools/index.astro
+12:16:53   └─ /tools/index.html (+3ms) 
+12:16:53 ✓ Completed in 82ms.
+
+12:16:53 [build] 8 page(s) built in 1.81s
+12:16:53 [build] Complete!
+READ-ONLY BETA PASS — 8 allowlisted pages; 1 CSS assets; 11 files; SHA-256 fa15a5858164ae35399cb027272e55ae55520ae5eaf4d5d18171e427a2d630f8; noindex; no executable chunks
+
+$ pnpm test:e2e
+
+> pit@0.1.0 test:e2e /home/corio/PIT
+> playwright test
+
+[WebServer] (node:284805) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:284818) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 58 tests using 6 workers
+
+(node:284899) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:284919) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:284901) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:284906) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:284912) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:284925) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:284899) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:284919) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:284901) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:284912) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:284906) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:284925) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   3 tests/e2e/portfolio-exposure.spec.ts:45:1 › illustrative spot portfolio calculates exact chain, group and concentration data offline (1.3s)
+  ✓   1 tests/e2e/bridge-cost.spec.ts:34:1 › two illustrative routes show embedded versus separate cross-chain costs without wallet or external requests (1.3s)
+Dedicated origin https://pit.example: reload persistence and CSV passed; https://sibling.example: no PIT database.
+  ✓   2 tests/e2e/origin-guard.spec.ts:54:1 › approved dedicated HTTPS origin persists and exports; sibling origin cannot read records (1.2s)
+Shared path: eventDB, appendEvent, listEvents, downloadCSV rejected; existing valid event preserved.
+  ✓   9 tests/e2e/origin-guard.spec.ts:96:1 › unsafe path denies open/write/read/download and preserves pre-existing valid records (336ms)
+  ✓   7 tests/e2e/portfolio-exposure.spec.ts:71:1 › unpriced holding removes whole-portfolio percentages without valuing it at zero (870ms)
+  ✓   6 tests/e2e/operator-readiness.spec.ts:3:1 › local public-address observer is available without connecting a wallet (2.5s)
+  ✓   8 tests/e2e/bridge-cost.spec.ts:79:1 › unknown destination gas, incompatible destination token and changed source budget prevent ranking (1.3s)
+  ✓  10 tests/e2e/origin-guard.spec.ts:136:1 › unapproved production origin never creates PIT storage; approved stable IPNS origin works (1.1s)
+  ✓  13 tests/e2e/bridge-cost.spec.ts:127:1 › actual locally downloaded JSON preserves exact raw cross-chain fields and simulation disclaimer (668ms)
+  ✓   4 tests/e2e/interface.spec.ts:10:1 › production swap, wallet dialog, navigation and CSP (3.6s)
+  ✓  11 tests/e2e/portfolio-exposure.spec.ts:93:1 › manual entry and CSV preview require explicit acceptance, reject duplicates, and keep quoted cells inert (1.4s)
+  ✓  14 tests/e2e/origin-guard.spec.ts:166:1 › dedicated-origin derivative evidence never enters Taxlot events and unsafe origins cannot open its store (858ms)
+  ✓   5 tests/e2e/preflight.spec.ts:3:3 › CoW UI refuses chain 84532 before any signature (3.9s)
+  ✓  15 tests/e2e/bridge-cost.spec.ts:152:1 › narrow viewport and keyboard-only submission work offline (627ms)
+  ✓  17 tests/e2e/portfolio-exposure.spec.ts:139:1 › local JSON download preserves exact raw assumptions and reset touches this page only (793ms)
+  ✓  18 tests/e2e/origin-guard.spec.ts:223:1 › shared-origin query, encoded path and reload cannot enable accounting (712ms)
+  ✓  20 tests/e2e/product-beta.spec.ts:12:1 › tool-first homepage exposes three wallet-free journeys and keeps the lab separate (413ms)
+  ✓  21 tests/e2e/portfolio-exposure.spec.ts:170:1 › mobile layout and keyboard-only sample analysis remain usable offline (538ms)
+  ✓  16 tests/e2e/interface.spec.ts:50:1 › perps fields render against public info fixture and mobile does not overflow (1.7s)
+  ✓  12 tests/e2e/operator-readiness.spec.ts:44:1 › disconnected dry-run rehearses both checkpoints without wallet or exchange actions (3.0s)
+  ✓  23 tests/e2e/product-beta.spec.ts:26:1 › flagship samples produce useful local results without wallet or network calls (1.1s)
+  ✓  27 tests/e2e/product-beta.spec.ts:43:1 › mobile homepage and toolbox remain navigable with keyboard (510ms)
+  ✓  19 tests/e2e/preflight.spec.ts:3:3 › CoW UI refuses chain 1 before any signature (2.9s)
+  ✓  26 tests/e2e/operator-readiness.spec.ts:141:1 › acceptance evidence view is local, testnet-labelled, and dry run makes no evidence session (1.3s)
+  ✓  28 tests/e2e/product-beta.spec.ts:55:1 › separate read-only artifact calculates in a browser without executable chunks (1.2s)
+Attack reproduction: {"stolen":{"event":{"account":"fixture","quantity":"1"},"raw":{"fill":"original"},"sequence":1},"poisoned":{"account":"fixture","quantity":"999"},"deleted":true,"sequence":999,"origin":"http://127.0.0.1:4398"}
+  ✓  31 tests/e2e/storage-origin.spec.ts:2:1 › shared-origin attack reads, poisons and deletes events raw and meta (224ms)
+  ✓  24 tests/e2e/staging-accounting-harness.spec.ts:44:1 › staging-only synthetic event survives reload, downloads actual PIT CSV, then cleans only itself (2.7s)
+  ✓  25 tests/e2e/interface.spec.ts:76:1 › injected test provider connects without secrets; invalid swaps cannot sign (2.9s)
+  ✓  32 tests/e2e/swap-cost.spec.ts:35:1 › manual CoW and Uniswap scenarios show embedded versus separate costs without network or wallet activity (562ms)
+  ✓  33 tests/e2e/staging-accounting-harness.spec.ts:114:1 › absence check fails when the exact fixture remains (536ms)
+  ✓  36 tests/e2e/staging-accounting-harness.spec.ts:124:1 › absence check rejects wrong fixture ID and unexpected records (321ms)
+  ✓  35 tests/e2e/swap-cost.spec.ts:70:1 › unknown gas or approval and mismatched budgets prevent a fabricated ranking (670ms)
+  ✓  29 tests/e2e/preflight.spec.ts:3:3 › CoW UI refuses chain 8453 before any signature (2.4s)
+  ✓  37 tests/e2e/staging-accounting-harness.spec.ts:154:1 › absence check blocks on missing database or unavailable IndexedDB inspection (351ms)
+  ✓  30 tests/e2e/operator-readiness.spec.ts:176:1 › connected testnet operator can start and export a local evidence session without signing (2.5s)
+  ✓  34 tests/e2e/interface.spec.ts:186:1 › IPFS-style subpath hydrates and links stay beneath the CID (1.3s)
+  ✓  38 tests/e2e/swap-cost.spec.ts:108:1 › actual downloaded JSON preserves exact integer fields and simulated status (568ms)
+  ✓  22 tests/e2e/quote-comparison.spec.ts:4:1 › CoW quote failure leaves the read-only Uniswap quote visible and signing gated (5.2s)
+  ✓  41 tests/e2e/interface.spec.ts:253:1 › Cloudflare static artifact emits a response CSP alongside Astro meta CSP (186ms)
+  ✓  40 tests/e2e/staging-accounting-harness.spec.ts:169:1 › preexisting records and unapproved origins fail closed (702ms)
+  ✓  42 tests/e2e/swap-cost.spec.ts:131:1 › mobile viewport and keyboard input remain usable offline (579ms)
+  ✓  44 tests/e2e/staging-accounting-harness.spec.ts:206:1 › CSV selection is retained before asynchronous fixture readback (557ms)
+  ✓  45 tests/e2e/staging-accounting-harness.spec.ts:220:1 › CSV selection survives report updates and input replacement without re-reading a stale filename (591ms)
+  ✓  46 tests/e2e/staging-accounting-harness.spec.ts:237:1 › missing, cancelled, or reloaded file selection cannot enable validation or cleanup (358ms)
+  ✓  47 tests/e2e/staging-accounting-harness.spec.ts:253:1 › invalid downloaded-file bytes fail without unlocking cleanup (421ms)
+  ✓  39 tests/e2e/preflight.spec.ts:3:3 › CoW UI refuses chain 42161 before any signature (3.0s)
+  ✓  43 tests/e2e/toolbox.spec.ts:12:1 › every registered tool has a production URL (2.7s)
+  ✓  48 tests/e2e/token-approvals.spec.ts:103:1 › public address inspection shows exact allowance and downloads local JSON without wallet calls (698ms)
+  ✓  50 tests/e2e/toolbox.spec.ts:57:1 › unverified-origin robots policy withholds a sitemap (189ms)
+  ✓  51 tests/e2e/token-approvals.spec.ts:173:1 › invalid address and wrong-chain RPC never show a false zero allowance (462ms)
+  ✓  52 tests/e2e/toolbox.spec.ts:74:1 › landing search, category and direct reload lead to a local calculation (660ms)
+  ✓  53 tests/e2e/token-approvals.spec.ts:191:1 › a failed allowance read remains unavailable while other rows remain usable (424ms)
+  ✓  54 tests/e2e/toolbox.spec.ts:141:3 › /tools/pnl/ calculates offline after assets load without network calls (341ms)
+  ✓  55 tests/e2e/token-approvals.spec.ts:209:1 › keyboard-only address entry and narrow layout keep results and export usable (435ms)
+  ✓  56 tests/e2e/toolbox.spec.ts:141:3 › /tools/liquidation/ calculates offline after assets load without network calls (366ms)
+  ✓  49 tests/e2e/preflight.spec.ts:3:3 › CoW UI refuses chain 999 before any signature (2.0s)
+  ✓  57 tests/e2e/toolbox.spec.ts:141:3 › /tools/impermanent-loss/ calculates offline after assets load without network calls (294ms)
+  ✓  58 tests/e2e/toolbox.spec.ts:179:1 › direct execution URLs keep signing controls behind existing preflight (935ms)
+
+  58 passed (21.6s)
+
+RELEASE CHECK PASS — offline testnet candidate only; no live acceptance or deployment

@@ -1,0 +1,21 @@
+---
+import ToolLayout from "../../../../components/ToolLayout.astro";
+import CalculatorForm from "../../../../components/CalculatorForm.astro";
+import PortfolioExposureAnalyzer from "../../../../components/PortfolioExposureAnalyzer.astro";
+import SwapCostSimulator from "../../../../components/SwapCostSimulator.astro";
+import BridgeCostComparator from "../../../../components/BridgeCostComparator.astro";
+import { READ_ONLY_TOOLS } from "../../../../lib/read-only-beta";
+
+export function getStaticPaths() {
+  return READ_ONLY_TOOLS.map((tool) => ({ params: { slug: tool.slug }, props: { tool } }));
+}
+const { tool } = Astro.props;
+---
+<ToolLayout tool={tool} betaOnly>
+  {tool.id === "portfolio-exposure" && <PortfolioExposureAnalyzer />}
+  {tool.id === "swap-cost" && <SwapCostSimulator />}
+  {tool.id === "bridge-cost" && <BridgeCostComparator />}
+  {tool.id === "pnl" && <CalculatorForm kind="pnl" />}
+  {tool.id === "liquidation" && <CalculatorForm kind="liquidation" />}
+  {tool.id === "impermanent-loss" && <CalculatorForm kind="impermanent-loss" />}
+</ToolLayout>

@@ -1,0 +1,23 @@
+---
+import { READ_ONLY_TOOLS } from "../lib/read-only-beta";
+import "../styles/global.css";
+const { betaOnly = false } = Astro.props as { betaOnly?: boolean };
+const flagship = ["portfolio-exposure", "swap-cost", "impermanent-loss"].map((id) => READ_ONLY_TOOLS.find((tool) => tool.id === id)!);
+---
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width" />
+    <meta name="description" content="Explore privacy-conscious DeFi tools for portfolio exposure, transaction costs and liquidity tradeoffs. Manual assumptions, no wallet required for featured tools." />
+    <title>PIT · Understand your DeFi positions and costs</title>
+  </head>
+  <body><main class="shell">
+    <header><a href="./" class="brand">pit<span>.</span></a><nav aria-label="Main navigation"><a href="./tools/">Toolbox</a>{!betaOnly && <><a href="./tools/swap/">Trading lab</a><a href="./fees/">Fees</a><a href="./legal/">Legal</a></>}</nav><span class="tag">{betaOnly ? "READ-ONLY CANDIDATE" : "TESTNET PREVIEW"}</span></header>
+    <section class="hero home-hero"><div class="eyebrow">PIT · local-first DeFi tools</div><h1>Understand your DeFi positions and costs.</h1><p>Explore simple, privacy-conscious tools to analyze your portfolio, estimate transaction costs and understand DeFi tradeoffs.</p><div class="home-actions"><a class="button-link primary" href="./tools/">Explore free DeFi tools</a><a class="button-link" href="./tools/portfolio-exposure/">Analyze portfolio exposure</a></div><p class="muted">The featured tools use manual inputs in your browser. They do not discover your holdings or fetch live prices.</p></section>
+    <section aria-labelledby="featured-heading" class="home-section"><div class="section-heading"><div><div class="eyebrow">Start here</div><h2 id="featured-heading">Three useful starting points</h2></div><span class="tag">NO WALLET NEEDED</span></div><div class="tool-grid">
+      {flagship.map((tool, index) => <a class="panel tool-card feature-card" href={`./tools/${tool.slug}/`}><span class="eyebrow">0{index + 1} · Local calculation</span><h3>{tool.title}</h3><p>{tool.description}</p><span class="feature-link">Open tool →</span></a>)}
+    </div></section>
+    <section class="home-section home-split"><div class="panel"><div class="eyebrow">Explore all tools</div><h2>Choose the task, then the tool.</h2><p>{betaOnly ? "This candidate includes six explicitly allowlisted browser-local calculators." : "Browse local calculators, public-chain lookups and separate testnet experiments. Each tool shows its wallet and network requirements."}</p><a class="text-link" href="./tools/">Browse the toolbox →</a></div><div class="panel"><div class="eyebrow">How PIT works</div><h2>Enter assumptions. Read the limits.</h2><p>Pick a tool, try its illustrative example, then enter your own assumptions. Results are estimates based on those inputs, not live market facts or advice.</p></div></section>
+    <section class="home-section home-split"><div class="panel"><div class="eyebrow">Privacy and limits</div><h2>Your inputs stay in this browser.</h2><p>Featured calculators do not require wallet access or send calculation inputs to PIT. Public-chain lookups elsewhere in the full toolbox contact testnet RPCs; testnet trading requires a wallet. Nothing here predicts returns.</p></div>{!betaOnly && <div class="panel lab-panel"><div class="eyebrow">Separate testnet trading lab</div><h2>Explore execution experiments.</h2><p>CoW swaps and Hyperliquid testnet interfaces have their own wallet and preflight gates. Uniswap execution is not accepted or enabled. These experiments are separate from the wallet-free calculators.</p><div class="home-actions"><a class="text-link" href="./tools/swap/">Sepolia swap lab →</a><a class="text-link" href="./tools/perps/">Perps testnet lab →</a></div></div>}</section>
+    <footer>Manual analysis only · No live prices or investment advice · {betaOnly ? "Read-only candidate · no public release" : "Testnet preview · fees disabled"}</footer>
+  </main></body>
+</html>

@@ -220,6 +220,22 @@ h3 {
   color: #d8f977;
   font-size: 13px;
 }
+.home-hero { max-width: 780px; padding: 84px 0 64px; }
+.home-hero h1 { font-size: clamp(42px, 7vw, 76px); max-width: 760px; }
+.home-hero > p { font-size: 18px; max-width: 680px; }
+.home-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 22px; }
+.button-link { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 9px 18px; border: 1px solid #4b6050; border-radius: 10px; font-weight: 700; }
+.button-link.primary { width: auto; margin: 0; }
+.button-link:hover, .button-link:focus-visible, .text-link:hover, .text-link:focus-visible { outline: 2px solid #d8f977; outline-offset: 3px; }
+.home-section { margin: 28px 0 48px; }
+.section-heading { display: flex; justify-content: space-between; align-items: start; gap: 18px; }
+.feature-card { min-height: 180px; display: flex; flex-direction: column; }
+.feature-card h3 { font-size: 23px; margin: 20px 0 4px; }
+.feature-link, .text-link { color: #d8f977; font-weight: 700; }
+.feature-link { margin-top: auto; padding-top: 20px; }
+.home-split { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
+.toolbox-start { margin-bottom: 28px; }
+@media (max-width: 760px) { .home-split { grid-template-columns: 1fr; } .home-hero { padding: 48px 0 36px; } .section-heading { flex-wrap: wrap; } }
 .calculator {
   max-width: 700px;
 }

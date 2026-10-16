@@ -16,7 +16,7 @@ test("production swap, wallet dialog, navigation and CSP", async ({ page }) => {
       (window as any).__violations.push(e.violatedDirective),
     );
   });
-  await page.goto("/");
+  await page.goto("/tools/swap/");
   await expect(
     page.getByRole("button", { name: "Perps review CSV", exact: true }),
   ).toBeDisabled();
@@ -56,8 +56,7 @@ test("perps fields render against public info fixture and mobile does not overfl
     }),
   );
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
-  await page.getByRole("button", { name: "Perpetuals", exact: true }).click();
+  await page.goto("/tools/perps/");
   await expect(page.getByLabel("Market")).toContainText("ETH / USDC");
   await page.getByLabel("Limit price (USDC)").fill("2000");
   await page.getByLabel("Size (ETH)").fill("0.01");
@@ -123,7 +122,7 @@ test("injected test provider connects without secrets; invalid swaps cannot sign
   await page.route("https://api.hyperliquid-testnet.xyz/info", (route) =>
     route.fulfill({ json: [] }),
   );
-  await page.goto("/");
+  await page.goto("/tools/swap/");
   await page
     .getByRole("button", { name: "Connect Wallet", exact: true })
     .click();
@@ -216,7 +215,7 @@ test("IPFS-style subpath hydrates and links stay beneath the CID", async ({
     const p = new URL(request.url()).pathname;
     if (p.startsWith("/_astro/")) rootAssetRequests.push(p);
   });
-  await page.goto("/ipfs/test-cid/");
+  await page.goto("/ipfs/test-cid/tools/swap/");
   await expect(page.getByRole("alert")).toContainText(
     "Accounting storage and CSV export are disabled",
   );
@@ -237,7 +236,7 @@ test("IPFS-style subpath hydrates and links stay beneath the CID", async ({
   await expect(
     page.getByRole("heading", { name: "Swap tokens" }),
   ).toBeVisible();
-  await page.getByRole("link", { name: "Fee transparency ↗" }).click();
+  await page.getByRole("link", { name: "Fees", exact: true }).click();
   await expect(page).toHaveURL(/\/ipfs\/test-cid\/fees\//);
   expect(rootAssetRequests).toEqual([]);
   await expect(

@@ -1,6 +1,8 @@
 ---
 import { TOOLBOX_PAGE, TOOL_CATEGORIES, TOOLS } from "../../lib/tool-registry";
+import { READ_ONLY_TOOLS } from "../../lib/read-only-beta";
 import "../../styles/global.css";
+const orderedTools = [...READ_ONLY_TOOLS, ...TOOLS.filter((tool) => tool.executionMode !== "local")];
 ---
 <html lang="en">
   <head>
@@ -17,14 +19,15 @@ import "../../styles/global.css";
     <main class="shell">
       <header>
         <a href="../" class="brand">pit<span>.</span></a>
-        <nav><a href="./" aria-current="page">Toolbox</a><a href="../">Trade</a><a href="../fees/">Fees</a><a href="../legal/">Legal</a></nav>
+        <nav><a href="./" aria-current="page">Toolbox</a><a href="../">Home</a><a href="swap/">Trading lab</a><a href="../fees/">Fees</a><a href="../legal/">Legal</a></nav>
         <span class="tag">TESTNET PREVIEW</span>
       </header>
       <section class="hero">
-        <div class="eyebrow">Task → tool → optional execution</div>
+        <div class="eyebrow">Local tools first · testnet lab separate</div>
         <h1>Choose a tool.</h1>
-        <p>Calculate locally, inspect wallet data, or review a testnet transaction before signing.</p>
+        <p>Start with a wallet-free local calculator. Read-only blockchain lookups use testnet RPCs; trading experiments require a wallet and remain testnet-only.</p>
       </section>
+      <section class="panel toolbox-start" aria-label="Featured starting points"><h2>Start without a wallet</h2><p>Try an illustrative example before entering your own assumptions.</p><div class="home-actions"><a class="text-link" href="portfolio-exposure/">Portfolio exposure →</a><a class="text-link" href="swap-cost/">Swap cost →</a><a class="text-link" href="impermanent-loss/">Impermanent loss →</a></div></section>
       <section aria-label="Find a tool">
         <label>Search tools<input type="search" id="tool-search" placeholder="Search by task or tool" autocomplete="off" /></label>
         <div class="category-list" role="group" aria-label="Tool categories">
@@ -33,7 +36,7 @@ import "../../styles/global.css";
         </div>
         <p id="tool-count" role="status">{TOOLS.length} tools</p>
         <div class="tool-grid">
-          {TOOLS.map((tool) => <a
+          {orderedTools.map((tool) => <a
             class="panel tool-card"
             href={`${tool.slug}/`}
             data-tool-card

@@ -1,10 +1,11 @@
 ---
 import { relatedTools, toolDiscoverability, type ToolDefinition } from "../lib/tool-registry";
+import { READ_ONLY_TOOL_IDS } from "../lib/read-only-beta";
 import "../styles/global.css";
-const { tool } = Astro.props as { tool: ToolDefinition };
+const { tool, betaOnly = false } = Astro.props as { tool: ToolDefinition; betaOnly?: boolean };
 const seo = toolDiscoverability(tool);
 const jsonLd = JSON.stringify(seo.structuredData).replace(/</g, "\\u003c");
-const related = relatedTools(tool);
+const related = relatedTools(tool).filter((entry) => !betaOnly || READ_ONLY_TOOL_IDS.some((id) => id === entry.id));
 const modeLabel = {
   local: "Local · no wallet or network",
   "read-only": "Read-only · no transaction",
@@ -27,8 +28,8 @@ const modeLabel = {
     <main class="shell">
       <header>
         <a href="../../" class="brand">pit<span>.</span></a>
-        <nav><a href="../">Toolbox</a><a href="../../">Trade</a><a href="../../fees/">Fees</a><a href="../../legal/">Legal</a></nav>
-        <span class="tag">TESTNET PREVIEW</span>
+        <nav><a href="../">Toolbox</a><a href="../../">Home</a>{!betaOnly && <><a href="../../tools/swap/">Trading lab</a><a href="../../fees/">Fees</a><a href="../../legal/">Legal</a></>}</nav>
+        <span class="tag">{betaOnly ? "READ-ONLY CANDIDATE" : "TESTNET PREVIEW"}</span>
       </header>
       <section class="hero">
         <div class="eyebrow">{tool.category} / {tool.status}</div>
@@ -37,10 +38,10 @@ const modeLabel = {
         <p class="tool-mode">{modeLabel}</p>
       </section>
       <slot />
-      <section aria-label="Other tools" class="panel">
+      {related.length > 0 && <section aria-label="Other tools" class="panel">
         <h2>Other tools</h2>
         <ul>{related.map((entry) => <li><a href={`../${entry.slug}/`}>{entry.title}</a> · {entry.category} · {entry.executionMode}</li>)}</ul>
-      </section>
+      </section>}
       <footer><a href="../">← All tools</a> · Non-custodial · No address analytics</footer>
     </main>
   </body>

@@ -1,0 +1,3 @@
+# Preserve terminal transcripts byte-for-byte, including CLI trailing spaces.
+docs/audit/phase-ae/release-check-*.txt -whitespace
+docs/audit/phase-ae/release-check.txt -whitespace

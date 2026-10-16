@@ -46,7 +46,8 @@ const results = [
 <section class="panel swap-cost-tool" aria-label="Swap Cost Simulator" data-swap-cost data-examples={JSON.stringify({ A: cowExample, B: uniswapExample })}>
   <p class="notice">Entirely local · no wallet · no live quote · no transaction</p>
   <p>{SWAP_COST_DISCLAIMER}</p>
-  <p class="muted">These manually entered token identifiers are not verified contracts. Use identical sell and buy identities, decimals and total sell budget before comparing. The linked Token Approval Inspector below checks only four reviewed Sepolia pairs. The linked Swap tool is a separate testnet execution interface.</p>
+  <p class="muted">Start with the illustrative comparison below. Enter the same sell budget and token identities in both scenarios, state which venue costs are already in the quote, and provide wallet gas and a manual conversion rate. PIT estimates net output; it cannot know future gas, execution price or approval state.</p>
+  <p class="muted">These manually entered token identifiers are not verified contracts. Use identical sell and buy identities, decimals and total sell budget before comparing. In the full PIT toolbox, the Token Approval Inspector checks only four reviewed Sepolia pairs; the Swap tool is a separate testnet execution interface.</p>
   <div class="swap-cost-examples" aria-label="Illustrative examples">
     <button type="button" data-example="normal">Load illustrative CoW and Uniswap example</button>
     <button type="button" data-example="unknown">Illustrate unknown swap gas</button>

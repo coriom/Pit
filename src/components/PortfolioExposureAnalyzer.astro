@@ -20,6 +20,7 @@ const tables = [
 <section class="panel portfolio-tool" data-portfolio aria-label="Portfolio Exposure Analyzer">
   <p class="notice">MANUAL SPOT HOLDINGS ONLY · local browser calculation · no wallet, live price or account discovery</p>
   <p>Enter current long-only spot holdings. USD unit prices and observation times are your assumptions. A ticker never proves two tokens are equivalent. Native ETH and WETH combine only if you assign the same group explicitly. Sample ERC-20 addresses are fictional placeholders.</p>
+  <p class="muted">Start with the illustrative three-position sample, then analyze allocation and missing-price coverage. To use your own holdings, add rows manually or select a CSV and explicitly accept its preview. PIT cannot discover a wallet balance or supply live prices.</p>
   <div class="portfolio-actions">
     <button type="button" data-sample>Load illustrative three-position sample</button>
     <button type="button" data-unpriced>Add illustrative unpriced holding</button>
@@ -72,7 +73,7 @@ const tables = [
     <h2>Method and limits</h2>
     <p>Values use exact token quantities and manual USD unit prices, rounded half-up to 18 decimal USD places per position. Unknown prices are excluded from the known subtotal, not valued at zero; whole-portfolio percentages disappear if any positive holding lacks a price. Stale manual prices are flagged separately.</p>
     <p>This is not a live wallet or DeFi scanner. It excludes debt, leverage, LP and staked-token decomposition, reused collateral, market moves and tax treatment. Labels for Ethereum, Base and Arbitrum mainnets are offline descriptions only; they make no RPC requests or execution paths available. No data is stored automatically or sent to PIT.</p>
-    <p>The related links below lead to PIT's PnL Calculator and Token Approval Inspector. The inspector covers only four reviewed Sepolia token/spender pairs.</p>
+    <p>The PnL Calculator models price-based returns separately. In the full PIT toolbox, the Token Approval Inspector covers only four reviewed Sepolia token/spender pairs; it does not discover this portfolio.</p>
   </div>
 </section>
 <script is:inline set:html={browserScript}></script>

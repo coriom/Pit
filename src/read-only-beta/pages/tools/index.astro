@@ -1,0 +1,10 @@
+---
+import { READ_ONLY_TOOLS } from "../../../lib/read-only-beta";
+import "../../../styles/global.css";
+---
+<html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width" /><meta name="description" content="Six explicitly allowlisted browser-local DeFi calculators. No wallet, RPC or trading execution." /><title>Read-only PIT Toolbox</title></head><body><main class="shell">
+  <header><a href="../" class="brand">pit<span>.</span></a><nav><a href="../">Home</a><a href="./" aria-current="page">Toolbox</a></nav><span class="tag">READ-ONLY CANDIDATE</span></header>
+  <section class="hero"><div class="eyebrow">Browser-local · no wallet</div><h1>Choose a tool.</h1><p>These six manually driven calculators do not connect to RPCs or trading venues. Their outputs depend on the assumptions you enter.</p></section>
+  <section aria-label="Local tools" class="tool-grid">{READ_ONLY_TOOLS.map((tool) => <a class="panel tool-card" href={`${tool.slug}/`}><span class="eyebrow">{tool.category} · Local calculation</span><h2>{tool.title}</h2><p>{tool.description}</p><small>No wallet · no network</small></a>)}</section>
+  <footer>Read-only candidate · Manual assumptions · No public release or investment advice</footer>
+</main></body></html>

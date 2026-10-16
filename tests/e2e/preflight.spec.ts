@@ -32,7 +32,7 @@ for (const chainId of [84532, 1, 8453, 42161, 999]) {
         },
       };
     }, chainId);
-    await page.goto("/");
+    await page.goto("/tools/swap/");
     await page
       .getByRole("button", { name: "Connect Wallet", exact: true })
       .click();
