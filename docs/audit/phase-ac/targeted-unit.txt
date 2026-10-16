@@ -1,0 +1,11 @@
+
+ RUN  v3.2.7 /home/corio/PIT
+
+ ✓ tests/tool-registry.test.ts (3 tests) 24ms
+ ✓ tests/bridge-cost.test.ts (15 tests) 46ms
+ ✓ tests/unit/discoverability.test.ts (8 tests) 63ms
+
+ Test Files  3 passed (3)
+      Tests  26 passed (26)
+   Start at  10:56:09
+   Duration  1.26s (transform 562ms, setup 111ms, collect 707ms, tests 132ms, environment 1ms, prepare 771ms)

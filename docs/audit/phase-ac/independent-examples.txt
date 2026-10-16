@@ -1,0 +1,16 @@
+Independent Python Decimal check; illustrative values only, no network data.
+
+from decimal import Decimal
+A_quote = Decimal('98')
+B_quote = Decimal('99')
+source_gas = (Decimal(150000) + Decimal(50000)) * Decimal('2') * Decimal('0.000000001') * Decimal('2800')
+destination_gas = Decimal(40000) * Decimal('3') * Decimal('0.000000001') * Decimal('3000')
+payout = Decimal('0.2') + Decimal('0.1')
+B_cost = source_gas + destination_gas + payout
+B_net = B_quote - B_cost
+
+A quoted/received/net = 98; embedded bridge = 1.5; embedded relayer = 0.5
+B source+approval gas cost = 1.120000000; destination gas cost = 0.360000000
+B payout fees = 0.3; received = 98.7; total separate cost = 1.780000000; net = 97.220000000
+A minus B net = 0.780000000; B minimum after payout = 95.7; B net minimum = 94.220000000
+C destination gas coverage UNKNOWN => no comparable net

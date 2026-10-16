@@ -124,6 +124,20 @@ export const TOOLS = [
     relatedToolIds: ["swap", "token-approvals"],
   },
   {
+    id: "bridge-cost",
+    slug: "bridge-cost",
+    path: "/tools/bridge-cost/",
+    title: "Bridge Cost Comparator",
+    description:
+      "Compare hypothetical cross-chain routes with explicit fee coverage, wallet gas, conversion and destination-value assumptions.",
+    category: "Calculate",
+    executionMode: "local",
+    walletRequirement: "none",
+    networkRequirement: "none",
+    status: "available",
+    relatedToolIds: ["swap-cost", "token-approvals"],
+  },
+  {
     id: "liquidation",
     slug: "liquidation",
     path: "/tools/liquidation/",

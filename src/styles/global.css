@@ -319,9 +319,31 @@ h3 {
   text-align: right;
   overflow-wrap: anywhere;
 }
+.bridge-cost-tool { min-width: 0; }
+.bridge-cost-tool [hidden] { display: none !important; }
+.bridge-cost-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.bridge-cost-route, .bridge-cost-result { min-width: 0; border: 1px solid #33443a; border-radius: 12px; padding: 18px; }
+.bridge-cost-route legend { color: #d8f977; font-weight: 700; padding: 0 8px; }
+.bridge-cost-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 14px; }
+.bridge-cost-fields label, .bridge-fee-row label { min-width: 0; }
+.bridge-cost-fields select, .bridge-fee-row select { display: block; width: 100%; margin-top: 7px; }
+.bridge-cost-route details { border-top: 1px solid #33443a; margin-top: 14px; padding-top: 12px; }
+.bridge-cost-route summary { cursor: pointer; font-weight: 700; color: #d8f977; }
+.bridge-fee-grid { display: grid; gap: 12px; margin-top: 12px; }
+.bridge-fee-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; min-width: 0; border: 1px solid #33443a; border-radius: 10px; padding: 12px; }
+.bridge-fee-row[data-coverage="included"] { border-left: 4px solid #79bb88; }
+.bridge-fee-row[data-coverage="separate"] { border-left: 4px solid #f1be6d; }
+.bridge-fee-row[data-coverage="unknown"] { border-left: 4px solid #e08888; }
+.bridge-cost-result dl > div { display: flex; justify-content: space-between; gap: 14px; border-top: 1px solid #304035; padding: 8px 0; }
+.bridge-cost-result dt { color: #a8b8af; }
+.bridge-cost-result dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.bridge-cost-result li { overflow-wrap: anywhere; margin: 8px 0; }
 @media (max-width: 850px) {
   .swap-cost-grid,
-  .swap-cost-fields {
+  .swap-cost-fields,
+  .bridge-cost-grid,
+  .bridge-cost-fields,
+  .bridge-fee-row {
     grid-template-columns: minmax(0, 1fr);
   }
 }

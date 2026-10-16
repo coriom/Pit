@@ -1,0 +1,6 @@
+---
+import ToolLayout from "../../../components/ToolLayout.astro";
+import BridgeCostComparator from "../../../components/BridgeCostComparator.astro";
+import { toolById } from "../../../lib/tool-registry";
+---
+<ToolLayout tool={toolById("bridge-cost")}><BridgeCostComparator /></ToolLayout>

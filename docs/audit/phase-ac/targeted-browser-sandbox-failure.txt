@@ -1,0 +1,17 @@
+[WebServer] (node:113050) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:113139) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 4 tests using 1 worker
+
+(node:113284) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:113284) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/e2e/bridge-cost.spec.ts:34:1 › two illustrative routes show embedded versus separate cross-chain costs without wallet or external requests (2.0s)
+  ✓  2 tests/e2e/bridge-cost.spec.ts:79:1 › unknown destination gas, incompatible destination token and changed source budget prevent ranking (580ms)
+  ✓  3 tests/e2e/bridge-cost.spec.ts:127:1 › actual locally downloaded JSON preserves exact raw cross-chain fields and simulation disclaimer (419ms)
+  ✓  4 tests/e2e/bridge-cost.spec.ts:152:1 › narrow viewport and keyboard-only submission work offline (326ms)
+
+  4 passed (27.4s)

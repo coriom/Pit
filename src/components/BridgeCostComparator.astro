@@ -1,0 +1,201 @@
+---
+import { bridgeCostInlineScript } from "../../scripts/build-bridge-cost-inline.mjs";
+import { BRIDGE_COST_DISCLAIMER } from "../lib/bridge-cost";
+const browserScript = bridgeCostInlineScript();
+const addressA = "0x1111111111111111111111111111111111111111";
+const addressB = "0x2222222222222222222222222222222222222222";
+const feeKinds = [
+  ["bridge", "Bridge service fee"], ["liquidity", "Liquidity provider fee"],
+  ["relayer", "Relayer fee"], ["claim", "Destination claim fee"],
+  ["intermediateSwap", "Intermediate swap fee"],
+] as const;
+const chains = [
+  ["11155111", "Ethereum Sepolia"], ["84532", "Base Sepolia"], ["421614", "Arbitrum Sepolia"],
+] as const;
+const base: Record<string, string> = {
+  sourceChainId: "11155111", destinationChainId: "84532", sourceAddress: addressA,
+  destinationAddress: addressB, sourceDecimals: "6", destinationDecimals: "6",
+  sourceAmount: "100", quotedDestinationAmount: "98", minimumDestinationAmount: "97",
+  estimatedMinutes: "8", approvalRequired: "no", approvalGasUnits: "",
+  sourceGasCoverage: "included", sourceGasUnits: "", sourceGasPriceGwei: "",
+  sourceNativeAsset: "ETH", sourceNativeRate: "2800", destinationGasCoverage: "included",
+  destinationGasUnits: "", destinationGasPriceGwei: "", destinationNativeAsset: "ETH",
+  destinationNativeRate: "3000", sourceTokenRate: "", commonUnit: "", commonUnitDecimals: "2", commonRate: "",
+};
+for (const [kind] of feeKinds) {
+  base[`${kind}-coverage`] = "included";
+  base[`${kind}-payer`] = "destination-proceeds";
+  base[`${kind}-denomination`] = "destination-token";
+  base[`${kind}-amount`] = "0";
+}
+const A: Record<string, string> = { ...base, "bridge-amount": "1.5", "relayer-amount": "0.5" };
+const B: Record<string, string> = { ...base, quotedDestinationAmount: "99", minimumDestinationAmount: "96", estimatedMinutes: "15",
+  approvalRequired: "yes", approvalGasUnits: "50000", sourceGasCoverage: "wallet", sourceGasUnits: "150000",
+  sourceGasPriceGwei: "2", destinationGasCoverage: "wallet", destinationGasUnits: "40000",
+  destinationGasPriceGwei: "3", "bridge-coverage": "separate", "bridge-amount": "0.2",
+  "claim-coverage": "separate", "claim-amount": "0.1" };
+const identityFields = [
+  ["sourceAddress", "Source asset address (manual)", "text"],
+  ["sourceDecimals", "Source asset decimals", "decimal"],
+  ["destinationAddress", "Destination asset address (manual)", "text"],
+  ["destinationDecimals", "Destination asset decimals", "decimal"],
+  ["sourceAmount", "Gross source transfer budget", "decimal"],
+  ["quotedDestinationAmount", "Quoted destination tokens after embedded fees", "decimal"],
+  ["minimumDestinationAmount", "Optional minimum destination tokens", "decimal"],
+  ["estimatedMinutes", "Optional estimated completion minutes", "decimal"],
+] as const;
+const gasFields = [
+  ["sourceGasUnits", "Source-chain wallet gas units"],
+  ["sourceGasPriceGwei", "Source-chain gas price (gwei)"],
+  ["sourceNativeAsset", "Source-chain native asset identifier"],
+  ["sourceNativeRate", "Destination tokens per 1 source native asset"],
+  ["approvalGasUnits", "Source-token approval gas units"],
+  ["destinationGasUnits", "Destination-chain wallet gas units"],
+  ["destinationGasPriceGwei", "Destination-chain gas price (gwei)"],
+  ["destinationNativeAsset", "Destination-chain native asset identifier"],
+  ["destinationNativeRate", "Destination tokens per 1 destination native asset"],
+  ["sourceTokenRate", "Destination tokens per 1 source token, if needed"],
+  ["commonUnit", "Optional common valuation unit label"],
+  ["commonUnitDecimals", "Common valuation unit decimals"],
+  ["commonRate", "Common units per 1 destination token"],
+] as const;
+const resultFields = [
+  ["gross", "Gross source transfer budget"], ["quote", "Manual destination quote"],
+  ["received", "Expected destination tokens received"], ["payout", "Separate fees deducted from destination proceeds"],
+  ["external", "Separate wallet-paid service fees, in destination units"],
+  ["sourceGas", "Wallet-funded source gas (native units)"],
+  ["approvalGas", "Wallet-funded source approval gas (native units)"],
+  ["destinationGas", "Wallet-funded destination gas (native units)"],
+  ["sourceGasCost", "Converted source and approval gas cost"],
+  ["destinationGasCost", "Converted destination gas cost"],
+  ["cost", "Total separate user cost in destination units"],
+  ["net", "Effective net destination value"], ["minimum", "Minimum destination tokens after payout fees"],
+  ["netMinimum", "Minimum net value after separate costs"],
+  ["commonCost", "Separate user cost in optional common unit"],
+  ["common", "Net value in optional common unit"], ["time", "Estimated time"], ["pitFee", "PIT fee"],
+] as const;
+---
+<section class="panel bridge-cost-tool" data-bridge-cost data-examples={JSON.stringify({ A, B })} aria-label="Bridge Cost Comparator">
+  <p class="notice">ILLUSTRATIVE ROUTES ONLY · local calculation · no wallet, quote, bridge or transaction</p>
+  <p>{BRIDGE_COST_DISCLAIMER}</p>
+  <p class="muted">The addresses below are fictional placeholders. Matching ticker labels do not prove token equivalence, canonical issuance, redeemability or equal value. The linked Swap Cost Simulator and Token Approval Inspector below are separate tools; the inspector covers only four reviewed Sepolia pairs.</p>
+  <div class="swap-cost-examples" aria-label="Illustrative bridge examples">
+    <button type="button" data-example="normal">Load illustrative embedded-versus-separate examples</button>
+    <button type="button" data-example="unknown">Illustrate unknown destination gas and rate</button>
+  </div>
+  <form data-bridge-form novalidate>
+    <div class="bridge-cost-grid">
+      {(["A", "B"] as const).map((name) => {
+        const example = name === "A" ? A : B;
+        return <fieldset class="bridge-cost-route" data-route={name}>
+          <legend>Route {name} · hypothetical</legend>
+          <div class="bridge-cost-fields">
+            <label>Source chain
+              <select name={`${name}-sourceChainId`} aria-label={`Route ${name} Source chain`}>
+                {chains.map(([id, label]) => <option value={id} selected={example.sourceChainId === id}>{label}</option>)}
+              </select>
+            </label>
+            <label>Destination chain
+              <select name={`${name}-destinationChainId`} aria-label={`Route ${name} Destination chain`}>
+                {chains.map(([id, label]) => <option value={id} selected={example.destinationChainId === id}>{label}</option>)}
+              </select>
+            </label>
+            {identityFields.map(([key, label, mode]) => <label>{label}
+              <input name={`${name}-${key}`} aria-label={`Route ${name} ${label}`} value={example[key]} inputmode={mode} autocomplete="off" />
+            </label>)}
+          </div>
+          <details open>
+            <summary>Fee coverage, denomination and payer — inspect each row</summary>
+            <div class="bridge-fee-grid">
+              {feeKinds.map(([kind, label]) => <fieldset class="bridge-fee-row" data-fee={kind} data-coverage={example[`${kind}-coverage`]}>
+                <legend>{label}</legend>
+                <label>Coverage
+                  <select name={`${name}-${kind}-coverage`} aria-label={`Route ${name} ${label} coverage`}>
+                    <option value="included" selected={example[`${kind}-coverage`] === "included"}>Included in quoted destination amount</option>
+                    <option value="separate" selected={example[`${kind}-coverage`] === "separate"}>Separately paid</option>
+                    <option value="unknown">Unknown</option>
+                  </select>
+                </label>
+                <label>Amount (exact decimal)
+                  <input name={`${name}-${kind}-amount`} aria-label={`Route ${name} ${label} amount`} value={example[`${kind}-amount`]} inputmode="decimal" autocomplete="off" />
+                </label>
+                <label>Denomination and chain
+                  <select name={`${name}-${kind}-denomination`} aria-label={`Route ${name} ${label} denomination`}>
+                    <option value="destination-token" selected>Destination token / destination chain</option>
+                    <option value="source-token">Source token / source chain</option>
+                    <option value="source-native">Native asset / source chain</option>
+                    <option value="destination-native">Native asset / destination chain</option>
+                  </select>
+                </label>
+                <label>Payer
+                  <select name={`${name}-${kind}-payer`} aria-label={`Route ${name} ${label} payer`}>
+                    <option value="destination-proceeds" selected>Destination proceeds</option>
+                    <option value="wallet">Wallet outside transfer budget</option>
+                    <option value="relayer">Relayer covers it</option>
+                  </select>
+                </label>
+              </fieldset>)}
+            </div>
+          </details>
+          <details open>
+            <summary>Separate gas, approval and conversion assumptions</summary>
+            <div class="bridge-cost-fields">
+              <label>Source transaction gas coverage
+                <select name={`${name}-sourceGasCoverage`} aria-label={`Route ${name} Source transaction gas coverage`}>
+                  <option value="wallet" selected={example.sourceGasCoverage === "wallet"}>Wallet paid</option>
+                  <option value="included" selected={example.sourceGasCoverage === "included"}>Embedded / relayer covered</option>
+                  <option value="unknown">Unknown</option>
+                </select>
+              </label>
+              <label>Destination transaction gas coverage
+                <select name={`${name}-destinationGasCoverage`} aria-label={`Route ${name} Destination transaction gas coverage`}>
+                  <option value="wallet" selected={example.destinationGasCoverage === "wallet"}>Wallet paid</option>
+                  <option value="included" selected={example.destinationGasCoverage === "included"}>Embedded / relayer covered</option>
+                  <option value="unknown">Unknown</option>
+                </select>
+              </label>
+              <label>Source-token approval required?
+                <select name={`${name}-approvalRequired`} aria-label={`Route ${name} Source-token approval required?`}>
+                  <option value="yes" selected={example.approvalRequired === "yes"}>Yes</option>
+                  <option value="no" selected={example.approvalRequired === "no"}>No</option>
+                  <option value="unknown">Unknown</option>
+                </select>
+              </label>
+              {gasFields.map(([key, label]) => <label data-field={key} hidden={name === "A" && ["sourceGasUnits", "approvalGasUnits", "destinationGasUnits"].includes(key)}>{label}
+                <input name={`${name}-${key}`} aria-label={`Route ${name} ${label}`} value={example[key]} inputmode={key.endsWith("Asset") || key === "commonUnit" ? "text" : "decimal"} autocomplete="off" />
+              </label>)}
+            </div>
+          </details>
+        </fieldset>;
+      })}
+    </div>
+    <button class="primary" type="submit">Compare hypothetical bridge costs locally</button>
+  </form>
+  <p role="alert" class="error" data-bridge-error hidden></p>
+  <div data-bridge-report data-testid="bridge-cost-report" role="status" aria-live="polite" hidden>
+    <div class="bridge-cost-grid">
+      {(["A", "B"] as const).map((name) => <section class="bridge-cost-result" data-result={name} aria-label={`Route ${name} result`}>
+        <h3 data-result-heading></h3>
+        <p class="error" data-reasons hidden></p>
+        <dl>{resultFields.map(([key, label]) => <div><dt>{label}</dt><dd data-value={key}></dd></div>)}</dl>
+        <h4>Fee inclusion audit</h4>
+        <ul>{feeKinds.map(([kind]) => <li data-fee-result={kind}></li>)}</ul>
+      </section>)}
+    </div>
+    <div class="rule">
+      <h2>Route comparison</h2>
+      <p><strong data-comparison-status></strong></p>
+      <p data-comparison-reasons hidden></p>
+      <p data-comparison-winner hidden></p>
+      <p>Separate user-cost difference: <span data-cost-difference></span></p>
+      <p class="muted">Completion time is separate from value; no risk-adjusted ranking is inferred. These routes are not live, available, executable, final or guaranteed.</p>
+      <button type="button" data-download>Download local JSON scenario report</button>
+    </div>
+  </div>
+  <div class="rule">
+    <h2>Limits and calculation method</h2>
+    <p>These testnet names are hypothetical route identifiers, not bridge-support claims. Source transfer budgets must match for ranking. Each fee states its payer, chain, denomination and whether it was embedded in the manually supplied quote. Embedded fees are reported but never deducted again. A separate destination-proceeds fee reduces tokens received; a separate wallet-paid fee or wallet-funded gas reduces effective net value after explicit conversion.</p>
+    <p>Source and destination gas are kept in their own native units and converted separately using your manual rates. A relayer-covered destination transaction is not wallet gas. Minimum received is optional and separate from expected value; time estimates never alter the ranking. Noncanonical or wrapped assets, bridge contract risk, liquidity bounds, delays/finality, refunds, failed transfers and changing cross-chain prices are not modelled.</p>
+  </div>
+</section>
+<script is:inline set:html={browserScript}></script>

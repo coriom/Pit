@@ -50,7 +50,7 @@ describe("authoritative toolbox registry", () => {
       TOOLS.filter((tool) => tool.executionMode === "local").map(
         (tool) => tool.id,
       ),
-    ).toEqual(["pnl", "swap-cost", "liquidation", "impermanent-loss"]);
+    ).toEqual(["pnl", "swap-cost", "bridge-cost", "liquidation", "impermanent-loss"]);
     for (const tool of TOOLS.filter(
       (entry) => entry.executionMode === "local",
     )) {
