@@ -1,0 +1,12 @@
+Independent Python Decimal check, not using the PIT TypeScript engine.
+Inputs are illustrative manual values, not live market prices. USD raw precision: 10^-18.
+Ethereum native ETH: 1 * 2000 = USD 2000; raw18 2000000000000000000000; weight 66.666666…%
+Base illustrative USDC: 500 * 1 = USD 500; raw18 500000000000000000000; weight 16.666666…%
+Arbitrum illustrative WETH: 0.25 * 2000 = USD 500; raw18 500000000000000000000; weight 16.666666…%
+Total: USD 3000; raw18 3000000000000000000000.
+Explicit ETH exposure group: USD 2500; raw18 2500000000000000000000; weight 83.333333…%.
+Stablecoin exposure group: USD 500; weight 16.666666…%.
+Largest position: 66.666666…%; top three: 100%.
+HHI = 10000 * ((2/3)^2 + (1/6)^2 + (1/6)^2) = 5000 exactly.
+Additional positive holding with no manual price: known subtotal remains USD 3000;
+complete valuation is INCOMPLETE; whole-portfolio weights and HHI are unavailable.

@@ -138,6 +138,20 @@ export const TOOLS = [
     relatedToolIds: ["swap-cost", "token-approvals"],
   },
   {
+    id: "portfolio-exposure",
+    slug: "portfolio-exposure",
+    path: "/tools/portfolio-exposure/",
+    title: "Portfolio Exposure Analyzer",
+    description:
+      "Analyze manually entered spot holdings, valuation coverage, allocation and concentration entirely in your browser.",
+    category: "Analyze",
+    executionMode: "local",
+    walletRequirement: "none",
+    networkRequirement: "none",
+    status: "available",
+    relatedToolIds: ["pnl", "token-approvals"],
+  },
+  {
     id: "liquidation",
     slug: "liquidation",
     path: "/tools/liquidation/",

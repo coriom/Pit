@@ -1,0 +1,6 @@
+---
+import ToolLayout from "../../../components/ToolLayout.astro";
+import PortfolioExposureAnalyzer from "../../../components/PortfolioExposureAnalyzer.astro";
+import { toolById } from "../../../lib/tool-registry";
+---
+<ToolLayout tool={toolById("portfolio-exposure")}><PortfolioExposureAnalyzer /></ToolLayout>

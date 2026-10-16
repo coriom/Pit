@@ -1,0 +1,10 @@
+
+ RUN  v3.2.7 /home/corio/PIT
+
+ ✓ tests/tool-registry.test.ts (3 tests) 90ms
+ ✓ tests/portfolio-exposure.test.ts (16 tests) 55ms
+
+ Test Files  2 passed (2)
+      Tests  19 passed (19)
+   Start at  11:16:02
+   Duration  920ms (transform 313ms, setup 152ms, collect 304ms, tests 144ms, environment 1ms, prepare 307ms)

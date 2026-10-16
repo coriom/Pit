@@ -1,0 +1,20 @@
+
+> pit@0.1.0 check /home/corio/PIT
+> astro check
+
+11:15:33 [content] Syncing content
+11:15:33 [content] Astro config changed
+11:15:33 [content] Clearing content store
+11:15:33 [content] Synced content
+11:15:33 [types] Generated 73ms
+11:15:33 [check] Getting diagnostics for Astro files in /home/corio/PIT...
+[96mscripts/audit/verify-live-setup.mjs[0m:[93m30[0m:[93m35[0m - [93mwarning[0m[90m ts(2568): [0mProperty 'value' may not exist on type 'string | { hash: string; value: 5000000000000000n; data: string; } | { hash: string; value: bigint; data: `0x${string}`; }'. Did you mean 'valueOf'?
+  Property 'value' does not exist on type 'string'.
+
+[7m30[0m   assert.equal(tx.value, expected.value);
+[7m  [0m [93m                                  ~~~~~[0m
+
+Result (161 files):
+- 0 errors
+- 0 warnings
+- 1 hint

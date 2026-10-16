@@ -1,0 +1,18 @@
+[WebServer] (node:175200) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:175255) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 5 tests using 1 worker
+
+(node:175496) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:175496) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/e2e/portfolio-exposure.spec.ts:45:1 › illustrative spot portfolio calculates exact chain, group and concentration data offline (1.0s)
+  ✓  2 tests/e2e/portfolio-exposure.spec.ts:71:1 › unpriced holding removes whole-portfolio percentages without valuing it at zero (376ms)
+  ✓  3 tests/e2e/portfolio-exposure.spec.ts:93:1 › manual entry and CSV preview require explicit acceptance, reject duplicates, and keep quoted cells inert (492ms)
+  ✓  4 tests/e2e/portfolio-exposure.spec.ts:139:1 › local JSON download preserves exact raw assumptions and reset touches this page only (571ms)
+  ✓  5 tests/e2e/portfolio-exposure.spec.ts:170:1 › mobile layout and keyboard-only sample analysis remain usable offline (556ms)
+
+  5 passed (8.4s)

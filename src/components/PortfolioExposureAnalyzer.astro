@@ -1,0 +1,78 @@
+---
+import { portfolioExposureInlineScript } from "../../scripts/build-portfolio-exposure-inline.mjs";
+import { CHAIN_LABELS, CSV_HEADER, MAX_CSV_BYTES, MAX_POSITIONS } from "../lib/portfolio-exposure";
+const browserScript = portfolioExposureInlineScript();
+const fields = [
+  ["accountLabel", "Local account label", "text", "Main wallet"],
+  ["tokenAddress", "ERC-20 address (blank for native)", "text", "0x…"],
+  ["symbol", "Symbol (display only)", "text", "ETH"],
+  ["decimals", "Token decimals", "numeric", "18"],
+  ["quantity", "Exact spot quantity", "decimal", "1"],
+  ["unitPriceUsd", "Manual USD price (blank = unknown)", "decimal", "2000"],
+  ["priceObservedAt", "Price observation time with timezone", "text", "2026-10-16T00:00:00Z"],
+  ["exposureGroup", "Optional explicit exposure group", "text", "ETH exposure"],
+] as const;
+const tables = [
+  ["asset", "Chain-scoped asset"], ["chain", "Blockchain"],
+  ["account", "Account label"], ["group", "Explicit exposure group"],
+] as const;
+---
+<section class="panel portfolio-tool" data-portfolio aria-label="Portfolio Exposure Analyzer">
+  <p class="notice">MANUAL SPOT HOLDINGS ONLY · local browser calculation · no wallet, live price or account discovery</p>
+  <p>Enter current long-only spot holdings. USD unit prices and observation times are your assumptions. A ticker never proves two tokens are equivalent. Native ETH and WETH combine only if you assign the same group explicitly. Sample ERC-20 addresses are fictional placeholders.</p>
+  <div class="portfolio-actions">
+    <button type="button" data-sample>Load illustrative three-position sample</button>
+    <button type="button" data-unpriced>Add illustrative unpriced holding</button>
+    <button type="button" data-reset>Reset this page only</button>
+  </div>
+  <form data-position-form novalidate>
+    <h2>Add a spot position</h2>
+    <div class="portfolio-form-grid">
+      {fields.slice(0, 1).map(([key, label, mode, placeholder]) => <label>{label}<input name={key} aria-label={label} inputmode={mode} placeholder={placeholder} autocomplete="off" /></label>)}
+      <label>Blockchain (descriptive, offline)
+        <select name="chainId" aria-label="Blockchain">
+          {Object.entries(CHAIN_LABELS).map(([id, label]) => <option value={id}>{label} ({id})</option>)}
+        </select>
+      </label>
+      <label>Asset type<select name="assetType" aria-label="Asset type"><option value="native">Native</option><option value="erc20">ERC-20</option></select></label>
+      {fields.slice(1).map(([key, label, mode, placeholder]) => <label>{label}<input name={key} aria-label={label} inputmode={mode} placeholder={placeholder} autocomplete="off" /></label>)}
+    </div>
+    <button class="primary" type="submit">Add position locally</button>
+  </form>
+  <div class="rule">
+    <h2>Import CSV with preview</h2>
+    <p>UTF-8, at most {MAX_CSV_BYTES} bytes and {MAX_POSITIONS} rows. Exact header:</p>
+    <code class="portfolio-header">{CSV_HEADER}</code>
+    <p>Use RFC 4180 quoted fields for commas. Leave both price and timestamp empty for an unpriced holding. Existing positions are retained; duplicates or invalid rows block acceptance.</p>
+    <label>Choose local portfolio CSV<input type="file" accept=".csv,text/csv" data-csv-file /></label>
+    <p data-import-status role="status"></p>
+    <div class="portfolio-table-wrap"><table data-import-preview hidden><caption>Import preview — no rows added yet</caption><thead><tr><th>Row</th><th>Account</th><th>Chain</th><th>Asset</th><th>Quantity</th><th>Manual price</th><th>Validation</th></tr></thead><tbody></tbody></table></div>
+    <button type="button" data-accept-import disabled>Accept valid preview</button>
+  </div>
+  <div class="rule">
+    <h2>Current input positions</h2><p data-row-count>0 positions</p>
+    <div class="portfolio-table-wrap"><table data-positions><thead><tr><th>Account</th><th>Chain-scoped asset</th><th>Quantity</th><th>Manual price</th><th>Exposure group</th><th>Action</th></tr></thead><tbody></tbody></table></div>
+    <label>Mark price stale after this many days<input data-stale-days aria-label="Stale-price threshold days" inputmode="numeric" value="7" /></label>
+    <button class="primary" type="button" data-analyze>Analyze current positions</button>
+    <p data-error role="alert" class="error" hidden></p>
+  </div>
+  <div class="rule" data-report hidden>
+    <h2>Valuation and coverage</h2>
+    <p><strong data-coverage></strong></p>
+    <p>Total known value: <strong data-known-total></strong></p>
+    <p data-coverage-detail></p>
+    <p data-stale-detail></p>
+    <div class="portfolio-table-wrap"><table data-valued-positions><caption>Individual holdings and manual price coverage</caption><thead><tr><th>Account and chain-scoped asset</th><th>Exact quantity</th><th>Known USD value</th><th>Whole-portfolio weight</th><th>Price status</th></tr></thead><tbody></tbody></table></div>
+    <p>Largest position: <strong data-largest></strong> · Top three: <strong data-top-three></strong> · HHI: <strong data-hhi></strong></p>
+    <p class="muted">Weights and HHI use the complete manually priced portfolio only. HHI measures concentration mathematically; it does not predict losses or provide an investment risk score.</p>
+    {tables.map(([key, label]) => <div class="portfolio-allocation"><h3>{label}</h3><div class="portfolio-table-wrap"><table data-allocation={key}><thead><tr><th>Identity</th><th>Known USD value</th><th>Whole-portfolio weight</th></tr></thead><tbody></tbody></table></div></div>)}
+    <button type="button" data-download>Download local JSON report</button>
+  </div>
+  <div class="rule">
+    <h2>Method and limits</h2>
+    <p>Values use exact token quantities and manual USD unit prices, rounded half-up to 18 decimal USD places per position. Unknown prices are excluded from the known subtotal, not valued at zero; whole-portfolio percentages disappear if any positive holding lacks a price. Stale manual prices are flagged separately.</p>
+    <p>This is not a live wallet or DeFi scanner. It excludes debt, leverage, LP and staked-token decomposition, reused collateral, market moves and tax treatment. Labels for Ethereum, Base and Arbitrum mainnets are offline descriptions only; they make no RPC requests or execution paths available. No data is stored automatically or sent to PIT.</p>
+    <p>The related links below lead to PIT's PnL Calculator and Token Approval Inspector. The inspector covers only four reviewed Sepolia token/spender pairs.</p>
+  </div>
+</section>
+<script is:inline set:html={browserScript}></script>
