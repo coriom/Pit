@@ -14,7 +14,10 @@ function fixture() {
   const securityHeaders = [
     { key: "X-Content-Type-Options", value: "nosniff" },
     { key: "Referrer-Policy", value: "no-referrer" },
-    { key: "Content-Security-Policy", value: `${policy}; frame-ancestors 'none'` },
+    {
+      key: "Content-Security-Policy",
+      value: `${policy}; frame-ancestors 'none'`,
+    },
   ];
   return new Map([
     ["index.html", html],
@@ -25,12 +28,15 @@ function fixture() {
       "_headers",
       `/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: no-referrer\n  Content-Security-Policy: ${policy}; frame-ancestors 'none'\n`,
     ],
-    ["vercel.json", JSON.stringify({
-      $schema: "https://openapi.vercel.sh/vercel.json",
-      framework: null,
-      outputDirectory: ".",
-      headers: [{ source: "/(.*)", headers: securityHeaders }],
-    })],
+    [
+      "vercel.json",
+      JSON.stringify({
+        $schema: "https://openapi.vercel.sh/vercel.json",
+        framework: null,
+        outputDirectory: ".",
+        headers: [{ source: "/(.*)", headers: securityHeaders }],
+      }),
+    ],
     ["_astro/app.css", "body{color:black}"],
     ["_astro/app.js", "console.log('pit')"],
   ]);
@@ -60,49 +66,87 @@ describe("release static artifact gate", () => {
     const artifact = fixture().get("vercel.json")!;
     const root = JSON.parse(artifact);
     root.outputDirectory = "dist";
-    expect(() => validateProjectVercelConfig(JSON.stringify(root), artifact)).not.toThrow();
+    expect(() =>
+      validateProjectVercelConfig(JSON.stringify(root), artifact),
+    ).not.toThrow();
   });
   it("rejects stale project-root CSP hashes and unrelated routes", () => {
     const artifact = fixture().get("vercel.json")!;
     const root = JSON.parse(artifact);
     root.outputDirectory = "dist";
     root.headers[0].headers[2].value += " 'sha256-FAKE'";
-    expect(() => validateProjectVercelConfig(JSON.stringify(root), artifact)).toThrow("Project-root Vercel");
+    expect(() =>
+      validateProjectVercelConfig(JSON.stringify(root), artifact),
+    ).toThrow("Project-root Vercel");
     root.headers = JSON.parse(artifact).headers;
     root.routes = [];
-    expect(() => validateProjectVercelConfig(JSON.stringify(root), artifact)).toThrow("Project-root Vercel");
+    expect(() =>
+      validateProjectVercelConfig(JSON.stringify(root), artifact),
+    ).toThrow("Project-root Vercel");
   });
   it("rejects a wrong project-root output directory", () => {
     const artifact = fixture().get("vercel.json")!;
-    expect(() => validateProjectVercelConfig(artifact, artifact)).toThrow("Project-root Vercel");
+    expect(() => validateProjectVercelConfig(artifact, artifact)).toThrow(
+      "Project-root Vercel",
+    );
   });
-  it.each(["PIT_AUTONOMOUS_SIGNER_TEST_ONLY", "/home/corio/.pit/test-operator/key", "autonomous-signer.mjs"])(
-    "rejects test signer leakage in production output: %s",
-    (value) => {
-      const files = fixture();
-      files.set("_astro/app.js", `console.log(${JSON.stringify(value)})`);
-      expect(() => validateArtifacts(files)).toThrow("Test signer or secret loader");
-    },
-  );
+  it.each([
+    "PIT_AUTONOMOUS_SIGNER_TEST_ONLY",
+    "/home/corio/.pit/test-operator/key",
+    "autonomous-signer.mjs",
+  ])("rejects test signer leakage in production output: %s", (value) => {
+    const files = fixture();
+    files.set("_astro/app.js", `console.log(${JSON.stringify(value)})`);
+    expect(() => validateArtifacts(files)).toThrow(
+      "Test signer or secret loader",
+    );
+  });
   it("rejects the staging accounting harness by path or marker in production output", () => {
     const byPath = fixture();
     byPath.set("__pit-staging-accounting/index.html", "synthetic audit");
-    expect(() => validateArtifacts(byPath)).toThrow("Staging accounting harness");
+    expect(() => validateArtifacts(byPath)).toThrow(
+      "Staging accounting harness",
+    );
     const byContent = fixture();
     byContent.set("_astro/app.js", "pit:staging-synthetic");
-    expect(() => validateArtifacts(byContent)).toThrow("Staging accounting harness");
-    for (const value of ["PIT_STAGING_ACCEPTANCE_ONLY", "staging-audit-access", "staging-access.mjs", "staging-diagnostics.mjs", "com.vercel.cli", "x-vercel-protection-bypass"]) {
+    expect(() => validateArtifacts(byContent)).toThrow(
+      "Staging accounting harness",
+    );
+    for (const value of [
+      "PIT_STAGING_ACCEPTANCE_ONLY",
+      "staging-audit-access",
+      "staging-access.mjs",
+      "staging-diagnostics.mjs",
+      "com.vercel.cli",
+      "x-vercel-protection-bypass",
+    ]) {
       const byAutomation = fixture();
       byAutomation.set("_astro/app.js", value);
-      expect(() => validateArtifacts(byAutomation)).toThrow("Staging accounting harness");
+      expect(() => validateArtifacts(byAutomation)).toThrow(
+        "Staging accounting harness",
+      );
     }
   });
   it("accepts self-hosted scripts/styles with strict CSP", () => {
     expect(validateArtifacts(fixture()).externalExecutable).toBe(0);
   });
+  it("rejects executable inline scripts without their exact CSP hash", () => {
+    const files = fixture();
+    mutateAllHtml(files, (html) =>
+      html.replace("</body>", "<script>window.pitTest = true;</script></body>"),
+    );
+    expect(() => validateArtifacts(files)).toThrow(
+      "Executable inline script CSP hash missing",
+    );
+  });
   it("rejects Vercel headers that differ from the built CSP", () => {
     const files = fixture();
-    files.set("vercel.json", files.get("vercel.json")!.replace("frame-ancestors 'none'", "frame-ancestors *"));
+    files.set(
+      "vercel.json",
+      files
+        .get("vercel.json")!
+        .replace("frame-ancestors 'none'", "frame-ancestors *"),
+    );
     expect(() => validateArtifacts(files)).toThrow("Vercel headers differ");
   });
   it("rejects a Vercel function or route added to the static artifact", () => {

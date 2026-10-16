@@ -1,5 +1,6 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
+import { createHash } from "node:crypto";
 
 const allowedConnect = new Set([
   "'self'",
@@ -97,13 +98,20 @@ export function validateProjectVercelConfig(projectText, artifactText) {
     project.framework !== null ||
     project.outputDirectory !== "dist" ||
     JSON.stringify(project.headers) !== JSON.stringify(artifact.headers)
-  ) throw Error("Project-root Vercel headers or output directory differ from built configuration");
+  )
+    throw Error(
+      "Project-root Vercel headers or output directory differ from built configuration",
+    );
 }
 
 export function validateArtifacts(files) {
   for (const [name, body] of files) {
-    if (/__pit-staging-accounting\//.test(name) ||
-        /PIT_STAGING_ACCOUNTING_AUDIT_ONLY|PIT_STAGING_ACCEPTANCE_ONLY|__pit-staging-accounting|pit:staging-synthetic|staging-audit-access|staging-access\.mjs|staging-acceptance\.mjs|staging-diagnostics\.mjs|com\.vercel\.cli|x-vercel-protection-bypass/i.test(body))
+    if (
+      /__pit-staging-accounting\//.test(name) ||
+      /PIT_STAGING_ACCOUNTING_AUDIT_ONLY|PIT_STAGING_ACCEPTANCE_ONLY|__pit-staging-accounting|pit:staging-synthetic|staging-audit-access|staging-access\.mjs|staging-acceptance\.mjs|staging-diagnostics\.mjs|com\.vercel\.cli|x-vercel-protection-bypass/i.test(
+        body,
+      )
+    )
       throw Error(`Staging accounting harness in production artifact: ${name}`);
   }
   const htmlFiles = [...files].filter(([name]) => name.endsWith(".html"));
@@ -119,25 +127,42 @@ export function validateArtifacts(files) {
   const vercelText = files.get("vercel.json");
   if (!vercelText) throw Error("Missing Vercel static response headers");
   let vercel;
-  try { vercel = JSON.parse(vercelText); }
-  catch { throw Error("Malformed Vercel static response headers"); }
+  try {
+    vercel = JSON.parse(vercelText);
+  } catch {
+    throw Error("Malformed Vercel static response headers");
+  }
   const headerLines = headers.trimEnd().split("\n");
   const expectedHeaders = headerLines.slice(1).map((line) => {
     const match = line.match(/^  ([A-Za-z-]+): ([^\r\n]+)$/);
     if (!match) throw Error("Malformed static response header");
     return { key: match[1], value: match[2] };
   });
-  if (headerLines[0] !== "/*" ||
-      JSON.stringify(Object.keys(vercel).sort()) !== JSON.stringify(["$schema", "framework", "headers", "outputDirectory"]) ||
-      vercel.framework !== null || vercel.outputDirectory !== "." ||
-      !Array.isArray(vercel.headers) || vercel.headers.length !== 1 ||
-      vercel.headers[0].source !== "/(.*)" ||
-      JSON.stringify(vercel.headers[0].headers) !== JSON.stringify(expectedHeaders))
-    throw Error("Vercel headers differ from the built static CSP and security headers");
+  if (
+    headerLines[0] !== "/*" ||
+    JSON.stringify(Object.keys(vercel).sort()) !==
+      JSON.stringify(["$schema", "framework", "headers", "outputDirectory"]) ||
+    vercel.framework !== null ||
+    vercel.outputDirectory !== "." ||
+    !Array.isArray(vercel.headers) ||
+    vercel.headers.length !== 1 ||
+    vercel.headers[0].source !== "/(.*)" ||
+    JSON.stringify(vercel.headers[0].headers) !==
+      JSON.stringify(expectedHeaders)
+  )
+    throw Error(
+      "Vercel headers differ from the built static CSP and security headers",
+    );
   let externalExecutable = 0;
   for (const [name, body] of files) {
-    if (/PIT_AUTONOMOUS_SIGNER_TEST_ONLY|\/\.pit\/test-operator\/|autonomous-signer(?:\.[cm]?[jt]s)?/i.test(body))
-      throw Error(`Test signer or secret loader in production artifact: ${name}`);
+    if (
+      /PIT_AUTONOMOUS_SIGNER_TEST_ONLY|\/\.pit\/test-operator\/|autonomous-signer(?:\.[cm]?[jt]s)?/i.test(
+        body,
+      )
+    )
+      throw Error(
+        `Test signer or secret loader in production artifact: ${name}`,
+      );
     if (
       /\.map$/i.test(name) ||
       /sourceMappingURL\s*=|sourcesContent\s*:/i.test(body)
@@ -195,6 +220,22 @@ export function validateArtifacts(files) {
       throw Error(`Script CSP lacks self and inline hashes: ${name}`);
     if (directives.get("style-src") !== "'self' 'unsafe-inline'")
       throw Error(`Unexpected style-src: ${name}`);
+    // Astro hashes its own inline scripts, but explicitly inlined tool code
+    // must also match the served policy. A CSP source can look valid while the
+    // browser blocks the page's only interactive script.
+    for (const script of html.matchAll(
+      /<script\b([^>]*)>([\s\S]*?)<\/script>/gi,
+    )) {
+      const attributes = script[1];
+      if (
+        /\bsrc\s*=/i.test(attributes) ||
+        /\btype\s*=\s*["']application\/(?:ld\+json|json)["']/i.test(attributes)
+      )
+        continue;
+      const hash = `sha256-${createHash("sha256").update(script[2]).digest("base64")}`;
+      if (!(directives.get("script-src") || "").includes(`'${hash}'`))
+        throw Error(`Executable inline script CSP hash missing: ${name}`);
+    }
     const attribute = (tag, key) => {
       const match = tag.match(
         new RegExp(`\\b${key}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, "i"),
@@ -233,7 +274,10 @@ if (process.argv[1]?.endsWith("artifacts.mjs")) {
   try {
     const files = collectArtifacts();
     const result = validateArtifacts(files);
-    validateProjectVercelConfig(readFileSync("vercel.json", "utf8"), files.get("vercel.json"));
+    validateProjectVercelConfig(
+      readFileSync("vercel.json", "utf8"),
+      files.get("vercel.json"),
+    );
     console.log(
       `PASS static artifacts: ${result.files} files; ${result.html} HTML pages; ${result.externalExecutable} external scripts/styles; project-root Vercel CSP, SRI, telemetry, secret, source-map and mainnet endpoint guards`,
     );

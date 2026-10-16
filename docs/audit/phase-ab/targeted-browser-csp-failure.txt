@@ -1,0 +1,130 @@
+[WebServer] (node:37149) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:37189) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 4 tests using 1 worker
+
+(node:37246) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:37246) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/e2e/swap-cost.spec.ts:35:1 › manual CoW and Uniswap scenarios show embedded versus separate costs without network or wallet activity (5.4s)
+(node:37598) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:37598) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 tests/e2e/swap-cost.spec.ts:70:1 › unknown gas or approval and mismatched budgets prevent a fabricated ranking (5.4s)
+(node:37965) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:37965) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  3 tests/e2e/swap-cost.spec.ts:108:1 › actual downloaded JSON preserves exact integer fields and simulated status (30.1s)
+(node:39207) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:39207) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  4 tests/e2e/swap-cost.spec.ts:131:1 › mobile viewport and keyboard input remain usable offline (5.4s)
+
+
+  1) tests/e2e/swap-cost.spec.ts:35:1 › manual CoW and Uniswap scenarios show embedded versus separate costs without network or wallet activity
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoContainText[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: getByRole('region', { name: 'Scenario A result' })
+    Expected substring: [32m"Embedded in quote; not deducted twice"[39m
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toContainText" with timeout 5000ms[22m
+    [2m  - waiting for getByRole('region', { name: 'Scenario A result' })[22m
+
+
+      49 |   const A = page.getByRole("region", { name: "Scenario A result" });
+      50 |   const B = page.getByRole("region", { name: "Scenario B result" });
+    > 51 |   await expect(A).toContainText("Embedded in quote; not deducted twice");
+         |                   ^
+      52 |   await expect(A).toContainText("Estimated net output0.005 WETH");
+      53 |   await expect(B).toContainText("Wallet approval gas0.00005 ETH");
+      54 |   await expect(B).toContainText("Wallet swap gas0.00015 ETH");
+        at /home/corio/PIT/tests/e2e/swap-cost.spec.ts:51:19
+
+    Error Context: test-results/swap-cost-manual-CoW-and-U-299bc--network-or-wallet-activity/error-context.md
+
+  2) tests/e2e/swap-cost.spec.ts:70:1 › unknown gas or approval and mismatched budgets prevent a fabricated ranking
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoContainText[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: getByTestId('swap-cost-report')
+    Expected substring: [32m"NOT COMPARABLE — incomplete cost coverage"[39m
+    Received string:    [31m"     Quoted outputVenue feesExpected output before wallet gasWallet swap gasWallet approval gasTotal wallet-paid gasGas converted to buy tokenEstimated net outputMinimum receive under slippage assumptionNet minimum after gas scenarioGas impactPIT fee Slippage is protection, not a fee. Negative net output means assumed wallet gas exceeds buy-token output.    Quoted outputVenue feesExpected output before wallet gasWallet swap gasWallet approval gasTotal wallet-paid gasGas converted to buy tokenEstimated net outputMinimum receive under slippage assumptionNet minimum after gas scenarioGas impactPIT fee Slippage is protection, not a fee. Negative net output means assumed wallet gas exceeds buy-token output.    Comparison    This ranks only the two entered scenarios under supplied assumptions. It is not the cheapest available route, guaranteed best execution or a live market price. Download local JSON report  "[39m
+    Timeout: 5000ms
+
+    Call log:
+    [2m  - Expect "toContainText" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('swap-cost-report')[22m
+    [2m    9 × locator resolved to <div hidden="" role="status" data-report="" aria-live="polite" data-testid="swap-cost-report">…</div>[22m
+    [2m      - unexpected value "     Quoted outputVenue feesExpected output before wallet gasWallet swap gasWallet approval gasTotal wallet-paid gasGas converted to buy tokenEstimated net outputMinimum receive under slippage assumptionNet minimum after gas scenarioGas impactPIT fee Slippage is protection, not a fee. Negative net output means assumed wallet gas exceeds buy-token output.    Quoted outputVenue feesExpected output before wallet gasWallet swap gasWallet approval gasTotal wallet-paid gasGas converted to buy tokenEstimated net outputMinimum receive under slippage assumptionNet minimum after gas scenarioGas impactPIT fee Slippage is protection, not a fee. Negative net output means assumed wallet gas exceeds buy-token output.    Comparison    This ranks only the two entered scenarios under supplied assumptions. It is not the cheapest available route, guaranteed best execution or a live market price. Download local JSON report  "[22m
+
+
+      78 |     .getByRole("button", { name: "Calculate local cost comparison" })
+      79 |     .click();
+    > 80 |   await expect(page.getByTestId("swap-cost-report")).toContainText(
+         |                                                      ^
+      81 |     "NOT COMPARABLE — incomplete cost coverage",
+      82 |   );
+      83 |   await expect(
+        at /home/corio/PIT/tests/e2e/swap-cost.spec.ts:80:54
+
+    Error Context: test-results/swap-cost-unknown-gas-or-a-eadb4-revent-a-fabricated-ranking/error-context.md
+
+  3) tests/e2e/swap-cost.spec.ts:108:1 › actual downloaded JSON preserves exact integer fields and simulated status
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: page.waitForEvent: Test timeout of 30000ms exceeded.
+    =========================== logs ===========================
+    waiting for event "download"
+    ============================================================
+
+      115 |     .click();
+      116 |   const [download] = await Promise.all([
+    > 117 |     page.waitForEvent("download"),
+          |          ^
+      118 |     page.getByRole("button", { name: "Download local JSON report" }).click(),
+      119 |   ]);
+      120 |   expect(download.suggestedFilename()).toBe("pit-swap-cost-simulation.json");
+        at /home/corio/PIT/tests/e2e/swap-cost.spec.ts:117:10
+
+    Error Context: test-results/swap-cost-actual-downloade-87574-fields-and-simulated-status/error-context.md
+
+  4) tests/e2e/swap-cost.spec.ts:131:1 › mobile viewport and keyboard input remain usable offline ──
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('swap-cost-report')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('swap-cost-report')[22m
+    [2m    - waiting for navigation to finish...[22m
+
+
+      143 |     .focus();
+      144 |   await page.keyboard.press("Enter");
+    > 145 |   await expect(page.getByTestId("swap-cost-report")).toBeVisible();
+          |                                                      ^
+      146 |   expect(
+      147 |     await page.evaluate(
+      148 |       () => document.documentElement.scrollWidth > window.innerWidth,
+        at /home/corio/PIT/tests/e2e/swap-cost.spec.ts:145:54
+
+  4 failed
+    tests/e2e/swap-cost.spec.ts:35:1 › manual CoW and Uniswap scenarios show embedded versus separate costs without network or wallet activity
+    tests/e2e/swap-cost.spec.ts:70:1 › unknown gas or approval and mismatched budgets prevent a fabricated ranking
+    tests/e2e/swap-cost.spec.ts:108:1 › actual downloaded JSON preserves exact integer fields and simulated status
+    tests/e2e/swap-cost.spec.ts:131:1 › mobile viewport and keyboard input remain usable offline ───

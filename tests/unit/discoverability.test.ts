@@ -79,7 +79,8 @@ describe("registry-driven discoverability release gate", () => {
     ).toEqual({
       routes: TOOLS.length + 4,
       toolPages: TOOLS.length,
-      isolatedPages: 4,
+      isolatedPages:
+        TOOLS.filter((tool) => tool.executionMode === "local").length + 1,
     });
     expect(
       validateDiscoverabilityArtifacts(
@@ -91,7 +92,8 @@ describe("registry-driven discoverability release gate", () => {
     ).toEqual({
       routes: TOOLS.length + 4,
       toolPages: TOOLS.length,
-      isolatedPages: 4,
+      isolatedPages:
+        TOOLS.filter((tool) => tool.executionMode === "local").length + 1,
     });
   });
   it("rejects enabled indexing without exact versioned HTTPS approval", () => {

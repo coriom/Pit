@@ -110,6 +110,20 @@ export const TOOLS = [
     relatedToolIds: ["liquidation", "impermanent-loss"],
   },
   {
+    id: "swap-cost",
+    slug: "swap-cost",
+    path: "/tools/swap-cost/",
+    title: "Swap Cost Simulator",
+    description:
+      "Compare two manually entered swap outcomes after embedded venue fees, wallet gas, approvals and slippage assumptions.",
+    category: "Calculate",
+    executionMode: "local",
+    walletRequirement: "none",
+    networkRequirement: "none",
+    status: "available",
+    relatedToolIds: ["swap", "token-approvals"],
+  },
+  {
     id: "liquidation",
     slug: "liquidation",
     path: "/tools/liquidation/",

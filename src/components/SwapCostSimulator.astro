@@ -1,0 +1,126 @@
+---
+import { swapCostInlineScript } from "../../scripts/build-swap-cost-inline.mjs";
+import { SWAP_COST_DISCLAIMER } from "../lib/swap-cost";
+
+// Local tools must not load an Astro island or an external JS chunk. Bundle the
+// shared exact-integer engine and DOM adapter into one CSP-hashed inline script.
+const browserScript = swapCostInlineScript();
+
+const cowExample = {
+  sellToken: "USDC", buyToken: "WETH", sellDecimals: "6", buyDecimals: "18",
+  sellAmount: "10", quotedBuyAmount: "0.005", venue: "cow-like",
+  feeCoverage: "included", unembeddedVenueFeeBuyAmount: "", approvalRequired: "no",
+  swapGasUnits: "", approvalGasUnits: "", gasPriceGwei: "",
+  nativeGasToken: "ETH", nativeToBuyRate: "", slippageBps: "50",
+};
+const uniswapExample = {
+  ...cowExample, quotedBuyAmount: "0.0051", venue: "uniswap-like",
+  approvalRequired: "yes", swapGasUnits: "150000", approvalGasUnits: "50000",
+  gasPriceGwei: "1", nativeToBuyRate: "1",
+};
+const fields = [
+  { key: "sellToken", label: "Sell-token identifier", hint: "Manual label or address; identity is not verified." },
+  { key: "buyToken", label: "Buy-token identifier", hint: "" },
+  { key: "sellDecimals", label: "Sell-token decimals", hint: "" },
+  { key: "buyDecimals", label: "Buy-token decimals", hint: "" },
+  { key: "sellAmount", label: "Total sell-token budget", hint: "" },
+  { key: "quotedBuyAmount", label: "Quoted buy-token output", hint: "Enter your own assumed output; this is not a PIT quote." },
+  { key: "unembeddedVenueFeeBuyAmount", label: "Unembedded venue fee in buy-token units", hint: "Only when explicitly excluded from a CoW-like quote." },
+  { key: "swapGasUnits", label: "Wallet-paid swap gas units", hint: "Never use QuoterV2 internal gas as verified wallet gas." },
+  { key: "approvalGasUnits", label: "Wallet-paid approval gas units", hint: "" },
+  { key: "gasPriceGwei", label: "Gas price (gwei)", hint: "Required when wallet gas may be paid." },
+  { key: "nativeGasToken", label: "Native gas-token identifier", hint: "" },
+  { key: "nativeToBuyRate", label: "Buy tokens per 1 native gas token", hint: "Explicit manual rate; no market data is fetched." },
+  { key: "slippageBps", label: "Slippage tolerance (bps)", hint: "Protection bound, not a charged fee." },
+] as const;
+const results = [
+  ["quoted", "Quoted output"], ["venueFee", "Venue fees"],
+  ["expected", "Expected output before wallet gas"], ["swapGas", "Wallet swap gas"],
+  ["approvalGas", "Wallet approval gas"], ["totalGas", "Total wallet-paid gas"],
+  ["gasBuy", "Gas converted to buy token"], ["net", "Estimated net output"],
+  ["min", "Minimum receive under slippage assumption"],
+  ["netMin", "Net minimum after gas scenario"], ["gasImpact", "Gas impact"],
+  ["pitFee", "PIT fee"],
+] as const;
+---
+<section class="panel swap-cost-tool" aria-label="Swap Cost Simulator" data-swap-cost data-examples={JSON.stringify({ A: cowExample, B: uniswapExample })}>
+  <p class="notice">Entirely local · no wallet · no live quote · no transaction</p>
+  <p>{SWAP_COST_DISCLAIMER}</p>
+  <p class="muted">These manually entered token identifiers are not verified contracts. Use identical sell and buy identities, decimals and total sell budget before comparing. The linked Token Approval Inspector below checks only four reviewed Sepolia pairs. The linked Swap tool is a separate testnet execution interface.</p>
+  <div class="swap-cost-examples" aria-label="Illustrative examples">
+    <button type="button" data-example="normal">Load illustrative CoW and Uniswap example</button>
+    <button type="button" data-example="unknown">Illustrate unknown swap gas</button>
+  </div>
+  <form data-swap-cost-form novalidate>
+    <div class="swap-cost-grid">
+      {(["A", "B"] as const).map((name) => {
+        const example = name === "A" ? cowExample : uniswapExample;
+        return <fieldset class="swap-cost-scenario" data-scenario={name}>
+          <legend>Scenario {name}</legend>
+          <div class="swap-cost-fields">
+            {fields.slice(0, 6).map((field) => <label data-field={field.key}>
+              {field.label}
+              <input name={`${name}-${field.key}`} aria-label={`Scenario ${name} ${field.label}`} value={example[field.key]} inputmode={field.key.endsWith("Token") ? "text" : "decimal"} autocomplete="off" />
+              {field.hint && <small>{field.hint}</small>}
+            </label>)}
+            <label>Venue model
+              <select name={`${name}-venue`} aria-label={`Scenario ${name} Venue model`}>
+                <option value="cow-like" selected={example.venue === "cow-like"}>CoW-like solver</option>
+                <option value="uniswap-like" selected={example.venue === "uniswap-like"}>Uniswap-like pool</option>
+              </select>
+            </label>
+            <label>Protocol / network fee coverage in quoted output
+              <select name={`${name}-feeCoverage`} aria-label={`Scenario ${name} Protocol / network fee coverage in quoted output`}>
+                <option value="included" selected>Included in quote</option>
+                <option value="not-included">Not included — enter fee below</option>
+                <option value="unknown">Unknown</option>
+              </select>
+            </label>
+            <label data-field="unembeddedVenueFeeBuyAmount" hidden>Unembedded venue fee in buy-token units
+              <input name={`${name}-unembeddedVenueFeeBuyAmount`} aria-label={`Scenario ${name} Unembedded venue fee in buy-token units`} value="" inputmode="decimal" autocomplete="off" />
+            </label>
+            <label>ERC-20 approval required?
+              <select name={`${name}-approvalRequired`} aria-label={`Scenario ${name} ERC-20 approval required?`}>
+                <option value="yes" selected={example.approvalRequired === "yes"}>Yes</option>
+                <option value="no" selected={example.approvalRequired === "no"}>No</option>
+                <option value="unknown">Unknown</option>
+              </select>
+            </label>
+            {fields.slice(7).map((field) => <label data-field={field.key} hidden={name === "A" && ["swapGasUnits", "approvalGasUnits", "gasPriceGwei", "nativeToBuyRate"].includes(field.key)}>
+              {field.label}
+              <input name={`${name}-${field.key}`} aria-label={`Scenario ${name} ${field.label}`} value={example[field.key]} inputmode={field.key === "nativeGasToken" ? "text" : "decimal"} autocomplete="off" />
+              {field.hint && <small>{field.hint}</small>}
+            </label>)}
+          </div>
+        </fieldset>;
+      })}
+    </div>
+    <button class="primary" type="submit">Calculate local cost comparison</button>
+  </form>
+  <p role="alert" class="error" data-error hidden></p>
+  <div data-testid="swap-cost-report" data-report role="status" aria-live="polite" hidden>
+    <div class="swap-cost-grid">
+      {(["A", "B"] as const).map((name) => <section class="swap-cost-result" aria-label={`Scenario ${name} result`} data-result={name}>
+        <h3 data-result-heading></h3>
+        <p class="error" data-reasons hidden></p>
+        <dl>{results.map(([key, label]) => <div><dt>{label}</dt><dd data-value={key}></dd></div>)}</dl>
+        <p class="muted">Slippage is protection, not a fee. Negative net output means assumed wallet gas exceeds buy-token output.</p>
+      </section>)}
+    </div>
+    <div class="rule">
+      <h2>Comparison</h2>
+      <p><strong data-comparison-status></strong></p>
+      <p data-comparison-reasons hidden></p>
+      <p data-comparison-winner hidden></p>
+      <p class="muted">This ranks only the two entered scenarios under supplied assumptions. It is not the cheapest available route, guaranteed best execution or a live market price.</p>
+      <button type="button" data-download>Download local JSON report</button>
+    </div>
+  </div>
+  <div class="rule">
+    <h2>How the calculation works</h2>
+    <p>When venue fees are included, quoted output already reflects them. If a CoW-like quote explicitly excludes a known buy-token fee, that fee is deducted once. CoW-like settlement gas is not charged again to the wallet. Uniswap-like pool fees are treated as embedded, while swap and required approval gas are separate wallet costs.</p>
+    <p>Wallet gas = gas units × assumed gwei price. Buy-token gas cost = wallet gas in native units × your buy-token-per-native-token rate, rounded up to one buy-token base unit. Estimated net = output after any unembedded venue fee − converted wallet gas. Minimum receive applies the bps tolerance to pre-wallet-gas output; it is not a fee. No calculator value is an executable intent or verified future cost.</p>
+  </div>
+</section>
+
+<script is:inline set:html={browserScript}></script>

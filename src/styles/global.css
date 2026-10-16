@@ -254,6 +254,77 @@ h3 {
   margin: 9px 0;
   overflow-wrap: anywhere;
 }
+.swap-cost-tool {
+  min-width: 0;
+}
+.swap-cost-tool [hidden] {
+  display: none !important;
+}
+.swap-cost-tool a {
+  color: #d8f977;
+  text-decoration: underline;
+}
+.swap-cost-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 20px 0;
+}
+.swap-cost-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.swap-cost-scenario,
+.swap-cost-result {
+  min-width: 0;
+  border: 1px solid #33443a;
+  border-radius: 12px;
+  padding: 18px;
+}
+.swap-cost-scenario legend {
+  color: #d8f977;
+  font-weight: 700;
+  padding: 0 8px;
+}
+.swap-cost-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 14px;
+}
+.swap-cost-fields label {
+  min-width: 0;
+}
+.swap-cost-fields select {
+  display: block;
+  width: 100%;
+  margin-top: 7px;
+}
+.swap-cost-fields small {
+  display: block;
+  margin-top: 5px;
+}
+.swap-cost-result dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  border-top: 1px solid #304035;
+  padding: 8px 0;
+}
+.swap-cost-result dt {
+  color: #a8b8af;
+}
+.swap-cost-result dd {
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 850px) {
+  .swap-cost-grid,
+  .swap-cost-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 @media (max-width: 760px) {
   .grid {
     grid-template-columns: 1fr;

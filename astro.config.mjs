@@ -1,6 +1,7 @@
 import { defineConfig } from "astro/config";
 import react from "@astrojs/react";
 import tailwindcss from "@tailwindcss/vite";
+import { swapCostInlineHash } from "./scripts/build-swap-cost-inline.mjs";
 export default defineConfig({
   output: "static",
   devToolbar: { enabled: false },
@@ -16,6 +17,7 @@ export default defineConfig({
   },
   experimental: {
     csp: {
+      scriptDirective: { hashes: [swapCostInlineHash()] },
       styleDirective: { resources: ["'self'", "'unsafe-inline'"] },
       directives: [
         "connect-src 'self' https://api.cow.fi https://api.hyperliquid-testnet.xyz https://rpc.hyperliquid-testnet.xyz https://ethereum-sepolia-rpc.publicnode.com https://11155111.rpc.thirdweb.com",

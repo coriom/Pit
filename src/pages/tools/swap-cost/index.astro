@@ -1,0 +1,6 @@
+---
+import ToolLayout from "../../../components/ToolLayout.astro";
+import SwapCostSimulator from "../../../components/SwapCostSimulator.astro";
+import { toolById } from "../../../lib/tool-registry";
+---
+<ToolLayout tool={toolById("swap-cost")}><SwapCostSimulator /></ToolLayout>
