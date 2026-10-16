@@ -2,6 +2,8 @@
 
 These drafts are for the six browser-local calculators only. They require publisher, hosting and jurisdiction review before any public pilot. No notice route is included in the eight-page candidate until the missing facts are supplied and reviewed.
 
+The proposed `pit-prod` Vercel project is currently only a plan for protected Preview QA. The operator reports a Hobby account. Vercel's [Hobby fair-use rules](https://vercel.com/docs/limits/fair-use-guidelines) restrict it to non-commercial personal use; whether PIT's intended invited pilot qualifies requires operator/legal review before invitations. Free deployment protection does not resolve this usage limit. No project, Preview or public notice is created by this draft.
+
 ## Privacy notice draft
 
 PIT's read-only beta calculators work on information you enter in your browser. Portfolio CSV preview, calculations and JSON downloads occur locally. The candidate does not connect a wallet, request balances or prices, send calculation fields to PIT, or install application analytics. It does not write to PIT's trading/accounting IndexedDB stores. Do not enter sensitive personal data when trying illustrative examples.
