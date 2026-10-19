@@ -27,6 +27,13 @@ import {
 } from "./ai-tool-contracts";
 import type { TradeRiskResult } from "./trade-risk";
 import type { ExecutionMathResult } from "./execution-math";
+import {
+  portfolioRebalanceContract,
+  performanceDrawdownContract,
+  runAjTool,
+} from "./aj-tool-contracts";
+import type { RebalanceResult } from "./portfolio-rebalance";
+import type { PerformanceResult } from "./performance-drawdown";
 
 export const TOOL_CONTRACT_VERSION = 1 as const;
 export type ToolCapability =
@@ -83,6 +90,9 @@ export type ToolUnit = Readonly<
     }
   | { kind: "manual-native-wei"; decimals: 0; label: string }
   | { kind: "reward-risk-ratio"; decimals: 18 }
+  | { kind: "weight-bps"; decimals: 0 }
+  | { kind: "signed-manual-cash-flow"; decimals: 18; label: string }
+  | { kind: "normalized-performance-index"; decimals: 18 }
   | {
       kind: "manual-conversion-rate";
       decimals: number;
@@ -119,7 +129,9 @@ export type PureToolContract<I, O> = Readonly<{
     | "token-fee-converter"
     | "yield-growth"
     | "trade-risk"
-    | "execution-math";
+    | "execution-math"
+    | "portfolio-rebalance"
+    | "performance-drawdown";
   version: typeof TOOL_CONTRACT_VERSION;
   title: string;
   category: ToolCategory;
@@ -453,6 +465,8 @@ export const PURE_TOOL_CONTRACTS = [
   yieldGrowthContract,
   tradeRiskContract,
   executionMathContract,
+  portfolioRebalanceContract,
+  performanceDrawdownContract,
 ] as const;
 
 export function compatiblePorts(source: ToolPort, target: ToolPort): boolean {
@@ -472,9 +486,14 @@ export function compatiblePorts(source: ToolPort, target: ToolPort): boolean {
   if (source.unit.kind === "manual-conversion-rate") return false;
   if (source.unit.kind === "manual-money") return false;
   if (
-    ["manual-quote", "manual-price", "manual-native-wei"].includes(
-      source.unit.kind,
-    )
+    [
+      "manual-quote",
+      "manual-price",
+      "manual-native-wei",
+      "weight-bps",
+      "signed-manual-cash-flow",
+      "normalized-performance-index",
+    ].includes(source.unit.kind)
   )
     return false;
   if (
@@ -578,6 +597,16 @@ export function runPureTool(
   context?: ToolRunContext,
 ): ToolRunResult<ExecutionMathResult>;
 export function runPureTool(
+  id: "portfolio-rebalance",
+  value: unknown,
+  context?: ToolRunContext,
+): ToolRunResult<RebalanceResult>;
+export function runPureTool(
+  id: "performance-drawdown",
+  value: unknown,
+  context?: ToolRunContext,
+): ToolRunResult<PerformanceResult>;
+export function runPureTool(
   id: string,
   value: unknown,
   context?: ToolRunContext,
@@ -588,6 +617,8 @@ export function runPureTool(
   | YieldResult
   | TradeRiskResult
   | ExecutionMathResult
+  | RebalanceResult
+  | PerformanceResult
 >;
 export function runPureTool(
   id: string,
@@ -600,6 +631,8 @@ export function runPureTool(
   | YieldResult
   | TradeRiskResult
   | ExecutionMathResult
+  | RebalanceResult
+  | PerformanceResult
 > {
   if (id === "swap-cost") return run(swapCostContract, value, context);
   if (id === "portfolio-exposure")
@@ -608,6 +641,8 @@ export function runPureTool(
     return runAhTool(id, value);
   if (id === "trade-risk" || id === "execution-math")
     return runAiTool(id, value);
+  if (id === "portfolio-rebalance" || id === "performance-drawdown")
+    return runAjTool(id, value);
   return {
     status: "ERROR",
     error: {

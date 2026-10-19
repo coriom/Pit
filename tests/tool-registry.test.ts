@@ -59,6 +59,8 @@ describe("authoritative toolbox registry", () => {
       "execution-math",
       "bridge-cost",
       "portfolio-exposure",
+      "portfolio-rebalance",
+      "performance-drawdown",
       "liquidation",
       "impermanent-loss",
     ]);

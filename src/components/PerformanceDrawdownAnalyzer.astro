@@ -1,0 +1,39 @@
+---
+import { ajInlineScript } from "../../scripts/build-aj-inline.mjs";
+import "../styles/ah-tools.css";
+const script = ajInlineScript("performance");
+---
+<section class="panel ah-tool" data-aj-performance>
+  <p class="notice">Manual historical values · end-of-period cash flows · no price feed or wallet</p>
+  <p>Enter portfolio snapshots in date order. Deposits are positive; withdrawals are negative. Each external flow occurs at the <strong>end</strong> of its interval, immediately before the ending snapshot, and is already included in that value.</p>
+  <form data-aj-form novalidate>
+    <label>Analysis mode<select name="mode" data-mode>
+      <option value="performance">Performance & cash flows</option>
+      <option value="drawdown">Drawdown & recovery</option>
+    </select></label>
+    <label>Manual valuation currency<input name="currencyLabel" value="USD" maxlength="32" autocomplete="off" /></label>
+    <fieldset><legend>Chronological snapshots</legend>
+      <p>The first row is the opening value and must have zero flow. Add a valuation boundary for any intraperiod deposit or withdrawal; the end-of-period model cannot reconstruct unknown timing.</p>
+      <div data-rows>
+        <fieldset data-row><legend>Snapshot 1</legend><label>Date (YYYY-MM-DD)<input name="date" value="2026-01-01" autocomplete="off" /></label><label>Ending portfolio value<input name="endingValue" value="100" inputmode="decimal" autocomplete="off" /></label><label>External flow included at interval end<input name="externalFlow" value="0" inputmode="decimal" autocomplete="off" /></label></fieldset>
+        <fieldset data-row><legend>Snapshot 2</legend><label>Date (YYYY-MM-DD)<input name="date" value="2026-01-02" autocomplete="off" /></label><label>Ending portfolio value<input name="endingValue" value="160" inputmode="decimal" autocomplete="off" /></label><label>External flow included at interval end<input name="externalFlow" value="50" inputmode="decimal" autocomplete="off" /></label></fieldset>
+        <fieldset data-row><legend>Snapshot 3</legend><label>Date (YYYY-MM-DD)<input name="date" value="2026-01-03" autocomplete="off" /></label><label>Ending portfolio value<input name="endingValue" value="144" inputmode="decimal" autocomplete="off" /></label><label>External flow included at interval end<input name="externalFlow" value="0" inputmode="decimal" autocomplete="off" /></label></fieldset>
+      </div>
+      <button type="button" data-add>Add snapshot</button>
+      <button type="button" data-remove>Remove last snapshot</button>
+    </fieldset>
+    <button type="button" data-sample>Load illustrative example</button>
+    <button class="primary" type="submit">Analyze local series</button>
+  </form>
+  <p role="alert" data-error hidden></p>
+  <section data-result role="status" aria-live="polite" hidden>
+    <h2>Historical result</h2><p data-status></p><p data-primary></p>
+    <dl data-fields></dl>
+    <p data-recovery></p>
+    <details><summary>Flow-adjusted snapshot detail</summary><div data-detail></div></details>
+    <ul data-reasons></ul>
+    <button type="button" data-download>Download local JSON</button>
+  </section>
+  <div class="rule"><h2>Method and limits</h2><p>Period return compares value immediately before the stated end-of-period external flow with the preceding ending value. Chained time-weighted return differs from monetary profit and money-weighted IRR. Drawdowns use the flow-neutral normalized index, not raw balances. Missing valuation boundaries or a zero previous value make percentage performance incomplete. No financial, tax or investment advice.</p><p>For current manually priced holdings, use <a href="/tools/portfolio-exposure/">Portfolio Exposure</a>.</p></div>
+</section>
+<script is:inline set:html={script}></script>

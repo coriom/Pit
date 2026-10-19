@@ -1,0 +1,6 @@
+---
+import ToolLayout from "../../../components/ToolLayout.astro";
+import PortfolioRebalancePlanner from "../../../components/PortfolioRebalancePlanner.astro";
+import { toolById } from "../../../lib/tool-registry";
+---
+<ToolLayout tool={toolById("portfolio-rebalance")}><PortfolioRebalancePlanner /></ToolLayout>

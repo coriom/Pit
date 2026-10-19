@@ -1,0 +1,65 @@
+---
+import { ajInlineScript } from "../../scripts/build-aj-inline.mjs";
+import "../styles/ah-tools.css";
+const script = ajInlineScript("rebalance");
+---
+<section class="panel ah-tool" data-aj-rebalance>
+  <p class="notice">Manual allocation scenarios · included buckets only · no wallet or trading</p>
+  <p>Enter the values you want to model in one manual currency. PIT cannot tell whether these rows cover your full portfolio. Targets are hypothetical value allocations, not token orders.</p>
+  <form data-aj-form novalidate>
+    <label>Calculation mode
+      <select name="mode" data-mode>
+        <option value="target">Target rebalance</option>
+        <option value="contribution">Contribution-only</option>
+        <option value="shock">Portfolio shock</option>
+      </select>
+    </label>
+    <label>Manual valuation currency
+      <input name="currencyLabel" value="USD" maxlength="32" autocomplete="off" />
+    </label>
+    <fieldset><legend>Included buckets</legend>
+      <p>Values and labels are entered by you. A blank value is unknown, never zero. IDs distinguish local rows; labels do not establish asset identity.</p>
+      <div data-rows>
+        <fieldset data-row><legend>Bucket 1</legend>
+          <label>Local row ID<input name="id" value="a" autocomplete="off" /></label>
+          <label>Display label<input name="label" value="Asset A" autocomplete="off" /></label>
+          <label>Current value in manual currency<input name="currentValue" value="600" inputmode="decimal" autocomplete="off" /></label>
+          <label data-target>Target weight in whole bps<input name="targetBps" value="5000" inputmode="numeric" autocomplete="off" /></label>
+          <label data-shock hidden>Hypothetical shock in signed bps<input name="shockBps" value="-2000" inputmode="numeric" autocomplete="off" /></label>
+        </fieldset>
+        <fieldset data-row><legend>Bucket 2</legend>
+          <label>Local row ID<input name="id" value="b" autocomplete="off" /></label>
+          <label>Display label<input name="label" value="Asset B" autocomplete="off" /></label>
+          <label>Current value in manual currency<input name="currentValue" value="400" inputmode="decimal" autocomplete="off" /></label>
+          <label data-target>Target weight in whole bps<input name="targetBps" value="5000" inputmode="numeric" autocomplete="off" /></label>
+          <label data-shock hidden>Hypothetical shock in signed bps<input name="shockBps" value="1000" inputmode="numeric" autocomplete="off" /></label>
+        </fieldset>
+      </div>
+      <button type="button" data-add>Add bucket</button>
+      <button type="button" data-remove>Remove last bucket</button>
+    </fieldset>
+    <fieldset data-target-panel><legend>Ideal target assumptions</legend>
+      <p>Target weights must sum to exactly 10,000 bps. Ideal value changes conserve the included starting value before any estimated fees.</p>
+      <label>Optional estimated fee on gross traded notional (bps; blank means not estimated)
+        <input name="feeBps" value="0" inputmode="numeric" autocomplete="off" />
+      </label>
+    </fieldset>
+    <fieldset data-contribution-panel hidden><legend>Contribution-only assumption</legend>
+      <p>Only additional manual currency may be allocated. No bucket is sold.</p>
+      <label>New cash contribution<input name="contribution" value="200" inputmode="decimal" autocomplete="off" /></label>
+    </fieldset>
+    <div data-shock-panel hidden><p>Each shock is a manually chosen scenario, with no probability, forecast or automatic price feed.</p></div>
+    <button type="button" data-sample>Load illustrative example</button>
+    <button class="primary" type="submit">Calculate local scenario</button>
+  </form>
+  <p role="alert" data-error hidden></p>
+  <section data-result role="status" aria-live="polite" hidden>
+    <h2>Modeled result</h2><p data-status></p><p data-primary></p>
+    <dl data-fields></dl>
+    <details><summary>Bucket-by-bucket detail</summary><div data-detail></div></details>
+    <ul data-reasons></ul>
+    <button type="button" data-download>Download local JSON</button>
+  </section>
+  <div class="rule"><h2>Method and limits</h2><p>Whole-bps targets and exact 18-decimal manual currency values are apportioned at the smallest unit. Fee estimates remain separate from the fee-free target. This does not discover holdings, price tokens, guarantee allocations or recommend trades. A subset is not automatically your whole portfolio.</p><p>For manually priced chain-scoped holdings, use <a href="/tools/portfolio-exposure/">Portfolio Exposure</a>. For hypothetical transaction costs, use <a href="/tools/swap-cost/">Swap Cost Simulator</a>.</p></div>
+</section>
+<script is:inline set:html={script}></script>
