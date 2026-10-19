@@ -1,0 +1,6 @@
+---
+import ToolLayout from "../../../components/ToolLayout.astro";
+import StakingRewardsPlanner from "../../../components/StakingRewardsPlanner.astro";
+import { toolById } from "../../../lib/tool-registry";
+---
+<ToolLayout tool={toolById("staking-rewards")}><StakingRewardsPlanner /></ToolLayout>

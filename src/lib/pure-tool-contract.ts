@@ -34,6 +34,13 @@ import {
 } from "./aj-tool-contracts";
 import type { RebalanceResult } from "./portfolio-rebalance";
 import type { PerformanceResult } from "./performance-drawdown";
+import {
+  stakingRewardsContract,
+  vestingUnlocksContract,
+  runAkTool,
+} from "./ak-tool-contracts";
+import type { StakingResult } from "./staking-rewards";
+import type { VestingResult } from "./vesting-unlocks";
 
 export const TOOL_CONTRACT_VERSION = 1 as const;
 export type ToolCapability =
@@ -131,7 +138,9 @@ export type PureToolContract<I, O> = Readonly<{
     | "trade-risk"
     | "execution-math"
     | "portfolio-rebalance"
-    | "performance-drawdown";
+    | "performance-drawdown"
+    | "staking-rewards"
+    | "vesting-unlocks";
   version: typeof TOOL_CONTRACT_VERSION;
   title: string;
   category: ToolCategory;
@@ -467,6 +476,8 @@ export const PURE_TOOL_CONTRACTS = [
   executionMathContract,
   portfolioRebalanceContract,
   performanceDrawdownContract,
+  stakingRewardsContract,
+  vestingUnlocksContract,
 ] as const;
 
 export function compatiblePorts(source: ToolPort, target: ToolPort): boolean {
@@ -607,6 +618,16 @@ export function runPureTool(
   context?: ToolRunContext,
 ): ToolRunResult<PerformanceResult>;
 export function runPureTool(
+  id: "staking-rewards",
+  value: unknown,
+  context?: ToolRunContext,
+): ToolRunResult<StakingResult>;
+export function runPureTool(
+  id: "vesting-unlocks",
+  value: unknown,
+  context?: ToolRunContext,
+): ToolRunResult<VestingResult>;
+export function runPureTool(
   id: string,
   value: unknown,
   context?: ToolRunContext,
@@ -619,6 +640,8 @@ export function runPureTool(
   | ExecutionMathResult
   | RebalanceResult
   | PerformanceResult
+  | StakingResult
+  | VestingResult
 >;
 export function runPureTool(
   id: string,
@@ -633,6 +656,8 @@ export function runPureTool(
   | ExecutionMathResult
   | RebalanceResult
   | PerformanceResult
+  | StakingResult
+  | VestingResult
 > {
   if (id === "swap-cost") return run(swapCostContract, value, context);
   if (id === "portfolio-exposure")
@@ -643,6 +668,8 @@ export function runPureTool(
     return runAiTool(id, value);
   if (id === "portfolio-rebalance" || id === "performance-drawdown")
     return runAjTool(id, value);
+  if (id === "staking-rewards" || id === "vesting-unlocks")
+    return runAkTool(id, value);
   return {
     status: "ERROR",
     error: {

@@ -7,6 +7,7 @@ import { portfolioExposureInlineHash } from "./scripts/build-portfolio-exposure-
 import { ahInlineHash } from "./scripts/build-ah-inline.mjs";
 import { aiInlineHash } from "./scripts/build-ai-inline.mjs";
 import { ajInlineHash } from "./scripts/build-aj-inline.mjs";
+import { akInlineHash } from "./scripts/build-ak-inline.mjs";
 export default defineConfig({
   output: "static",
   devToolbar: { enabled: false },
@@ -33,6 +34,8 @@ export default defineConfig({
           aiInlineHash("execution"),
           ajInlineHash("rebalance"),
           ajInlineHash("performance"),
+          akInlineHash("staking"),
+          akInlineHash("vesting"),
         ],
       },
       styleDirective: { resources: ["'self'", "'unsafe-inline'"] },

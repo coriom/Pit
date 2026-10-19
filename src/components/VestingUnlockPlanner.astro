@@ -1,0 +1,40 @@
+---
+import { akInlineScript } from "../../scripts/build-ak-inline.mjs";
+import "../styles/ah-tools.css";
+const script = akInlineScript("vesting");
+---
+<section class="panel ah-tool" data-ak-vesting>
+  <p class="notice">Fictional manual token schedules · UTC dates · no token distributor or claim action</p>
+  <p>Choose a schedule and enter dates yourself. PIT calculates modeled unlocks only; it cannot verify a contract, token identity, custody or actual claimability.</p>
+  <form data-ak-form novalidate>
+    <label>Calculation mode<select name="mode" data-mode><option value="linear">Linear with optional cliff</option><option value="initial-linear">Initial unlock + linear</option><option value="tranches">Scheduled tranches</option></select></label>
+    <label>Manual token label<input name="tokenLabel" value="TOKEN" maxlength="32" autocomplete="off" /></label>
+    <label>Token decimals (0–36)<input name="decimals" value="6" inputmode="numeric" autocomplete="off" /></label>
+    <label>Total token allocation<input name="totalAllocation" value="10000" inputmode="decimal" autocomplete="off" /></label>
+    <label>Vesting start (UTC YYYY-MM-DD)<input name="startDate" value="2026-01-01" autocomplete="off" /></label>
+    <label>Vesting end (UTC YYYY-MM-DD)<input name="endDate" value="2027-01-01" autocomplete="off" /></label>
+    <label>Observation date (UTC YYYY-MM-DD)<input name="observationDate" value="2026-05-01" autocomplete="off" /></label>
+    <label>Optional previously received tokens<input name="previouslyReceived" value="0" inputmode="decimal" autocomplete="off" /></label>
+    <div data-linear><label>Optional cliff date (UTC YYYY-MM-DD)<input name="cliffDate" value="2026-04-01" autocomplete="off" /></label></div>
+    <div data-initial hidden><label>Initial unlock share (whole bps)<input name="initialBps" value="1000" inputmode="numeric" autocomplete="off" /></label></div>
+    <fieldset data-tranches hidden><legend>Scheduled tranche amounts</legend>
+      <p>Dates must be unique, chronological and within the stated start/end. Listed amounts must exactly equal the total allocation.</p>
+      <div data-rows>
+        <fieldset data-row><legend>Tranche 1</legend><label>Unlock date (UTC YYYY-MM-DD)<input name="date" value="2026-01-01" autocomplete="off" /></label><label>Unlock tokens<input name="amount" value="100" inputmode="decimal" autocomplete="off" /></label></fieldset>
+        <fieldset data-row><legend>Tranche 2</legend><label>Unlock date (UTC YYYY-MM-DD)<input name="date" value="2026-04-01" autocomplete="off" /></label><label>Unlock tokens<input name="amount" value="300" inputmode="decimal" autocomplete="off" /></label></fieldset>
+        <fieldset data-row><legend>Tranche 3</legend><label>Unlock date (UTC YYYY-MM-DD)<input name="date" value="2026-07-01" autocomplete="off" /></label><label>Unlock tokens<input name="amount" value="600" inputmode="decimal" autocomplete="off" /></label></fieldset>
+      </div><button type="button" data-add>Add tranche</button><button type="button" data-remove>Remove last tranche</button>
+    </fieldset>
+    <button type="button" data-sample>Load illustrative example</button>
+    <button class="primary" type="submit">Calculate local schedule</button>
+  </form>
+  <p role="alert" data-error hidden></p>
+  <section data-result role="status" aria-live="polite" hidden>
+    <h2>Modeled schedule result</h2><p data-status></p><p data-primary></p>
+    <dl data-fields></dl><p data-next></p>
+    <details><summary>Tranche breakdown</summary><div data-schedule></div></details>
+    <ul data-reasons></ul><button type="button" data-download>Download local JSON</button>
+  </section>
+  <div class="rule"><h2>Method and limits</h2><p>Linear accrual begins at start; an optional cliff holds accrued tokens until its date. Intermediate token amounts round down in base units, and the full allocation vests at end. Initial unlock is counted once. Tranche schedules must conserve the allocation. Vested-but-not-received is only a manual arithmetic difference, never verified on-chain claimability.</p><p>Use <a href="/tools/token-fee-converter/">Token &amp; Fee Converter</a> for raw units.</p></div>
+</section>
+<script is:inline set:html={script}></script>

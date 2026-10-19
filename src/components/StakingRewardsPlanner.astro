@@ -1,0 +1,59 @@
+---
+import { akInlineScript } from "../../scripts/build-ak-inline.mjs";
+import "../styles/ah-tools.css";
+const script = akInlineScript("staking");
+---
+<section class="panel ah-tool" data-ak-staking>
+  <p class="notice">Illustrative manual token economics · no protocol lookup, wallet or staking action</p>
+  <p>Choose one question. Enter token amounts and rates yourself; a matching token label never proves asset identity or a current reward rate.</p>
+  <form data-ak-form novalidate>
+    <label>Calculation mode<select name="mode" data-mode>
+      <option value="projection">Reward projection</option>
+      <option value="claim">Claim economics</option>
+      <option value="restake">Restaking &amp; penalty</option>
+    </select></label>
+    <label>Manual reward token label<input name="tokenLabel" value="TOKEN" maxlength="32" autocomplete="off" /></label>
+    <label>Token decimals (0–36)<input name="decimals" value="6" inputmode="numeric" autocomplete="off" /></label>
+    <fieldset data-panel="projection"><legend>What could a stated simple nominal APR accrue?</legend>
+      <label>Staked token amount<input name="stake" value="1000" inputmode="decimal" autocomplete="off" /></label>
+      <label>Gross nominal APR (whole bps)<input name="grossAprBps" value="1200" inputmode="numeric" autocomplete="off" /></label>
+      <label>Elapsed whole days, ACT/365 fixed<input name="elapsedDays" value="365" inputmode="numeric" autocomplete="off" /></label>
+      <label>Validator commission on gross rewards (bps)<input name="commissionBps" value="1000" inputmode="numeric" autocomplete="off" /></label>
+      <label>Additional fee coverage<select name="otherFeeCoverage"><option value="none">Explicitly none</option><option value="separate">Separately paid in same reward token</option><option value="unknown">Unknown</option></select></label>
+      <label>Additional same-token fee (when separate)<input name="otherFee" value="0" inputmode="decimal" autocomplete="off" /></label>
+    </fieldset>
+    <fieldset data-panel="claim" hidden><legend>Would modeled rewards cover a stated claim cost?</legend>
+      <label>Stated reward balance (before or after commission as selected)<input name="grossReward" value="10" inputmode="decimal" autocomplete="off" /></label>
+      <label>Commission rate (bps)<input name="commissionBps" value="1000" inputmode="numeric" autocomplete="off" /></label>
+      <label>Commission coverage<select name="commissionCoverage"><option value="not-deducted">Not yet deducted</option><option value="already-deducted">Already deducted</option><option value="unknown">Unknown</option></select></label>
+      <label>Claim fee amount<input name="claimFee" value="0.5" inputmode="decimal" autocomplete="off" /></label>
+      <label>Fee asset decimals<input name="feeDecimals" value="6" inputmode="numeric" autocomplete="off" /></label>
+      <label>Manual fee asset label<input name="feeAssetLabel" value="TOKEN" autocomplete="off" /></label>
+      <label>Fee/reward asset relation<select name="feeAssetRelation"><option value="same-confirmed">I explicitly confirm same asset</option><option value="different">Different assets</option><option value="unknown">Unknown</option></select></label>
+      <label data-conversion hidden>Reward tokens per one fee token (manual conversion)<input name="rewardPerFeeAsset" value="" inputmode="decimal" autocomplete="off" /></label>
+      <label>Claim-fee coverage<select name="feeCoverage"><option value="separate">Separate wallet-paid cost</option><option value="already-deducted">Already deducted from stated balance</option><option value="unknown">Unknown</option></select></label>
+      <label>Optional gross reward accrual per day<input name="dailyGrossAccrual" value="0.25" inputmode="decimal" autocomplete="off" /></label>
+    </fieldset>
+    <fieldset data-panel="restake" hidden><legend>How do restaking and an illustrative slash interact?</legend>
+      <label>Starting stake<input name="stake" value="1000" inputmode="decimal" autocomplete="off" /></label>
+      <label>Manually assumed nominal reward APR (bps)<input name="grossAprBps" value="1200" inputmode="numeric" autocomplete="off" /></label>
+      <label>Commission (bps)<input name="commissionBps" value="0" inputmode="numeric" autocomplete="off" /></label>
+      <label>Hypothetical principal slash (bps)<input name="slashBps" value="200" inputmode="numeric" autocomplete="off" /></label>
+      <label>Whole years<input name="years" value="1" inputmode="numeric" autocomplete="off" /></label>
+      <label>Restaking periods per year<input name="periodsPerYear" value="12" inputmode="numeric" autocomplete="off" /></label>
+      <label><input type="checkbox" name="sameAssetConfirmed" checked /> I confirm rewards and principal are the same asset</label>
+      <label>Cost coverage<select name="feeCoverage"><option value="none">Explicitly no restaking cost</option><option value="separate">Separate same-token cost each period</option><option value="already-reflected-in-apr">Already reflected in entered APR</option><option value="unknown">Unknown</option></select></label>
+      <label>Manual restaking cost per period<input name="restakeFeePerPeriod" value="0" inputmode="decimal" autocomplete="off" /></label>
+    </fieldset>
+    <button type="button" data-sample>Load illustrative example</button>
+    <button class="primary" type="submit">Calculate local scenario</button>
+  </form>
+  <p role="alert" data-error hidden></p>
+  <section data-result role="status" aria-live="polite" hidden>
+    <h2>Modeled result</h2><p data-status></p><p data-primary></p>
+    <dl data-fields></dl><ul data-reasons></ul>
+    <button type="button" data-download>Download local JSON</button>
+  </section>
+  <div class="rule"><h2>Method and limits</h2><p>Simple reward projection uses ACT/365 fixed and rounds token rewards down; commission rounds up. Restaking is a same-asset illustration, with each period's reward added after commission and separately declared costs. APR is not APY. A slash reduces modeled principal, not the chance of loss. Claim costs in another asset need an explicit conversion; a net result is not on-chain claimability or a transaction recommendation.</p><p>For generic APR/APY and contributions, use <a href="/tools/yield-growth/">Yield &amp; Growth Planner</a>. For raw token precision, use <a href="/tools/token-fee-converter/">Token &amp; Fee Converter</a>.</p></div>
+</section>
+<script is:inline set:html={script}></script>

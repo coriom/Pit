@@ -21,6 +21,8 @@ describe("Phase AI reviewed local contract boundary", () => {
       "execution-math",
       "portfolio-rebalance",
       "performance-drawdown",
+      "staking-rewards",
+      "vesting-unlocks",
     ]);
     for (const id of ["swap", "perps", "taxlot-export", "token-approvals"])
       expect(runPureTool(id, {}).status).toBe("ERROR");
