@@ -48,6 +48,13 @@ import {
 } from "./al-tool-contracts";
 import type { CollateralResult } from "./collateral-health";
 import type { BorrowingResult } from "./borrowing-cost";
+import {
+  ammPoolContract,
+  concentratedLiquidityContract,
+  runAmTool,
+} from "./am-tool-contracts";
+import type { AmmResult } from "./amm-pool-math";
+import type { ClResult } from "./concentrated-liquidity";
 
 export const TOOL_CONTRACT_VERSION = 1 as const;
 export type ToolCapability =
@@ -151,7 +158,9 @@ export type PureToolContract<I, O> = Readonly<{
     | "staking-rewards"
     | "vesting-unlocks"
     | "collateral-health"
-    | "borrowing-cost";
+    | "borrowing-cost"
+    | "amm-pool-math"
+    | "concentrated-liquidity";
   version: typeof TOOL_CONTRACT_VERSION;
   title: string;
   category: ToolCategory;
@@ -491,6 +500,8 @@ export const PURE_TOOL_CONTRACTS = [
   vestingUnlocksContract,
   collateralHealthContract,
   borrowingCostContract,
+  ammPoolContract,
+  concentratedLiquidityContract,
 ] as const;
 
 export function compatiblePorts(source: ToolPort, target: ToolPort): boolean {
@@ -653,6 +664,16 @@ export function runPureTool(
   context?: ToolRunContext,
 ): ToolRunResult<BorrowingResult>;
 export function runPureTool(
+  id: "amm-pool-math",
+  value: unknown,
+  context?: ToolRunContext,
+): ToolRunResult<AmmResult>;
+export function runPureTool(
+  id: "concentrated-liquidity",
+  value: unknown,
+  context?: ToolRunContext,
+): ToolRunResult<ClResult>;
+export function runPureTool(
   id: string,
   value: unknown,
   context?: ToolRunContext,
@@ -669,6 +690,8 @@ export function runPureTool(
   | VestingResult
   | CollateralResult
   | BorrowingResult
+  | AmmResult
+  | ClResult
 >;
 export function runPureTool(
   id: string,
@@ -687,6 +710,8 @@ export function runPureTool(
   | VestingResult
   | CollateralResult
   | BorrowingResult
+  | AmmResult
+  | ClResult
 > {
   if (id === "swap-cost") return run(swapCostContract, value, context);
   if (id === "portfolio-exposure")
@@ -701,6 +726,8 @@ export function runPureTool(
     return runAkTool(id, value);
   if (id === "collateral-health" || id === "borrowing-cost")
     return runAlTool(id, value);
+  if (id === "amm-pool-math" || id === "concentrated-liquidity")
+    return runAmTool(id, value);
   return {
     status: "ERROR",
     error: {

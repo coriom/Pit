@@ -1,0 +1,26 @@
+---
+import { amInlineScript } from "../../scripts/build-am-inline.mjs";
+import "../styles/ah-tools.css";
+const script = amInlineScript("amm");
+---
+<section class="panel ah-tool" data-am-amm>
+  <p class="notice">Illustrative constant-product mathematics · manual inputs only · no wallet or execution</p>
+  <p>How do reserves set a marginal price, affect a hypothetical swap, and split a proportional deposit? Token labels are only labels; no live pool or token identity is checked.</p>
+  <form novalidate>
+    <label>Calculation mode<select name="mode" data-mode><option value="reserves">Pool reserves &amp; price</option><option value="swap">Hypothetical swap</option><option value="liquidity">Proportional liquidity</option></select></label>
+    <label>Token0 manual label<input name="token0" value="TokenA" maxlength="32" autocomplete="off" /></label>
+    <label>Token1 manual label<input name="token1" value="TokenB" maxlength="32" autocomplete="off" /></label>
+    <label>Token0 decimals (0–36)<input name="decimals0" value="6" inputmode="numeric" autocomplete="off" /></label>
+    <label>Token1 decimals (0–36)<input name="decimals1" value="6" inputmode="numeric" autocomplete="off" /></label>
+    <label>Existing token0 reserve<input name="reserve0" value="100" inputmode="decimal" autocomplete="off" /></label>
+    <label>Existing token1 reserve<input name="reserve1" value="10000" inputmode="decimal" autocomplete="off" /></label>
+    <fieldset data-panel="reserves"><legend>What is the reserve-implied price?</legend><label>Optional manual token0 price in token1 for composition<input name="commonValuePrice" value="100" inputmode="decimal" autocomplete="off" /></label><p>Price orientation is token1 per one token0. Optional composition uses only your stated reference price.</p></fieldset>
+    <fieldset data-panel="swap" hidden><legend>How would an exact-input reserve swap move price?</legend><label>Direction<select name="direction"><option value="zero-to-one">Token0 → token1</option><option value="one-to-zero">Token1 → token0</option></select></label><label>Input amount in selected token<input name="amountIn" value="10" inputmode="decimal" autocomplete="off" /></label><label>Illustrative pool fee (whole bps)<input name="feeBps" value="0" inputmode="numeric" autocomplete="off" /></label><p>The pool retains the fee portion. Price impact excludes the fee; fee-inclusive deviation includes it. Gas and competing trades are omitted.</p></fieldset>
+    <fieldset data-panel="liquidity" hidden><legend>What fits a proportional deposit?</legend><label>Desired token0 contribution<input name="deposit0" value="10" inputmode="decimal" autocomplete="off" /></label><label>Available token1 contribution<input name="available1" value="1000" inputmode="decimal" autocomplete="off" /></label><label>Separate illustrative withdrawal share (whole bps)<input name="withdrawBps" value="1000" inputmode="numeric" autocomplete="off" /></label><p>Deposit and withdrawal are separate fee-free illustrations. Unused budgets and raw-unit rounding are shown.</p></fieldset>
+    <button type="button" data-sample>Load illustrative example</button><button class="primary" type="submit">Calculate local scenario</button>
+  </form>
+  <p role="alert" data-error hidden></p>
+  <section data-result role="status" aria-live="polite" hidden><h2>Modeled result</h2><p data-status></p><p data-primary></p><dl data-fields></dl><ul data-reasons></ul><button type="button" data-download>Download local JSON</button></section>
+  <div class="rule"><h2>Method and limits</h2><p>The constant-product illustration starts from raw reserves x and y. After an exact-input swap, fee-adjusted input sets output while the full input enters the reserve. Integer output rounds down. This is not a quote, a protocol-contract simulation, a gas estimate or PIT revenue.</p><p>For fee-inclusive transaction budgets, use <a href="/tools/swap-cost/">Swap Cost Simulator</a>. For the older 50/50 holding comparison, use <a href="/tools/impermanent-loss/">Impermanent Loss Calculator</a>.</p></div>
+</section>
+<script is:inline set:html={script}></script>

@@ -66,6 +66,8 @@ describe("authoritative toolbox registry", () => {
       "collateral-health",
       "borrowing-cost",
       "liquidation",
+      "amm-pool-math",
+      "concentrated-liquidity",
       "impermanent-loss",
     ]);
     for (const tool of TOOLS.filter(

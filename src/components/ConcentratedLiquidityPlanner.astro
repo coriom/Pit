@@ -1,0 +1,30 @@
+---
+import { amInlineScript } from "../../scripts/build-am-inline.mjs";
+import "../styles/ah-tools.css";
+const script = amInlineScript("concentrated");
+---
+<section class="panel ah-tool" data-am-cl>
+  <p class="notice">Illustrative continuous range mathematics · no live position, wallet or fee forecast</p>
+  <p>Enter a price range and initial token budgets. PIT derives the largest modeled liquidity L fitting those budgets, then compares its future composition with simply holding the same initially used tokens.</p>
+  <form novalidate>
+    <label>Calculation mode<select name="mode" data-mode><option value="composition">Position composition</option><option value="scenario">Price range scenario</option><option value="fees">LP fees &amp; break-even</option></select></label>
+    <label>Token0 manual label<input name="token0" value="TokenA" maxlength="32" autocomplete="off" /></label>
+    <label>Token1 manual label<input name="token1" value="TokenB" maxlength="32" autocomplete="off" /></label>
+    <label>Token0 decimals (0–36)<input name="decimals0" value="6" inputmode="numeric" autocomplete="off" /></label>
+    <label>Token1 decimals (0–36)<input name="decimals1" value="6" inputmode="numeric" autocomplete="off" /></label>
+    <label>Lower price (token1 per token0)<input name="lowerPrice" value="0.25" inputmode="decimal" autocomplete="off" /></label>
+    <label>Upper price (token1 per token0)<input name="upperPrice" value="4" inputmode="decimal" autocomplete="off" /></label>
+    <label>Initial price (token1 per token0)<input name="initialPrice" value="1" inputmode="decimal" autocomplete="off" /></label>
+    <label>Future scenario price (token1 per token0)<input name="futurePrice" value="4" inputmode="decimal" autocomplete="off" /></label>
+    <label>Initial token0 budget<input name="budget0" value="50" inputmode="decimal" autocomplete="off" /></label>
+    <label>Initial token1 budget<input name="budget1" value="50" inputmode="decimal" autocomplete="off" /></label>
+    <fieldset data-panel="composition"><legend>What tokens form the position?</legend><p>Below the lower bound the modeled position is token0 only; above the upper bound it is token1 only. Unused budget stays outside the position.</p></fieldset>
+    <fieldset data-panel="scenario" hidden><legend>What changes if price moves?</legend><p>HODL keeps the same initially used token quantities. LP minus HODL is a relative value difference, not an absolute portfolio return.</p></fieldset>
+    <fieldset data-panel="fees" hidden><legend>How many manually stated fees would cover divergence?</legend><label>Manually accrued token0 fees<input name="accruedFee0" value="0" inputmode="decimal" autocomplete="off" /></label><label>Manually accrued token1 fees<input name="accruedFee1" value="0" inputmode="decimal" autocomplete="off" /></label><label>Management/gas cost coverage<select name="costCoverage"><option value="known">Known, separately paid in token1</option><option value="unknown">Unknown; withhold net assessment</option></select></label><label>Known management cost in token1<input name="managementCost1" value="5" inputmode="decimal" autocomplete="off" /></label><p>Fees are user assumptions, never inferred from a pool tier. Unknown costs prevent a definitive net assessment.</p></fieldset>
+    <button type="button" data-sample>Load illustrative example</button><button class="primary" type="submit">Calculate local scenario</button>
+  </form>
+  <p role="alert" data-error hidden></p>
+  <section data-result role="status" aria-live="polite" hidden><h2>Modeled result</h2><p data-status></p><p data-region></p><p data-primary></p><dl data-fields></dl><ul data-reasons></ul><button type="button" data-download>Download local JSON</button></section>
+  <div class="rule"><h2>Method and limits</h2><p>The continuous model uses square-root price, floors L to fit budgets, and floors token outputs to raw units. It does not implement ticks, Q64.96, NFT positions, fee growth, gas, slippage or any real Uniswap operation. A modeled in-range price does not guarantee earned fees.</p><p>Compare with <a href="/tools/amm-pool-math/">AMM Pool Math Lab</a> for constant-product reserve mechanics and <a href="/tools/impermanent-loss/">Impermanent Loss Calculator</a> for a separate full-range 50/50 illustration.</p></div>
+</section>
+<script is:inline set:html={script}></script>
