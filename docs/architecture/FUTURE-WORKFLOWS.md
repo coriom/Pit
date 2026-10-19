@@ -1,0 +1,11 @@
+# Future local workflows: contract boundary only
+
+A later PIT release may let a person explicitly connect pure calculations in a small directed graph, for example **manual fee inputs → valuation → local report**. Phase AG implements no graph, visual editor, scheduler, backend, MCP server, user scripts, account system, persistence or automatic execution.
+
+A future port needs a stable name, value type, unit, raw precision, required/optional status, source tool ID and contract version, and where relevant exact chain/asset identity and observation timestamp. A connection must validate both port metadata and the actual value before any downstream calculation. Missing values propagate `INCOMPLETE`, not zero. Any exchange-rate conversion must be an explicit separate rule with named source/destination identities, timestamp, rational rate and rounding.
+
+The v1 `compatiblePorts` pure function is a narrow proof of the metadata boundary: a portfolio's 18-decimal manual-USD raw value can connect to another 18-decimal manual-USD raw input **at the same observation time and version**. The function does not transfer a value or calculate a report. A `WETH` manual-label raw result cannot connect to a chain-scoped WETH input; matching text and decimals do not establish asset identity. The tests also reject a different chain, token decimals, decimal-versus-raw type, changed timestamp and changed version.
+
+Only hardcoded, reviewed `local-pure` adapters can enter a future automatic workflow. The UI registry includes wallet reads, read-only network calls and transaction-capable entries, but their visibility does not make them executable via this contract. A future graph should be local-first, bounded in nodes and data size, acyclic, explicitly started by the user, and free of implicit network, storage or wallet side effects. Trading, signing, Taxlot writes, and external reads require separate product/security design and cannot be enabled by adding a registry entry.
+
+Contract migrations must be opt-in and tested against old reference examples. A workflow saved under one version must not be silently reinterpreted under another version. No persisted workflow format is defined in Phase AG.

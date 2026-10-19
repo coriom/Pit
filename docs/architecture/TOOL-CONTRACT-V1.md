@@ -1,0 +1,24 @@
+# PIT pure-local tool contract v1
+
+Phase AG adds an **opt-in calculation boundary**, not a replacement for the toolbox registry or an execution API. `src/lib/tool-registry.ts` remains the source of user-facing IDs, titles, categories, routes and access labels. `src/lib/pure-tool-contract.ts` exposes only two reviewed IDs: `swap-cost` and `portfolio-exposure`. The contract metadata derives its title and category from that registry. Presence in `TOOLS` never grants composition eligibility.
+
+Each `PureToolContract<I,O>` has a stable ID, version `1`, capability `local-pure`, typed input/output, runtime input and output checks, assumptions, limitations, explicit input/output ports, and a deterministic `calculate(input, context)` entry point. `runPureTool` validates an unknown input before calling the existing engine and returns `COMPLETE`, `INCOMPLETE`, or structured `ERROR`. It cannot dispatch to CoW, Uniswap, Hyperliquid, Taxlot, wallet or external-read tools. The other capability names (`external-read`, `wallet-read`, `transaction-execution`) exist for classification only; they have no runner here.
+
+Error codes are `INVALID_INPUT`, `INCOMPLETE_INPUTS`, `INCOMPATIBLE_UNITS`, `UNAVAILABLE_DATA`, `UNSUPPORTED_CALCULATION`, and `INTERNAL_FAILURE`. V1 currently emits invalid/incomplete/unsupported/internal cases; the remaining codes are reserved for a future explicit connection or data boundary. Incomplete economic coverage is a successful *incomplete result*, never a zero-filled complete result. Unknown internal exceptions return a fixed message so untrusted values are not echoed.
+
+## Values and units
+
+- Token inputs remain the engines' exact human-readable decimal strings; raw integer outputs are base-unit **decimal strings**, never JSON BigInt or JavaScript floats. Token precision is carried as `decimals` (0–36 per the existing engines). Manual token labels are display identifiers, not verified chain-scoped identities.
+- A chain-scoped token identity needs chain ID, native/ERC-20 type and ERC-20 address where applicable. Native ETH, WETH, and a same-ticker token on another chain are distinct. V1 will not connect two manual-label token ports, even if their text matches.
+- Portfolio USD is `usd-manual`, 18 decimal raw units. It is a manually supplied valuation, not a live/verified market price. Portfolio time enters through `context.observationTimeIso`; there is no implicit clock read in the adapter. Output records the resolved observation timestamp.
+- `wei`, gas-unit counts, days and `basis-points` have integer precision 0; human-readable gwei inputs allow up to 9 fractional digits. One ETH is 10^18 wei, one gwei is 10^9 wei, and 10,000 basis points is 100%. These are **different units**. A manually entered native-to-buy-token rate has its own conversion-rate unit and cannot be connected automatically. Conversions need an explicit rule and rounding decision. APR and APY also remain distinct future units.
+- The swap engine floors its slippage minimum, ceilings converted wallet gas, and never deducts included venue fees again. The portfolio engine rounds USD raw values and PPM weights half up. The adapters do not change these rules, numeric inputs, or result fields.
+- `compatiblePorts` currently accepts matching value type, unit kind/precision, contract version and observation time; chain-scoped token ports additionally require the exact chain/type/address. It rejects unknown units, manual-label tokens, timestamps that differ and cross-version connections. It performs no value conversion.
+
+The output checks validate the critical economic raw fields, status, shape and zero PIT fee where applicable. They are a defensive boundary around trusted existing engines, not a replacement for their domain validation or a general JSON Schema verifier. Future tools should add appropriate full output checks when data originates outside the reviewed engine.
+
+## Versioning and composition safety
+
+Version 1 is immutable in meaning. A breaking input, output, unit or rounding change needs a new contract version and an explicit migration function with golden-reference tests; mere numeric version equality does not migrate values. Tool IDs remain stable across versions unless the product itself changes. No workflow may infer compatibility from a field name, ticker, decimal count, quote age, or display formatting. An explicit contextual conversion must name both identities, rate, timestamp and rounding rule.
+
+V1 deliberately has no generic `run(anyContract)` interface, dynamic module loading, graph, scheduler, filesystem access or browser storage access. Pure adapters import only their existing calculation engines and metadata. They do not depend on Astro, React, DOM, network APIs or wallet providers. The existing browser pages continue to call their established engines; this pilot does not change their economics or behavior.
