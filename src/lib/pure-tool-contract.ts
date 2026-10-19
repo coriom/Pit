@@ -20,6 +20,13 @@ import {
 } from "./ah-tool-contracts";
 import type { ConverterResult } from "./token-fee-converter";
 import type { YieldResult } from "./yield-growth";
+import {
+  tradeRiskContract,
+  executionMathContract,
+  runAiTool,
+} from "./ai-tool-contracts";
+import type { TradeRiskResult } from "./trade-risk";
+import type { ExecutionMathResult } from "./execution-math";
 
 export const TOOL_CONTRACT_VERSION = 1 as const;
 export type ToolCapability =
@@ -67,6 +74,15 @@ export type ToolUnit = Readonly<
   | { kind: "simple-annual-percent-input"; decimals: 16 }
   | { kind: "loss-percent-input"; decimals: 16 }
   | { kind: "manual-money"; decimals: 18; label: string }
+  | { kind: "manual-quote"; decimals: number; label: string }
+  | {
+      kind: "manual-price";
+      decimals: 18;
+      baseLabel: string;
+      quoteLabel: string;
+    }
+  | { kind: "manual-native-wei"; decimals: 0; label: string }
+  | { kind: "reward-risk-ratio"; decimals: 18 }
   | {
       kind: "manual-conversion-rate";
       decimals: number;
@@ -98,7 +114,12 @@ export type ToolRunResult<O> =
 
 export type PureToolContract<I, O> = Readonly<{
   id:
-    "swap-cost" | "portfolio-exposure" | "token-fee-converter" | "yield-growth";
+    | "swap-cost"
+    | "portfolio-exposure"
+    | "token-fee-converter"
+    | "yield-growth"
+    | "trade-risk"
+    | "execution-math";
   version: typeof TOOL_CONTRACT_VERSION;
   title: string;
   category: ToolCategory;
@@ -430,6 +451,8 @@ export const PURE_TOOL_CONTRACTS = [
   portfolioExposureContract,
   tokenFeeContract,
   yieldGrowthContract,
+  tradeRiskContract,
+  executionMathContract,
 ] as const;
 
 export function compatiblePorts(source: ToolPort, target: ToolPort): boolean {
@@ -448,6 +471,12 @@ export function compatiblePorts(source: ToolPort, target: ToolPort): boolean {
   if (source.unit.kind === "timestamp-iso") return true;
   if (source.unit.kind === "manual-conversion-rate") return false;
   if (source.unit.kind === "manual-money") return false;
+  if (
+    ["manual-quote", "manual-price", "manual-native-wei"].includes(
+      source.unit.kind,
+    )
+  )
+    return false;
   if (
     target.unit.kind === "timestamp-iso" ||
     source.unit.decimals !== target.unit.decimals
@@ -539,24 +568,46 @@ export function runPureTool(
   context?: ToolRunContext,
 ): ToolRunResult<YieldResult>;
 export function runPureTool(
+  id: "trade-risk",
+  value: unknown,
+  context?: ToolRunContext,
+): ToolRunResult<TradeRiskResult>;
+export function runPureTool(
+  id: "execution-math",
+  value: unknown,
+  context?: ToolRunContext,
+): ToolRunResult<ExecutionMathResult>;
+export function runPureTool(
   id: string,
   value: unknown,
   context?: ToolRunContext,
 ): ToolRunResult<
-  SwapCostResult | PortfolioResult | ConverterResult | YieldResult
+  | SwapCostResult
+  | PortfolioResult
+  | ConverterResult
+  | YieldResult
+  | TradeRiskResult
+  | ExecutionMathResult
 >;
 export function runPureTool(
   id: string,
   value: unknown,
   context: ToolRunContext = {},
 ): ToolRunResult<
-  SwapCostResult | PortfolioResult | ConverterResult | YieldResult
+  | SwapCostResult
+  | PortfolioResult
+  | ConverterResult
+  | YieldResult
+  | TradeRiskResult
+  | ExecutionMathResult
 > {
   if (id === "swap-cost") return run(swapCostContract, value, context);
   if (id === "portfolio-exposure")
     return run(portfolioExposureContract, value, context);
   if (id === "token-fee-converter" || id === "yield-growth")
     return runAhTool(id, value);
+  if (id === "trade-risk" || id === "execution-math")
+    return runAiTool(id, value);
   return {
     status: "ERROR",
     error: {

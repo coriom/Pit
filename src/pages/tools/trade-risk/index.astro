@@ -1,0 +1,6 @@
+---
+import ToolLayout from "../../../components/ToolLayout.astro";
+import TradeRiskPlanner from "../../../components/TradeRiskPlanner.astro";
+import { toolById } from "../../../lib/tool-registry";
+---
+<ToolLayout tool={toolById("trade-risk")}><TradeRiskPlanner /></ToolLayout>

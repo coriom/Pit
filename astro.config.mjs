@@ -5,6 +5,7 @@ import { swapCostInlineHash } from "./scripts/build-swap-cost-inline.mjs";
 import { bridgeCostInlineHash } from "./scripts/build-bridge-cost-inline.mjs";
 import { portfolioExposureInlineHash } from "./scripts/build-portfolio-exposure-inline.mjs";
 import { ahInlineHash } from "./scripts/build-ah-inline.mjs";
+import { aiInlineHash } from "./scripts/build-ai-inline.mjs";
 export default defineConfig({
   output: "static",
   devToolbar: { enabled: false },
@@ -27,6 +28,8 @@ export default defineConfig({
           portfolioExposureInlineHash(),
           ahInlineHash("converter"),
           ahInlineHash("yield"),
+          aiInlineHash("trade"),
+          aiInlineHash("execution"),
         ],
       },
       styleDirective: { resources: ["'self'", "'unsafe-inline'"] },

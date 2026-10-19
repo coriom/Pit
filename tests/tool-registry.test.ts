@@ -55,6 +55,8 @@ describe("authoritative toolbox registry", () => {
       "swap-cost",
       "token-fee-converter",
       "yield-growth",
+      "trade-risk",
+      "execution-math",
       "bridge-cost",
       "portfolio-exposure",
       "liquidation",

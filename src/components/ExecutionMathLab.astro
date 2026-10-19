@@ -1,0 +1,45 @@
+---
+import { aiInlineScript } from "../../scripts/build-ai-inline.mjs";
+import "../styles/ah-tools.css";
+const script = aiInlineScript("execution");
+---
+<section class="panel ah-tool" data-ai-execution>
+  <p class="notice">Manual execution mathematics · no live quotes, wallet or RPC</p>
+  <p>Choose one mode. These are hypothetical prices and gas assumptions, not an executable route or verified estimate.</p>
+  <form data-ai-form novalidate>
+    <label>Calculation mode<select data-mode-select name="mode"><option value="spread">Spread & price deviation</option><option value="slippage">Slippage bounds</option><option value="gas">Gas budget</option></select></label>
+    <fieldset data-panel="spread"><legend>Spread & price deviation</legend>
+      <p>Spread is relative to the bid/ask midpoint; execution deviation uses the entered reference price as its denominator. Positive deviation is above reference; negative is below.</p>
+      <label>Manual quote unit label<input name="quoteLabel" value="USD" autocomplete="off" /></label>
+      <label>Quote unit decimals<input name="quoteDecimals" value="2" inputmode="numeric" autocomplete="off" /></label>
+      <label>Bid price<input name="bid" value="99" inputmode="decimal" autocomplete="off" /></label>
+      <label>Ask price<input name="ask" value="101" inputmode="decimal" autocomplete="off" /></label>
+      <label>Reference price<input name="referencePrice" value="100" inputmode="decimal" autocomplete="off" /></label>
+      <label>Observed execution price<input name="executionPrice" value="101" inputmode="decimal" autocomplete="off" /></label>
+    </fieldset>
+    <fieldset data-panel="slippage" hidden><legend>Slippage bounds</legend>
+      <p>Apply a tolerance to an illustrative token amount. Minimum receive is floored; maximum spend is ceiled to base units.</p>
+      <label>Manual token label<input name="tokenLabel" value="USDC" autocomplete="off" /></label>
+      <label>Token decimals<input name="tokenDecimals" value="6" inputmode="numeric" autocomplete="off" /></label>
+      <label>Transaction direction<select name="direction"><option value="exact-input">Exact input: minimum output</option><option value="exact-output">Exact output: maximum input</option></select></label>
+      <label>Expected token amount<input name="expectedAmount" value="100" inputmode="decimal" autocomplete="off" /></label>
+      <label>Slippage tolerance (bps)<input name="toleranceBps" value="50" inputmode="numeric" autocomplete="off" /></label>
+    </fieldset>
+    <fieldset data-panel="gas" hidden><legend>Gas budget</legend>
+      <p>Count wallet-paid transaction gas once. Extra L2 data or other fees must be marked unknown until supplied elsewhere.</p>
+      <label>Manual native gas token label<input name="nativeLabel" value="ETH" autocomplete="off" /></label>
+      <label>Transaction gas units<input name="transactionGasUnits" value="21000" inputmode="numeric" autocomplete="off" /></label>
+      <label>Approval required?<select name="approvalRequired"><option value="no">No</option><option value="yes">Yes</option><option value="unknown">Unknown</option></select></label>
+      <label data-approval-units hidden>Approval gas units (only if required)<input name="approvalGasUnits" value="" inputmode="numeric" autocomplete="off" /></label>
+      <label>Gas price (gwei per gas)<input name="gasPriceGwei" value="20" inputmode="decimal" autocomplete="off" /></label>
+      <label>Native-token gas budget<input name="budgetNative" value="0.001" inputmode="decimal" autocomplete="off" /></label>
+      <label>Optional notional in same native unit<input name="notionalNative" value="" inputmode="decimal" autocomplete="off" /></label>
+      <label>Cost coverage<select name="coverage"><option value="complete">Only modeled EVM gas applies</option><option value="unknown-extra">Other applicable fee may be unknown</option></select></label>
+    </fieldset>
+    <button type="button" data-sample>Load illustrative example</button><button class="primary" type="submit">Calculate local scenario</button>
+  </form>
+  <p role="alert" data-error hidden></p>
+  <section data-result role="status" aria-live="polite" hidden><h2>Modeled result</h2><p data-status></p><dl data-fields></dl><ul data-reasons></ul><button type="button" data-download>Download local JSON</button></section>
+  <div class="rule"><h2>Method and limitations</h2><p>Spread, price impact and slippage are distinct. Gas estimates exclude any component you have not entered; they do not assume a chain, live ETH price, successful transaction or final settlement. QuoterV2 gas is not a verified wallet-paid estimate.</p></div>
+</section>
+<script is:inline set:html={script}></script>

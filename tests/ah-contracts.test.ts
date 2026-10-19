@@ -6,12 +6,14 @@ import {
 } from "../src/lib/pure-tool-contract";
 
 describe("Phase AH closed pure-local composition boundary", () => {
-  it("adds exactly two reviewed tools and keeps execution IDs rejected", () => {
+  it("retains the reviewed local allowlist and keeps execution IDs rejected", () => {
     expect(PURE_TOOL_CONTRACTS.map((item) => item.id)).toEqual([
       "swap-cost",
       "portfolio-exposure",
       "token-fee-converter",
       "yield-growth",
+      "trade-risk",
+      "execution-math",
     ]);
     for (const id of ["swap", "perps", "taxlot-export", "token-approvals"])
       expect(runPureTool(id, {}).status).toBe("ERROR");

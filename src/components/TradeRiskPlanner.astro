@@ -1,0 +1,57 @@
+---
+import { aiInlineScript } from "../../scripts/build-ai-inline.mjs";
+import "../styles/ah-tools.css";
+const script = aiInlineScript("trade");
+---
+<section class="panel ah-tool" data-ai-trade>
+  <p class="notice">Long-only spot arithmetic · manually entered data · no wallet or order</p>
+  <p>Choose one question. Prices and all fees must use the same manually named quote unit. A planned stop is not a guaranteed execution price or maximum real-world loss.</p>
+  <form data-ai-form novalidate>
+    <label>Calculation mode<select data-mode-select name="mode">
+      <option value="average">Average entry</option><option value="risk">Position risk</option><option value="reward">Risk / reward</option>
+    </select></label>
+    <fieldset data-panel="average"><legend>Average entry</legend>
+      <p>Combine up to ten purchase fills; blank quote-fee fields mean unknown, not zero.</p>
+      <div data-fills>
+        <fieldset data-fill><legend>Fill 1</legend><label>Quantity<input name="quantity" value="0.1" inputmode="decimal" autocomplete="off" /></label><label>Purchase price (quote/base)<input name="price" value="2000" inputmode="decimal" autocomplete="off" /></label><label>Acquisition fee (quote units; enter 0 if none)<input name="feeQuote" value="1" inputmode="decimal" autocomplete="off" /></label></fieldset>
+        <fieldset data-fill><legend>Fill 2</legend><label>Quantity<input name="quantity" value="0.2" inputmode="decimal" autocomplete="off" /></label><label>Purchase price (quote/base)<input name="price" value="2500" inputmode="decimal" autocomplete="off" /></label><label>Acquisition fee (quote units; enter 0 if none)<input name="feeQuote" value="2" inputmode="decimal" autocomplete="off" /></label></fieldset>
+      </div>
+      <button type="button" data-add-fill>Add purchase fill</button><button type="button" data-remove-fill>Remove last fill</button>
+      <label>Exit fee (basis points; enter 0 if none)<input name="exitFeeBps" value="50" inputmode="numeric" autocomplete="off" /></label>
+      <label>Fixed exit fee (quote units; enter 0 if none)<input name="exitFixedFeeQuote" value="1" inputmode="decimal" autocomplete="off" /></label>
+    </fieldset>
+    <fieldset data-panel="risk" hidden><legend>Position risk</legend>
+      <p>Size a long-only spot position under a hypothetical stop and a modeled loss budget.</p>
+      <label>Entry price (quote/base)<input name="entryPrice" value="2000" inputmode="decimal" autocomplete="off" /></label>
+      <label>Planned stop price (quote/base)<input name="stopPrice" value="1900" inputmode="decimal" autocomplete="off" /></label>
+      <label>Current planned quantity (base units)<input name="quantity" value="1" inputmode="decimal" autocomplete="off" /></label>
+      <label>Modeled loss budget (quote units)<input name="lossBudgetQuote" value="100" inputmode="decimal" autocomplete="off" /></label>
+    </fieldset>
+    <fieldset data-panel="reward" hidden><legend>Risk / reward</legend>
+      <p>Compare a hypothetical target payoff with the modeled stop loss, after declared fees.</p>
+      <label>Entry price (quote/base)<input name="entryPrice" value="100" inputmode="decimal" autocomplete="off" /></label>
+      <label>Planned stop price (quote/base)<input name="stopPrice" value="95" inputmode="decimal" autocomplete="off" /></label>
+      <label>Planned target price (quote/base)<input name="targetPrice" value="110" inputmode="decimal" autocomplete="off" /></label>
+      <label>Planned quantity (base units)<input name="quantity" value="1" inputmode="decimal" autocomplete="off" /></label>
+    </fieldset>
+    <fieldset data-shared><legend>Units and modeled fees</legend>
+      <label>Manual base asset label<input name="baseLabel" value="ETH" autocomplete="off" /></label>
+      <label>Base quantity decimals<input name="baseDecimals" value="18" inputmode="numeric" autocomplete="off" /></label>
+      <label>Manual quote unit label<input name="quoteLabel" value="USDC" autocomplete="off" /></label>
+      <label>Quote unit decimals<input name="quoteDecimals" value="6" inputmode="numeric" autocomplete="off" /></label>
+      <div data-risk-fees hidden>
+        <p>All fees are in the declared quote unit. Enter 0 explicitly if none; a blank fee is incomplete coverage.</p>
+        <label>Entry fee (bps)<input name="entryFeeBps" value="0" inputmode="numeric" autocomplete="off" /></label>
+        <label>Exit fee (bps)<input name="exitFeeBps" value="0" inputmode="numeric" autocomplete="off" /></label>
+        <label>Fixed entry fee (quote units)<input name="entryFixedFeeQuote" value="0" inputmode="decimal" autocomplete="off" /></label>
+        <label>Fixed exit fee (quote units)<input name="exitFixedFeeQuote" value="0" inputmode="decimal" autocomplete="off" /></label>
+      </div>
+    </fieldset>
+    <button type="button" data-sample>Load illustrative example</button>
+    <button class="primary" type="submit">Calculate local scenario</button>
+  </form>
+  <p role="alert" data-error hidden></p>
+  <section data-result role="status" aria-live="polite" hidden><h2>Modeled result</h2><p data-status></p><dl data-fields></dl><ul data-reasons></ul><button type="button" data-download>Download local JSON</button></section>
+  <div class="rule"><h2>Method and limitations</h2><p>This is a planning model, not Taxlot cost basis or a trade recommendation. Quantity and prices are manual; tickers do not verify assets. The stop or target may not execute at the entered price. Gaps, slippage, other costs and taxes can make real losses larger.</p></div>
+</section>
+<script is:inline set:html={script}></script>
