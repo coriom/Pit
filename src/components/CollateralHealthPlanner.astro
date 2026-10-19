@@ -1,0 +1,28 @@
+---
+import { alInlineScript } from "../../scripts/build-al-inline.mjs";
+import "../styles/ah-tools.css";
+const script = alInlineScript("collateral");
+---
+<section class="panel ah-tool" data-al-collateral>
+  <p class="notice">Illustrative single-position lending mathematics · no oracle, wallet or borrow action</p>
+  <p>Enter one collateral value and one debt value in the same manually named currency. Maximum LTV limits borrowing; liquidation threshold defines the modeled health factor. Neither is a live protocol rule.</p>
+  <form data-al-form novalidate>
+    <label>Calculation mode<select name="mode" data-mode><option value="health">Health &amp; borrow capacity</option><option value="adjust">Repay, add or withdraw</option><option value="shock">Collateral shock &amp; buffer</option></select></label>
+    <label>Manual quote currency label<input name="currency" value="USDmanual" maxlength="32" autocomplete="off" /></label>
+    <label>Quote currency decimals (0–18)<input name="decimals" value="2" inputmode="numeric" autocomplete="off" /></label>
+    <label>Current collateral value<input name="collateral" value="2000" inputmode="decimal" autocomplete="off" /></label>
+    <label>Current debt value<input name="debt" value="1000" inputmode="decimal" autocomplete="off" /></label>
+    <label>Maximum origination LTV (whole bps)<input name="maxLtvBps" value="7500" inputmode="numeric" autocomplete="off" /></label>
+    <label>Liquidation threshold (whole bps)<input name="liquidationThresholdBps" value="8000" inputmode="numeric" autocomplete="off" /></label>
+    <label>Minimum target health factor<input name="targetHealthFactor" value="1.3" inputmode="decimal" autocomplete="off" /></label>
+    <fieldset data-panel="health"><legend>What theoretical headroom remains?</legend><p>Headroom obeys both the maximum LTV and your target health factor. Existing breaches are shown separately.</p></fieldset>
+    <fieldset data-panel="adjust" hidden><legend>What value-only change meets both constraints?</legend><p>Required repayment and collateral addition round up. Safe withdrawal rounds down. Transaction costs are not modeled.</p></fieldset>
+    <fieldset data-panel="shock" hidden><legend>How would fixed-debt collateral loss change the buffer?</legend><label>Hypothetical collateral-value shock (signed whole bps, -10000 to +10000)<input name="collateralShockBps" value="-4000" inputmode="numeric" autocomplete="off" /></label><p>Debt value and risk thresholds are held fixed. This is not a liquidation-price guarantee.</p></fieldset>
+    <button type="button" data-sample>Load illustrative example</button>
+    <button class="primary" type="submit">Calculate local scenario</button>
+  </form>
+  <p role="alert" data-error hidden></p>
+  <section data-result role="status" aria-live="polite" hidden><h2>Modeled result</h2><p data-status></p><p data-primary></p><dl data-fields></dl><ul data-reasons></ul><ul data-breaches></ul><button type="button" data-download>Download local JSON</button></section>
+  <div class="rule"><h2>Method and limits</h2><p>Current LTV is debt divided by collateral. Health factor is collateral times the liquidation-threshold fraction divided by debt; it is not applicable when debt is zero. The planner omits oracle freshness, interest changes, liquidation bonuses, eMode, isolation mode, protocol caps and transaction costs. Values are manually supplied, not token quantities or borrowing recommendations.</p><p>For a separate generic isolated-position price model, see <a href="/tools/liquidation/">Liquidation Price Calculator</a>. For interest and payment scenarios, see <a href="/tools/borrowing-cost/">Borrowing Cost Planner</a>.</p></div>
+</section>
+<script is:inline set:html={script}></script>

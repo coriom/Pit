@@ -46,6 +46,8 @@ describe("Phase AK closed local contracts", () => {
       "performance-drawdown",
       "staking-rewards",
       "vesting-unlocks",
+      "collateral-health",
+      "borrowing-cost",
     ]);
     for (const id of [
       "swap",

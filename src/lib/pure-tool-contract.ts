@@ -41,6 +41,13 @@ import {
 } from "./ak-tool-contracts";
 import type { StakingResult } from "./staking-rewards";
 import type { VestingResult } from "./vesting-unlocks";
+import {
+  collateralHealthContract,
+  borrowingCostContract,
+  runAlTool,
+} from "./al-tool-contracts";
+import type { CollateralResult } from "./collateral-health";
+import type { BorrowingResult } from "./borrowing-cost";
 
 export const TOOL_CONTRACT_VERSION = 1 as const;
 export type ToolCapability =
@@ -97,6 +104,8 @@ export type ToolUnit = Readonly<
     }
   | { kind: "manual-native-wei"; decimals: 0; label: string }
   | { kind: "reward-risk-ratio"; decimals: 18 }
+  | { kind: "manual-ltv-bps"; decimals: 0 }
+  | { kind: "health-factor"; decimals: 18 }
   | { kind: "weight-bps"; decimals: 0 }
   | { kind: "signed-manual-cash-flow"; decimals: 18; label: string }
   | { kind: "normalized-performance-index"; decimals: 18 }
@@ -140,7 +149,9 @@ export type PureToolContract<I, O> = Readonly<{
     | "portfolio-rebalance"
     | "performance-drawdown"
     | "staking-rewards"
-    | "vesting-unlocks";
+    | "vesting-unlocks"
+    | "collateral-health"
+    | "borrowing-cost";
   version: typeof TOOL_CONTRACT_VERSION;
   title: string;
   category: ToolCategory;
@@ -478,6 +489,8 @@ export const PURE_TOOL_CONTRACTS = [
   performanceDrawdownContract,
   stakingRewardsContract,
   vestingUnlocksContract,
+  collateralHealthContract,
+  borrowingCostContract,
 ] as const;
 
 export function compatiblePorts(source: ToolPort, target: ToolPort): boolean {
@@ -504,6 +517,8 @@ export function compatiblePorts(source: ToolPort, target: ToolPort): boolean {
       "weight-bps",
       "signed-manual-cash-flow",
       "normalized-performance-index",
+      "manual-ltv-bps",
+      "health-factor",
     ].includes(source.unit.kind)
   )
     return false;
@@ -628,6 +643,16 @@ export function runPureTool(
   context?: ToolRunContext,
 ): ToolRunResult<VestingResult>;
 export function runPureTool(
+  id: "collateral-health",
+  value: unknown,
+  context?: ToolRunContext,
+): ToolRunResult<CollateralResult>;
+export function runPureTool(
+  id: "borrowing-cost",
+  value: unknown,
+  context?: ToolRunContext,
+): ToolRunResult<BorrowingResult>;
+export function runPureTool(
   id: string,
   value: unknown,
   context?: ToolRunContext,
@@ -642,6 +667,8 @@ export function runPureTool(
   | PerformanceResult
   | StakingResult
   | VestingResult
+  | CollateralResult
+  | BorrowingResult
 >;
 export function runPureTool(
   id: string,
@@ -658,6 +685,8 @@ export function runPureTool(
   | PerformanceResult
   | StakingResult
   | VestingResult
+  | CollateralResult
+  | BorrowingResult
 > {
   if (id === "swap-cost") return run(swapCostContract, value, context);
   if (id === "portfolio-exposure")
@@ -670,6 +699,8 @@ export function runPureTool(
     return runAjTool(id, value);
   if (id === "staking-rewards" || id === "vesting-unlocks")
     return runAkTool(id, value);
+  if (id === "collateral-health" || id === "borrowing-cost")
+    return runAlTool(id, value);
   return {
     status: "ERROR",
     error: {

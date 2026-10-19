@@ -63,6 +63,8 @@ describe("authoritative toolbox registry", () => {
       "performance-drawdown",
       "staking-rewards",
       "vesting-unlocks",
+      "collateral-health",
+      "borrowing-cost",
       "liquidation",
       "impermanent-loss",
     ]);

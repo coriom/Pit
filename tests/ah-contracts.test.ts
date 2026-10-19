@@ -18,6 +18,8 @@ describe("Phase AH closed pure-local composition boundary", () => {
       "performance-drawdown",
       "staking-rewards",
       "vesting-unlocks",
+      "collateral-health",
+      "borrowing-cost",
     ]);
     for (const id of ["swap", "perps", "taxlot-export", "token-approvals"])
       expect(runPureTool(id, {}).status).toBe("ERROR");

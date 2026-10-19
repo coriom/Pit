@@ -42,6 +42,8 @@ describe("Phase AJ closed pure-local adapters", () => {
       "performance-drawdown",
       "staking-rewards",
       "vesting-unlocks",
+      "collateral-health",
+      "borrowing-cost",
     ]);
     for (const id of [
       "swap",

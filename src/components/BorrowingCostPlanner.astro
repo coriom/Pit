@@ -1,0 +1,25 @@
+---
+import { alInlineScript } from "../../scripts/build-al-inline.mjs";
+import "../styles/ah-tools.css";
+const script = alInlineScript("borrowing");
+---
+<section class="panel ah-tool" data-al-borrowing>
+  <p class="notice">Illustrative manual borrowing costs · no lending protocol, wallet or transaction</p>
+  <p>Supply a nominal borrowing APR and one manual quote currency. This models fixed assumptions; it cannot predict a protocol's future variable rate.</p>
+  <form data-al-form novalidate>
+    <label>Calculation mode<select name="mode" data-mode><option value="growth">Debt growth</option><option value="repayment">Repayment schedule</option><option value="carry">Borrowed-capital carry</option></select></label>
+    <label>Manual quote currency label<input name="currency" value="USDmanual" maxlength="32" autocomplete="off" /></label>
+    <label>Quote currency decimals (0–18)<input name="decimals" value="2" inputmode="numeric" autocomplete="off" /></label>
+    <label>Borrowed principal<input name="principal" value="1000" inputmode="decimal" autocomplete="off" /></label>
+    <label>Nominal borrow APR (whole bps)<input name="borrowAprBps" value="1200" inputmode="numeric" autocomplete="off" /></label>
+    <fieldset data-panel="growth"><legend>How do simple and scheduled compounding differ?</legend><label>Whole elapsed days for simple ACT/365<input name="elapsedDays" value="365" inputmode="numeric" autocomplete="off" /></label><label>Compounding periods per year<input name="periodsPerYear" value="12" inputmode="numeric" autocomplete="off" /></label><label>Whole elapsed compounding periods<input name="elapsedPeriods" value="12" inputmode="numeric" autocomplete="off" /></label><p>The two horizons are independently entered; compare them only when they describe the same intended time span.</p></fieldset>
+    <fieldset data-panel="repayment" hidden><legend>What does a fixed end-of-period payment cover?</legend><label>Modeled periods per year<input name="periodsPerYear" value="12" inputmode="numeric" autocomplete="off" /></label><label>Maximum modeled periods<input name="horizonPeriods" value="20" inputmode="numeric" autocomplete="off" /></label><label>Fixed end-of-period payment<input name="fixedPayment" value="100" inputmode="decimal" autocomplete="off" /></label></fieldset>
+    <fieldset data-panel="carry" hidden><legend>Would a stated yield cover financing under these assumptions?</legend><label>Whole elapsed days, ACT/365 fixed<input name="elapsedDays" value="365" inputmode="numeric" autocomplete="off" /></label><label>Hypothetical investment yield (signed whole bps)<input name="investmentYieldBps" value="1200" inputmode="numeric" autocomplete="off" /></label><label>Other cost coverage<select name="costCoverage"><option value="none">Explicitly no other cost</option><option value="separate">Separately paid in same currency</option><option value="embedded">Already reflected in stated rate</option><option value="unknown">Unknown</option></select></label><label>Other cost in same manual currency<input name="otherCosts" value="0" inputmode="decimal" autocomplete="off" /></label><p>Unknown costs withhold net carry. This is not a borrowing or investment recommendation.</p></fieldset>
+    <button type="button" data-sample>Load illustrative example</button>
+    <button class="primary" type="submit">Calculate local scenario</button>
+  </form>
+  <p role="alert" data-error hidden></p>
+  <section data-result role="status" aria-live="polite" hidden><h2>Modeled result</h2><p data-status></p><p data-primary></p><dl data-fields></dl><ul data-reasons></ul><details data-schedule hidden><summary>Period-by-period repayment</summary><div class="table-scroll"><table><thead><tr><th>Period</th><th>Opening</th><th>Interest</th><th>Paid</th><th>Principal reduction (negative = added interest)</th><th>Ending</th></tr></thead><tbody data-rows></tbody></table></div></details><button type="button" data-download>Download local JSON</button></section>
+  <div class="rule"><h2>Method and limits</h2><p>Simple interest uses ACT/365 fixed. Discrete growth uses the entered whole periods and rounds the final debt up once. Repayment interest rounds up each period, then the end-of-period payment is capped at the amount due. Carry keeps investment yield and borrowing APR separate; no token exchange rate or risk-free return is assumed. Live rates, fees not entered, credit rules and liquidation are outside this model.</p><p>For generic APR/APY conversion, use <a href="/tools/yield-growth/">Yield &amp; Growth Planner</a>. For collateral thresholds, use <a href="/tools/collateral-health/">Collateral Health Planner</a>.</p></div>
+</section>
+<script is:inline set:html={script}></script>
