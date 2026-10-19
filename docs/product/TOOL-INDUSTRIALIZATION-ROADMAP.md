@@ -4,7 +4,7 @@ Planning targets are discovery prompts, not a mandate to create 90–100 separat
 
 | Phase | Shared engine / candidate modules | Product boundary |
 | --- | --- | --- |
-| AH | Exact decimal scaling, rational rates, APR/APY and compounding; roughly 10–15 small pure operations | Prefer one or two clear conversion/rate interfaces; never label APR as APY or assume a live rate. |
+| AH | Delivered: 12 pure operations in two tools, Token & Fee Converter (4) and Yield & Growth Planner (8). Exact decimal scaling, rate denominations, APR/APY, discrete growth, contributions, income principal and recovery. | Targeted acceptance only; neither tool enters the six-tool hosted read-only beta. Never label APR as APY or assume a live rate. |
 | AI | Trade sizing, average price, breakeven, spread, slippage, gas and fee mathematics; roughly 10–15 operations | Reuse Swap Cost where it already answers the question; no executable quote or order path. |
 | AJ | Weighted allocations, cost-basis scenarios, return decomposition and drawdown from manual series; roughly 10–15 operations | Extend Portfolio Exposure only where it remains understandable; no automated wallet discovery or tax conclusion. |
 | AK | Rewards, vesting schedules, staking yield scenarios and time-based compounding; roughly 10–15 operations | Explicit emission/price assumptions; no staking transaction or claimed future yield. |

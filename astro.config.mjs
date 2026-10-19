@@ -4,6 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { swapCostInlineHash } from "./scripts/build-swap-cost-inline.mjs";
 import { bridgeCostInlineHash } from "./scripts/build-bridge-cost-inline.mjs";
 import { portfolioExposureInlineHash } from "./scripts/build-portfolio-exposure-inline.mjs";
+import { ahInlineHash } from "./scripts/build-ah-inline.mjs";
 export default defineConfig({
   output: "static",
   devToolbar: { enabled: false },
@@ -24,6 +25,8 @@ export default defineConfig({
           swapCostInlineHash(),
           bridgeCostInlineHash(),
           portfolioExposureInlineHash(),
+          ahInlineHash("converter"),
+          ahInlineHash("yield"),
         ],
       },
       styleDirective: { resources: ["'self'", "'unsafe-inline'"] },

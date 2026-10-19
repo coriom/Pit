@@ -1,0 +1,55 @@
+---
+import { ahInlineScript } from "../../scripts/build-ah-inline.mjs";
+import "../styles/ah-tools.css";
+const script = ahInlineScript("converter");
+const modes = [
+  ["native", "Wei, gwei and ETH", "Convert denominations of one native ETH amount; no exchange rate is involved."],
+  ["token", "ERC-20 base units", "Use manually supplied decimals. A token label is not a verified contract identity."],
+  ["rate", "Percent, bps and ppm", "Convert an exact nonnegative rate between denominations."],
+  ["fee", "Apply a fee rate", "Apply a stated rate once to a manual amount, rounded to the nearest base unit."],
+] as const;
+---
+<section class="panel ah-tool" data-ah-converter>
+  <p class="notice">Browser-local arithmetic · no wallet, price feed or transaction</p>
+  <p>Choose one mode. Enter a quantity and its denomination, then calculate. Results are exact integer units; ticker labels are never verified assets.</p>
+  <form data-ah-form novalidate>
+    <label>Calculation mode
+      <select name="mode" data-mode-select>{modes.map(([id, title]) => <option value={id}>{title}</option>)}</select>
+    </label>
+    {modes.map(([id, title, purpose]) => <fieldset data-mode-panel={id} hidden={id !== "native"}>
+      <legend>{title}</legend><p>{purpose}</p>
+      {id === "native" && <>
+        <label>Native amount<input name="amount" value="1" inputmode="decimal" autocomplete="off" /></label>
+        <label>Input unit<select name="unit"><option value="eth">ETH</option><option value="gwei">gwei</option><option value="wei">wei</option></select></label>
+      </>}
+      {id === "token" && <>
+        <label>Manual token label<input name="tokenLabel" value="TEST" autocomplete="off" /></label>
+        <label>Token decimals<input name="decimals" value="6" inputmode="numeric" autocomplete="off" /></label>
+        <label>Direction<select name="direction"><option value="human-to-raw">Human amount to base units</option><option value="raw-to-human">Base units to human amount</option></select></label>
+        <label>Token amount<input name="amount" value="1.234567" inputmode="decimal" autocomplete="off" /></label>
+      </>}
+      {id === "rate" && <>
+        <label>Rate amount<input name="amount" value="50" inputmode="decimal" autocomplete="off" /></label>
+        <label>Rate denomination<select name="unit"><option value="bps">Basis points</option><option value="percent">Percent</option><option value="ppm">Parts per million</option></select></label>
+      </>}
+      {id === "fee" && <>
+        <label>Manual token label<input name="tokenLabel" value="TEST" autocomplete="off" /></label>
+        <label>Token decimals<input name="decimals" value="6" inputmode="numeric" autocomplete="off" /></label>
+        <label>Amount before fee<input name="amount" value="100" inputmode="decimal" autocomplete="off" /></label>
+        <label>Fee rate<input name="rate" value="50" inputmode="decimal" autocomplete="off" /></label>
+        <label>Fee rate denomination<select name="rateUnit"><option value="bps">Basis points</option><option value="percent">Percent</option><option value="ppm">Parts per million</option></select></label>
+      </>}
+    </fieldset>)}
+    <button type="button" data-sample>Load illustrative example</button>
+    <button class="primary" type="submit">Convert locally</button>
+  </form>
+  <p role="alert" class="error" data-error hidden></p>
+  <section data-report role="status" aria-live="polite" hidden>
+    <h2>Result</h2><dl data-values></dl>
+    <button type="button" data-download>Download local JSON</button>
+  </section>
+  <div class="rule"><h2>Assumptions and limits</h2>
+    <p>Decimals and rate denominations are supplied by you. The fee mode rounds the calculated fee half-up to one token base unit. No token contract, chain, balance, price, fee schedule or live transaction is checked. The report stays in this browser unless you download it.</p>
+  </div>
+</section>
+<script is:inline set:html={script}></script>

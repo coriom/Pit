@@ -1,0 +1,43 @@
+.ah-tool {
+  max-width: 760px;
+}
+.ah-tool [hidden] {
+  display: none !important;
+}
+.ah-tool fieldset {
+  min-width: 0;
+  border: 1px solid #33443a;
+  border-radius: 12px;
+  margin: 18px 0;
+  padding: 18px;
+}
+.ah-tool legend {
+  color: #d8f977;
+  font-weight: 700;
+  padding: 0 8px;
+}
+.ah-tool label {
+  display: block;
+  max-width: 100%;
+}
+.ah-tool input,
+.ah-tool select {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+.ah-tool dl > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 18px;
+  border-top: 1px solid #304035;
+  padding: 9px 0;
+}
+.ah-tool dt {
+  color: #a8b8af;
+}
+.ah-tool dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}

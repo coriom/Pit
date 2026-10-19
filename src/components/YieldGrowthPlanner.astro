@@ -1,0 +1,46 @@
+---
+import { ahInlineScript } from "../../scripts/build-ah-inline.mjs";
+import "../styles/ah-tools.css";
+const script = ahInlineScript("yield");
+const modes = [
+  { id: "apr-to-apy", title: "Nominal APR → effective APY", purpose: "Apply a nominal annual rate with a stated number of compounding periods.", fields: [["aprPercent", "Nominal APR (%)", "12"], ["periodsPerYear", "Compounding periods per year", "12"]] },
+  { id: "apy-to-apr", title: "Effective APY → nominal APR", purpose: "Find the nearest supported nominal rate for a stated compounding schedule.", fields: [["apyPercent", "Effective APY (%)", "12.68250301319697"], ["periodsPerYear", "Compounding periods per year", "12"]] },
+  { id: "periodic-to-annual", title: "Periodic return → annualized return", purpose: "Repeat one explicitly assumed periodic return over a year.", fields: [["periodicPercent", "Return per period (%)", "1"], ["periodsPerYear", "Periods per year", "12"]] },
+  { id: "simple", title: "Simple-interest future value", purpose: "Apply a constant simple annual rate, without compounding.", fields: [["principal", "Starting principal", "1000"], ["annualRatePercent", "Simple annual rate (%)", "5"], ["years", "Whole years", "2"], ["currency", "Manual currency label", "USD"]] },
+  { id: "compound", title: "Discrete compound-growth future value", purpose: "Compound an assumed nominal APR for whole periods only.", fields: [["principal", "Starting principal", "1000"], ["nominalAprPercent", "Nominal APR (%)", "5"], ["periodsPerYear", "Compounding periods per year", "12"], ["years", "Whole years", "2"], ["currency", "Manual currency label", "USD"]] },
+  { id: "contributions", title: "Growth with recurring contributions", purpose: "Distinguish a payment at the beginning from one at the end of each period.", fields: [["principal", "Starting principal", "1000"], ["contribution", "Contribution each period", "100"], ["nominalAprPercent", "Nominal APR (%)", "5"], ["periodsPerYear", "Periods per year", "12"], ["years", "Whole years", "2"], ["currency", "Manual currency label", "USD"]] },
+  { id: "required-principal", title: "Principal for an annual-income target", purpose: "Solve an illustrative principal from annual income and assumed effective APY.", fields: [["annualIncome", "Annual income target", "100"], ["effectiveApyPercent", "Assumed effective APY (%)", "5"], ["currency", "Manual currency label", "USD"]] },
+  { id: "recovery", title: "Recovery after a loss", purpose: "Find the gain needed to return to the starting value after a stated loss.", fields: [["lossPercent", "Loss from starting value (%)", "20"]] },
+] as const;
+---
+<section class="panel ah-tool" data-ah-yield>
+  <p class="notice">Illustrative constant-rate mathematics · no wallet or live yield</p>
+  <p>Choose one question, enter your own assumptions, and calculate. APR, APY and a periodic return are different rate types. Future returns are never guaranteed.</p>
+  <form data-ah-form novalidate>
+    <label>Calculation mode<select name="mode" data-mode-select>
+      {modes.map((mode) => <option value={mode.id}>{mode.title}</option>)}
+    </select></label>
+    {modes.map((mode, index) => <fieldset data-mode-panel={mode.id} hidden={index !== 0}>
+      <legend>{mode.title}</legend><p>{mode.purpose}</p>
+      {mode.fields.map(([key, label, example]) => <label>{label}
+        <input name={key} value={example} data-sample={example} inputmode={key === "currency" ? "text" : "decimal"} autocomplete="off" />
+      </label>)}
+      {mode.id === "contributions" && <label>Contribution timing<select name="timing" data-sample="end">
+        <option value="end">End of each period</option><option value="beginning">Beginning of each period</option>
+      </select></label>}
+    </fieldset>)}
+    <button type="button" data-load-sample>Load illustrative example</button>
+    <button class="primary" type="submit">Calculate local scenario</button>
+  </form>
+  <p role="alert" class="error" data-error hidden></p>
+  <section data-report role="status" aria-live="polite" hidden>
+    <h2>Modeled result</h2><dl data-values></dl>
+    <p class="muted">Ending value includes principal and contributions; modeled growth is shown separately. Rates are assumptions, not a prediction.</p>
+    <button type="button" data-download>Download local JSON</button>
+  </section>
+  <div class="rule"><h2>Method and limits</h2>
+    <p>Amounts use 18 decimal places. Rates use bounded integer fixed-point arithmetic. Whole years and compounding periods are required; no fractional compounding period is guessed. Contributions are applied at the selected point in each period. Inverse rates are solved by a bounded integer search.</p>
+    <p>No taxes, inflation, fees, protocol-specific rewards or future price changes are included. Currency labels are manual metadata. The calculation stays in the browser unless you download its report.</p>
+  </div>
+</section>
+<script is:inline set:html={script}></script>

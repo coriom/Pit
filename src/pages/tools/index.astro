@@ -1,8 +1,8 @@
 ---
 import { TOOLBOX_PAGE, TOOL_CATEGORIES, TOOLS } from "../../lib/tool-registry";
-import { READ_ONLY_TOOLS } from "../../lib/read-only-beta";
+import { READ_ONLY_TOOLS, READ_ONLY_TOOL_IDS } from "../../lib/read-only-beta";
 import "../../styles/global.css";
-const orderedTools = [...READ_ONLY_TOOLS, ...TOOLS.filter((tool) => tool.executionMode !== "local")];
+const orderedTools = [...READ_ONLY_TOOLS, ...TOOLS.filter((tool) => !READ_ONLY_TOOL_IDS.some((id) => id === tool.id))];
 ---
 <html lang="en">
   <head>

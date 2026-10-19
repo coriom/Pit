@@ -23,6 +23,10 @@ function namedMeta(html, name, kind = "name") {
 function textContent(value) {
   return value
     .replace(/<[^>]+>/g, "")
+    .replace(/&#(\d+);/g, (_match, code) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_match, code) =>
+      String.fromCodePoint(parseInt(code, 16)),
+    )
     .replace(/&amp;/g, "&")
     .trim();
 }
@@ -119,7 +123,9 @@ export function validateDiscoverabilityArtifacts(
   for (const tool of tools) {
     const name = `tools/${tool.slug}/index.html`;
     const html = files.get(name);
-    const title = html.match(/<title>([\s\S]*?)<\/title>/i)?.[1];
+    const title = textContent(
+      html.match(/<title>([\s\S]*?)<\/title>/i)?.[1] || "",
+    );
     const description = namedMeta(html, "description");
     const expectedDescription = `${tool.description}${tool.status === "testnet-only" ? " Testnet only." : ""}`;
     if (
@@ -140,7 +146,10 @@ export function validateDiscoverabilityArtifacts(
       ["og:description", expectedDescription],
       ["og:type", "website"],
     ])
-      if (namedMeta(html, property, "property").join("") !== value)
+      if (
+        namedMeta(html, property, "property").map(textContent).join("") !==
+        value
+      )
         throw Error(`Invalid Open Graph ${property}: ${name}`);
     const ld = (html.match(
       /<script type="application\/ld\+json">([\s\S]*?)<\/script>/i,

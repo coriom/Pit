@@ -53,6 +53,8 @@ describe("authoritative toolbox registry", () => {
     ).toEqual([
       "pnl",
       "swap-cost",
+      "token-fee-converter",
+      "yield-growth",
       "bridge-cost",
       "portfolio-exposure",
       "liquidation",

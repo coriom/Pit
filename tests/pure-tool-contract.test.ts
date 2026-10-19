@@ -47,10 +47,12 @@ const position: PositionInput = {
 const portfolioInput = { positions: [position], staleAfterDays: 7 };
 
 describe("versioned pure tool contracts", () => {
-  it("allows only the two reviewed local calculator IDs", () => {
+  it("allows only the four reviewed local calculator IDs", () => {
     expect(PURE_TOOL_CONTRACTS.map((contract) => contract.id)).toEqual([
       "swap-cost",
       "portfolio-exposure",
+      "token-fee-converter",
+      "yield-growth",
     ]);
     expect(
       PURE_TOOL_CONTRACTS.every(
