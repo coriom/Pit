@@ -1,5 +1,5 @@
 /** Explicit Phase AJ pure-local adapters. Registry metadata grants no execution power. */
-import { toolById } from "./tool-registry";
+import { localToolById } from "./local-tool-definitions";
 import { AiInputError } from "./ai-math";
 import {
   calculateRebalance,
@@ -134,8 +134,8 @@ export const portfolioRebalanceContract: PureToolContract<
 > = {
   id: "portfolio-rebalance",
   version: 1,
-  title: toolById("portfolio-rebalance").title,
-  category: toolById("portfolio-rebalance").category,
+  title: localToolById("portfolio-rebalance").title,
+  category: localToolById("portfolio-rebalance").category,
   capability: "local-pure",
   assumptions: [
     "Manually included buckets share one stated valuation currency.",
@@ -240,8 +240,8 @@ export const performanceDrawdownContract: PureToolContract<
 > = {
   id: "performance-drawdown",
   version: 1,
-  title: toolById("performance-drawdown").title,
-  category: toolById("performance-drawdown").category,
+  title: localToolById("performance-drawdown").title,
+  category: localToolById("performance-drawdown").category,
   capability: "local-pure",
   assumptions: [
     "External flows occur at interval end and are included in ending values.",

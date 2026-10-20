@@ -6,7 +6,7 @@ import {
   type EvmInput,
   type EvmResult,
 } from "./evm-data-inspector";
-import { toolById } from "./tool-registry";
+import { localToolById } from "./local-tool-definitions";
 import type {
   PureToolContract,
   ToolRunResult,
@@ -60,8 +60,8 @@ const evmValidate = (x: unknown): EvmInput => {
 export const evmDataInspectorContract: PureToolContract<EvmInput, EvmResult> = {
   id: "evm-data-inspector",
   version: 1,
-  title: toolById("evm-data-inspector").title,
-  category: toolById("evm-data-inspector").category,
+  title: localToolById("evm-data-inspector").title,
+  category: localToolById("evm-data-inspector").category,
   capability: "local-pure",
   assumptions: ["All input is manually supplied; EIP-55 is chain-independent."],
   limitations: [

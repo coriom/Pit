@@ -1,5 +1,5 @@
 /** Phase AH opt-in adapters. The existing v1 pilots remain unchanged. */
-import { toolById } from "./tool-registry";
+import { localToolById } from "./local-tool-definitions";
 import type {
   PureToolContract,
   ToolPort,
@@ -82,8 +82,8 @@ export const tokenFeeContract: PureToolContract<
 > = {
   id: "token-fee-converter",
   version: 1,
-  title: toolById("token-fee-converter").title,
-  category: toolById("token-fee-converter").category,
+  title: localToolById("token-fee-converter").title,
+  category: localToolById("token-fee-converter").category,
   capability: "local-pure",
   assumptions: ["All quantities and rate denominations are manually supplied."],
   limitations: [
@@ -238,8 +238,8 @@ const yieldUnit = (
 export const yieldGrowthContract: PureToolContract<YieldInput, YieldResult> = {
   id: "yield-growth",
   version: 1,
-  title: toolById("yield-growth").title,
-  category: toolById("yield-growth").category,
+  title: localToolById("yield-growth").title,
+  category: localToolById("yield-growth").category,
   capability: "local-pure",
   assumptions: [
     "Rates and horizons are manually supplied and constant within each scenario.",

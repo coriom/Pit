@@ -12,7 +12,7 @@ import {
   type ClInput,
   type ClResult,
 } from "./concentrated-liquidity";
-import { toolById } from "./tool-registry";
+import { localToolById } from "./local-tool-definitions";
 import type {
   PureToolContract,
   ToolPort,
@@ -93,8 +93,8 @@ const outputValue = (
 export const ammPoolContract: PureToolContract<AmmInput, AmmResult> = {
   id: "amm-pool-math",
   version: 1,
-  title: toolById("amm-pool-math").title,
-  category: toolById("amm-pool-math").category,
+  title: localToolById("amm-pool-math").title,
+  category: localToolById("amm-pool-math").category,
   capability: "local-pure",
   assumptions: ["Manual constant-product reserves and fee."],
   limitations: [
@@ -197,8 +197,8 @@ export const concentratedLiquidityContract: PureToolContract<
 > = {
   id: "concentrated-liquidity",
   version: 1,
-  title: toolById("concentrated-liquidity").title,
-  category: toolById("concentrated-liquidity").category,
+  title: localToolById("concentrated-liquidity").title,
+  category: localToolById("concentrated-liquidity").category,
   capability: "local-pure",
   assumptions: [
     "Continuous bounded range model; manual token budgets and price.",

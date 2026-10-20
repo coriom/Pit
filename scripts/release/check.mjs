@@ -67,6 +67,7 @@ try {
   run("node", ["scripts/release/discoverability.mjs"]);
   run("pnpm", ["beta:check"]);
   run("node", ["scripts/release/beta-css-isolation.mjs"]);
+  run("pnpm", ["toolbox:check"]);
   // Browser tests exercise precisely the production build just created.
   run("pnpm", ["test:e2e"]);
   clean();

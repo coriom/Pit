@@ -1,0 +1,19 @@
+/* Fixed local-toolbox styles: no Tailwind source scan or remote imports. */
+.local-intro { max-width: 780px; }
+.local-intro p { font-size: 18px; }
+.local-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 24px 0; }
+.local-actions a { display: inline-flex; align-items: center; min-height: 44px; }
+.local-task-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,250px),1fr)); gap: 16px; }
+.local-task-card { display: block; }
+.local-task-card:hover,.local-task-card:focus-visible { outline: 2px solid #d8f977; outline-offset: 2px; }
+.local-search { max-width: 580px; }
+.local-filter-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 26px; }
+.local-filter-list [aria-pressed="true"] { background: #d8f977; color: #172010; }
+.local-group { margin: 30px 0 40px; }
+.local-group[hidden],.local-card[hidden],.local-empty[hidden] { display: none !important; }
+.local-group h2 { margin-bottom: 16px; }
+.local-card { display: block; min-width: 0; }
+.local-card p { margin: 8px 0; }
+.local-card:hover,.local-card:focus-visible { outline: 2px solid #d8f977; outline-offset: 2px; }
+.local-card small { color: #d8f977; }
+@media (max-width: 760px) { .local-filter-list button { flex: 1 1 140px; } }

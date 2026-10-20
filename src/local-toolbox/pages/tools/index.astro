@@ -1,0 +1,45 @@
+---
+import { LOCAL_TASK_GROUPS, LOCAL_TOOLS } from "../../../lib/local-toolbox";
+import "../../../styles/global.css";
+import "../../local.css";
+---
+<html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width" /><meta name="description" content="Search twenty approved browser-local PIT tools by task. Manual inputs only; no wallet, RPC or trading." /><title>Local tools · PIT Toolbox</title></head><body><main class="shell">
+  <header><a href="../" class="brand">pit<span>.</span></a><nav aria-label="Main navigation"><a href="../">Home</a><a href="./" aria-current="page">Toolbox</a></nav><span class="tag">LOCAL · NO WALLET</span></header>
+  <section class="hero"><div class="eyebrow">Twenty local tools</div><h1>Choose a task.</h1><p>Search by question or select a category. All tools here use manual inputs in this browser; none can connect to a wallet or submit a transaction.</p></section>
+  <label class="local-search" for="tool-search">Search tools by name or purpose<input id="tool-search" type="search" autocomplete="off" placeholder="Try portfolio, gas, vesting or CSV" /></label>
+  <div class="local-filter-list" role="group" aria-label="Tool category filters"><button type="button" data-filter="all" aria-pressed="true">All 20</button>{LOCAL_TASK_GROUPS.map((group) => <button type="button" data-filter={group.id} aria-pressed="false">{group.label}</button>)}</div>
+  <p id="tool-match-count" class="muted" role="status" aria-live="polite">20 tools shown</p>
+  {LOCAL_TASK_GROUPS.map((group) => <section id={group.id} class="local-group" data-group={group.id} aria-label={group.label}><h2>{group.label}</h2><div class="tool-grid">{group.ids.map((id) => { const tool = LOCAL_TOOLS.find((entry) => entry.id === id)!; return <a class="panel tool-card local-card" data-tool={tool.id} data-search={`${tool.title} ${tool.description} ${group.label}`.toLowerCase()} href={`${tool.slug}/`}><span class="eyebrow">{group.label}</span><h3>{tool.title}</h3><p>{tool.description}</p><small>Browser-local · no wallet · no live data</small></a>; })}</div></section>)}
+  <p id="tool-empty" class="panel local-empty" hidden>No tools match. Try a broader term or select All 20.</p>
+  <footer><a href="../">← Home</a> · Manual assumptions · No financial advice · No public release</footer>
+</main>
+<script>
+  const search = document.querySelector<HTMLInputElement>("#tool-search");
+  const buttons = [...document.querySelectorAll<HTMLButtonElement>("[data-filter]")];
+  const groups = [...document.querySelectorAll<HTMLElement>("[data-group]")];
+  const count = document.querySelector<HTMLElement>("#tool-match-count");
+  const empty = document.querySelector<HTMLElement>("#tool-empty");
+  let selected = "all";
+  function update() {
+    const query = search?.value.trim().toLowerCase() ?? "";
+    let shown = 0;
+    for (const group of groups) {
+      let inGroup = 0;
+      for (const card of group.querySelectorAll<HTMLElement>("[data-tool]")) {
+        const visible = (selected === "all" || selected === group.dataset.group) && (card.dataset.search ?? "").includes(query);
+        card.hidden = !visible;
+        if (visible) { inGroup++; shown++; }
+      }
+      group.hidden = inGroup === 0;
+    }
+    if (count) count.textContent = `${shown} ${shown === 1 ? "tool" : "tools"} shown`;
+    if (empty) empty.hidden = shown !== 0;
+  }
+  search?.addEventListener("input", update);
+  for (const button of buttons) button.addEventListener("click", () => {
+    selected = button.dataset.filter ?? "all";
+    for (const candidate of buttons) candidate.setAttribute("aria-pressed", String(candidate === button));
+    update();
+  });
+</script>
+</body></html>

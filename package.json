@@ -8,6 +8,7 @@
     "dev": "astro dev --host 127.0.0.1",
     "build": "node scripts/generate-validator.mjs && astro build && node scripts/prepare-static.mjs && node scripts/discoverability.mjs && node scripts/add-static-csp.mjs && node scripts/add-vercel-config.mjs && node scripts/build-manifest.mjs",
     "beta:check": "astro build --config astro.readonly-beta.config.mjs && node scripts/release/read-only-beta-host.mjs",
+    "toolbox:check": "astro build --config astro.local-toolbox.config.mjs && node scripts/release/local-toolbox-host.mjs",
     "check": "astro check",
     "test": "vitest run",
     "test:e2e": "playwright test",

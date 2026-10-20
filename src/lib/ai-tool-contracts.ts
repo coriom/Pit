@@ -1,5 +1,5 @@
 /** Reviewed Phase AI pure-local contracts; no registry-derived execution permissions. */
-import { toolById } from "./tool-registry";
+import { localToolById } from "./local-tool-definitions";
 import { AiInputError } from "./ai-math";
 import {
   calculateTradeRisk,
@@ -132,8 +132,8 @@ export const tradeRiskContract: PureToolContract<
 > = {
   id: "trade-risk",
   version: 1,
-  title: toolById("trade-risk").title,
-  category: toolById("trade-risk").category,
+  title: localToolById("trade-risk").title,
+  category: localToolById("trade-risk").category,
   capability: "local-pure",
   assumptions: ["Manual long-only spot prices and same-quote-unit fees."],
   limitations: [
@@ -243,8 +243,8 @@ export const executionMathContract: PureToolContract<
 > = {
   id: "execution-math",
   version: 1,
-  title: toolById("execution-math").title,
-  category: toolById("execution-math").category,
+  title: localToolById("execution-math").title,
+  category: localToolById("execution-math").category,
   capability: "local-pure",
   assumptions: [
     "All prices, amounts and gas figures are manual scenario inputs.",

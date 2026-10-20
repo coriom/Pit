@@ -1,5 +1,6 @@
 /** Explicitly allowlisted, side-effect-free entry points. This is not an execution registry. */
-import { toolById, type ToolCategory } from "./tool-registry";
+import { localToolById } from "./local-tool-definitions";
+import type { ToolCategory } from "./tool-registry";
 import {
   calculateSwapCost,
   SwapCostInputError,
@@ -265,8 +266,8 @@ export const swapCostContract: PureToolContract<SwapCostInput, SwapCostResult> =
   {
     id: "swap-cost",
     version: TOOL_CONTRACT_VERSION,
-    title: toolById("swap-cost").title,
-    category: toolById("swap-cost").category,
+    title: localToolById("swap-cost").title,
+    category: localToolById("swap-cost").category,
     capability: "local-pure",
     assumptions: [
       "Manual token identifiers and quoted amounts are supplied by the user.",
@@ -400,8 +401,8 @@ export const portfolioExposureContract: PureToolContract<
 > = {
   id: "portfolio-exposure",
   version: TOOL_CONTRACT_VERSION,
-  title: toolById("portfolio-exposure").title,
-  category: toolById("portfolio-exposure").category,
+  title: localToolById("portfolio-exposure").title,
+  category: localToolById("portfolio-exposure").category,
   capability: "local-pure",
   assumptions: [
     "Spot holdings and USD prices are manually supplied.",

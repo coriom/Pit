@@ -6,7 +6,7 @@ import {
   type WorkshopInput,
   type WorkshopResult,
 } from "./crypto-data-workshop";
-import { toolById } from "./tool-registry";
+import { localToolById } from "./local-tool-definitions";
 import type {
   PureToolContract,
   ToolRunResult,
@@ -98,8 +98,8 @@ export const cryptoDataWorkshopContract: PureToolContract<
 > = {
   id: "crypto-data-workshop",
   version: 1,
-  title: toolById("crypto-data-workshop").title,
-  category: toolById("crypto-data-workshop").category,
+  title: localToolById("crypto-data-workshop").title,
+  category: localToolById("crypto-data-workshop").category,
   capability: "local-pure",
   assumptions: [
     "CSV text, header, delimiter, mapping and duplicate decisions are supplied explicitly.",

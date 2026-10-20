@@ -2,6 +2,7 @@
 import { anInlineScript } from "../../scripts/build-an-inline.mjs";
 import "../styles/an-tools.css";
 const script = anInlineScript("evm");
+const { localOnly = false } = Astro.props as { localOnly?: boolean };
 ---
 <section class="panel an-tool" data-an-evm>
   <p class="notice">Offline data inspection · no wallet, RPC, lookup or transaction</p>
@@ -27,6 +28,6 @@ const script = anInlineScript("evm");
   </form>
   <p role="alert" data-error hidden></p>
   <section data-result role="status" aria-live="polite" hidden><h2>Inspection result</h2><p data-primary></p><dl data-details></dl><button type="button" data-download>Download local JSON</button></section>
-  <div class="rule"><h2>Limits</h2><p>Checksum is a typo-detection aid, not recipient verification. The same address text can denote unrelated things on different chains. Static ABI decoding inspects data only; it does not assess a contract, send a call or sign.</p><p>For live allowances on a small reviewed Sepolia pair set, use <a href="/tools/token-approvals/">Token Approval Inspector</a>.</p></div>
+  <div class="rule"><h2>Limits</h2><p>Checksum is a typo-detection aid, not recipient verification. The same address text can denote unrelated things on different chains. Static ABI decoding inspects data only; it does not assess a contract, send a call or sign.</p>{!localOnly && <p>For live allowances on a small reviewed Sepolia pair set, use <a href="/tools/token-approvals/">Token Approval Inspector</a>.</p>}</div>
 </section>
 <script is:inline set:html={script}></script>

@@ -1,0 +1,50 @@
+---
+import ToolLayout from "../../../../components/ToolLayout.astro";
+import CalculatorForm from "../../../../components/CalculatorForm.astro";
+import SwapCostSimulator from "../../../../components/SwapCostSimulator.astro";
+import TokenFeeConverter from "../../../../components/TokenFeeConverter.astro";
+import YieldGrowthPlanner from "../../../../components/YieldGrowthPlanner.astro";
+import TradeRiskPlanner from "../../../../components/TradeRiskPlanner.astro";
+import ExecutionMathLab from "../../../../components/ExecutionMathLab.astro";
+import BridgeCostComparator from "../../../../components/BridgeCostComparator.astro";
+import PortfolioExposureAnalyzer from "../../../../components/PortfolioExposureAnalyzer.astro";
+import PortfolioRebalancePlanner from "../../../../components/PortfolioRebalancePlanner.astro";
+import PerformanceDrawdownAnalyzer from "../../../../components/PerformanceDrawdownAnalyzer.astro";
+import StakingRewardsPlanner from "../../../../components/StakingRewardsPlanner.astro";
+import VestingUnlockPlanner from "../../../../components/VestingUnlockPlanner.astro";
+import CollateralHealthPlanner from "../../../../components/CollateralHealthPlanner.astro";
+import BorrowingCostPlanner from "../../../../components/BorrowingCostPlanner.astro";
+import AmmPoolMathLab from "../../../../components/AmmPoolMathLab.astro";
+import ConcentratedLiquidityPlanner from "../../../../components/ConcentratedLiquidityPlanner.astro";
+import EvmDataInspector from "../../../../components/EvmDataInspector.astro";
+import CryptoDataWorkshop from "../../../../components/CryptoDataWorkshop.astro";
+import { LOCAL_TOOLS } from "../../../../lib/local-toolbox";
+import "../../../local.css";
+
+export function getStaticPaths() {
+  return LOCAL_TOOLS.map((tool) => ({ params: { slug: tool.slug }, props: { tool } }));
+}
+const { tool } = Astro.props;
+---
+<ToolLayout tool={tool} localOnly>
+  {tool.id === "pnl" && <CalculatorForm kind="pnl" />}
+  {tool.id === "liquidation" && <CalculatorForm kind="liquidation" />}
+  {tool.id === "impermanent-loss" && <CalculatorForm kind="impermanent-loss" />}
+  {tool.id === "swap-cost" && <SwapCostSimulator />}
+  {tool.id === "token-fee-converter" && <TokenFeeConverter />}
+  {tool.id === "yield-growth" && <YieldGrowthPlanner />}
+  {tool.id === "trade-risk" && <TradeRiskPlanner />}
+  {tool.id === "execution-math" && <ExecutionMathLab />}
+  {tool.id === "bridge-cost" && <BridgeCostComparator />}
+  {tool.id === "portfolio-exposure" && <PortfolioExposureAnalyzer />}
+  {tool.id === "portfolio-rebalance" && <PortfolioRebalancePlanner />}
+  {tool.id === "performance-drawdown" && <PerformanceDrawdownAnalyzer />}
+  {tool.id === "staking-rewards" && <StakingRewardsPlanner />}
+  {tool.id === "vesting-unlocks" && <VestingUnlockPlanner />}
+  {tool.id === "collateral-health" && <CollateralHealthPlanner />}
+  {tool.id === "borrowing-cost" && <BorrowingCostPlanner />}
+  {tool.id === "amm-pool-math" && <AmmPoolMathLab />}
+  {tool.id === "concentrated-liquidity" && <ConcentratedLiquidityPlanner />}
+  {tool.id === "evm-data-inspector" && <EvmDataInspector localOnly />}
+  {tool.id === "crypto-data-workshop" && <CryptoDataWorkshop />}
+</ToolLayout>

@@ -1,6 +1,6 @@
 /** Explicitly reviewed Phase AL local-only adapters. */
 import { AiInputError } from "./ai-math";
-import { toolById } from "./tool-registry";
+import { localToolById } from "./local-tool-definitions";
 import {
   calculateCollateral,
   COLLATERAL_VERSION,
@@ -113,8 +113,8 @@ export const collateralHealthContract: PureToolContract<
 > = {
   id: "collateral-health",
   version: 1,
-  title: toolById("collateral-health").title,
-  category: toolById("collateral-health").category,
+  title: localToolById("collateral-health").title,
+  category: localToolById("collateral-health").category,
   capability: "local-pure",
   assumptions: [
     "Single collateral and single debt are manually valued in one declared currency.",
@@ -204,8 +204,8 @@ export const borrowingCostContract: PureToolContract<
 > = {
   id: "borrowing-cost",
   version: 1,
-  title: toolById("borrowing-cost").title,
-  category: toolById("borrowing-cost").category,
+  title: localToolById("borrowing-cost").title,
+  category: localToolById("borrowing-cost").category,
   capability: "local-pure",
   assumptions: ["One manual currency and fixed stated nominal APR."],
   limitations: [

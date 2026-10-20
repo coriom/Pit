@@ -1,11 +1,12 @@
 ---
 import { relatedTools, toolDiscoverability, type ToolDefinition } from "../lib/tool-registry";
 import { READ_ONLY_TOOL_IDS } from "../lib/read-only-beta";
+import { LOCAL_TOOL_ID_SET } from "../lib/local-toolbox";
 import "../styles/global.css";
-const { tool, betaOnly = false } = Astro.props as { tool: ToolDefinition; betaOnly?: boolean };
+const { tool, betaOnly = false, localOnly = false } = Astro.props as { tool: ToolDefinition; betaOnly?: boolean; localOnly?: boolean };
 const seo = toolDiscoverability(tool);
 const jsonLd = JSON.stringify(seo.structuredData).replace(/</g, "\\u003c");
-const related = relatedTools(tool).filter((entry) => !betaOnly || READ_ONLY_TOOL_IDS.some((id) => id === entry.id));
+const related = relatedTools(tool).filter((entry) => (!betaOnly || READ_ONLY_TOOL_IDS.some((id) => id === entry.id)) && (!localOnly || LOCAL_TOOL_ID_SET.has(entry.id)));
 const modeLabel = {
   local: "Local · no wallet or network",
   "read-only": "Read-only · no transaction",
@@ -28,8 +29,8 @@ const modeLabel = {
     <main class="shell">
       <header>
         <a href="../../" class="brand">pit<span>.</span></a>
-        <nav><a href="../">Toolbox</a><a href="../../">Home</a>{!betaOnly && <><a href="../../tools/swap/">Trading lab</a><a href="../../fees/">Fees</a><a href="../../legal/">Legal</a></>}</nav>
-        <span class="tag">{betaOnly ? "READ-ONLY CANDIDATE" : "TESTNET PREVIEW"}</span>
+        <nav><a href="../">Toolbox</a><a href="../../">Home</a>{!betaOnly && !localOnly && <><a href="../../tools/swap/">Trading lab</a><a href="../../fees/">Fees</a><a href="../../legal/">Legal</a></>}</nav>
+        <span class="tag">{betaOnly ? "READ-ONLY CANDIDATE" : localOnly ? "LOCAL TOOLBOX CANDIDATE" : "TESTNET PREVIEW"}</span>
       </header>
       <section class="hero">
         <div class="eyebrow">{tool.category} / {tool.status}</div>

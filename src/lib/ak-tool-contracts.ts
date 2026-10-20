@@ -1,5 +1,5 @@
 /** Two explicitly reviewed, pure-local Phase AK adapters. */
-import { toolById } from "./tool-registry";
+import { localToolById } from "./local-tool-definitions";
 import { AiInputError } from "./ai-math";
 import {
   calculateStaking,
@@ -131,8 +131,8 @@ export const stakingRewardsContract: PureToolContract<
 > = {
   id: "staking-rewards",
   version: 1,
-  title: toolById("staking-rewards").title,
-  category: toolById("staking-rewards").category,
+  title: localToolById("staking-rewards").title,
+  category: localToolById("staking-rewards").category,
   capability: "local-pure",
   assumptions: [
     "Manually supplied rates and token identity; ACT/365 simple accrual unless restaking is selected.",
@@ -245,8 +245,8 @@ export const vestingUnlocksContract: PureToolContract<
 > = {
   id: "vesting-unlocks",
   version: 1,
-  title: toolById("vesting-unlocks").title,
-  category: toolById("vesting-unlocks").category,
+  title: localToolById("vesting-unlocks").title,
+  category: localToolById("vesting-unlocks").category,
   capability: "local-pure",
   assumptions: [
     "Dates are UTC calendar days, token allocation and receipt amounts are manual.",
