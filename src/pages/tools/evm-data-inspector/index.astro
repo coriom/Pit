@@ -1,0 +1,6 @@
+---
+import ToolLayout from "../../../components/ToolLayout.astro";
+import EvmDataInspector from "../../../components/EvmDataInspector.astro";
+import { toolById } from "../../../lib/tool-registry";
+---
+<ToolLayout tool={toolById("evm-data-inspector")}><EvmDataInspector /></ToolLayout>

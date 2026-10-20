@@ -1,0 +1,44 @@
+---
+import { anInlineScript } from "../../scripts/build-an-inline.mjs";
+import "../styles/an-tools.css";
+const script = anInlineScript("csv");
+---
+<section class="panel an-tool" data-an-csv>
+  <p class="notice">Local CSV preparation · no upload, Taxlot import or accounting interpretation</p>
+  <p>Choose a UTF-8 CSV or load fictional sample rows. Confirm its structure, then map only the fields you understand. The original text stays available in this page session.</p>
+  <label>Select local CSV (maximum 256 KiB)<input type="file" accept=".csv,text/csv,text/plain" data-file /></label>
+  <button type="button" data-sample>Load fictional CSV example</button>
+  <p data-file-status role="status">No file selected.</p>
+  <form novalidate>
+    <label>Workshop mode<select name="mode" data-mode><option value="inspect">CSV inspect</option><option value="normalize">Normalize &amp; preview</option><option value="dedupe">Deduplicate &amp; export</option></select></label>
+    <label>Confirmed delimiter<select name="delimiter"><option value=",">Comma</option><option value=";">Semicolon</option><option value="tab">Tab</option></select></label>
+    <label><input type="checkbox" name="hasHeader" checked /> First row is a header (confirm explicitly)</label>
+    <fieldset data-panel="inspect"><legend>Inspect source structure</legend><p>Delimiter candidates are hints only. Check the bounded preview and confirm your selection before transforming data.</p></fieldset>
+    <fieldset data-panel="transform" hidden><legend>Explicit generic column mapping</legend>
+      <p>Choose source columns for generic fields. Blank means unmapped, never zero. Amount has no inferred currency or tax meaning.</p>
+      <label>Record ID source<select name="recordId" data-map></select></label>
+      <label>Chain ID source<select name="chainId" data-map></select></label>
+      <label>Event/log ID source<select name="eventId" data-map></select></label>
+      <label>Timestamp source<select name="timestampUtc" data-map></select></label>
+      <label>Amount source<select name="amount" data-map></select></label>
+      <label>Note source<select name="note" data-map></select></label>
+      <label>Amount precision (0–18; exact raw integer in report)<input name="amountDecimals" value="6" inputmode="numeric" maxlength="2" /></label>
+      <label>Timestamp format<select name="dateFormat"><option value="iso-offset">ISO with explicit UTC offset</option><option value="utc-date">UTC date at 00:00</option><option value="unix-seconds">Unix seconds</option></select></label>
+      <div data-dedupe hidden>
+        <label>First duplicate identity field<select name="identityA" data-identity></select></label>
+        <label>Second identity field (optional)<select name="identityB" data-identity></select></label>
+        <p>Matching timestamp or amount alone does not establish one blockchain event. Choose fields that identify a record; then review each duplicate group.</p>
+      </div>
+      <label><input type="checkbox" name="confirm" /> I reviewed the original preview, delimiter, header, mapping and export choices.</label>
+    </fieldset>
+    <button class="primary" type="submit">Run local review</button>
+  </form>
+  <p role="alert" data-error hidden></p>
+  <section data-result role="status" aria-live="polite" hidden>
+    <h2>Local review</h2><p data-summary></p><p data-candidates></p>
+    <div data-preview></div><div data-normalized-preview></div><ul data-issues></ul><div data-duplicate-decisions></div>
+    <div class="an-actions"><button type="button" data-download-original>Download exact original CSV (spreadsheet-unsafe)</button><button type="button" data-download-json>Download exact local JSON report</button><button type="button" data-download-csv hidden>Download reviewed spreadsheet-safe CSV</button></div>
+  </section>
+  <div class="rule"><h2>Method and limits</h2><p>CSV quoting, UTF-8, row width and selected mappings are checked locally. Ambiguous delimiters, date formats, decimal separators, identities and tax meaning are never guessed. A leading spreadsheet formula character is escaped in CSV exports; JSON keeps the original exact text. This is not a Taxlot importer or tax advice.</p></div>
+</section>
+<script is:inline set:html={script}></script>

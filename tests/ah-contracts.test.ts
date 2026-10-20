@@ -7,7 +7,7 @@ import {
 
 describe("Phase AH closed pure-local composition boundary", () => {
   it("retains the reviewed local allowlist and keeps execution IDs rejected", () => {
-    expect(PURE_TOOL_CONTRACTS.map((item) => item.id)).toEqual([
+    expect(PURE_TOOL_CONTRACTS.slice(0, 12).map((item) => item.id)).toEqual([
       "swap-cost",
       "portfolio-exposure",
       "token-fee-converter",

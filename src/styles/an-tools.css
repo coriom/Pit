@@ -1,0 +1,13 @@
+.an-tool { max-width: 800px; }
+.an-tool [hidden] { display: none !important; }
+.an-tool fieldset { min-width: 0; border: 1px solid #33443a; border-radius: 12px; margin: 18px 0; padding: 18px; }
+.an-tool legend { color: #d8f977; font-weight: 700; padding: 0 8px; }
+.an-tool label { display: block; max-width: 100%; }
+.an-tool input, .an-tool select, .an-tool textarea { box-sizing: border-box; max-width: 100%; width: 100%; }
+.an-tool textarea { min-height: 8rem; font: inherit; }
+.an-tool pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 18rem; overflow-y: auto; }
+.an-tool table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
+.an-tool th, .an-tool td { padding: 6px 10px; border-bottom: 1px solid #33443a; text-align: left; overflow-wrap: anywhere; }
+.an-tool dl > div { border-top: 1px solid #33443a; padding: 8px 0; }
+.an-tool dd { margin: 0; overflow-wrap: anywhere; }
+.an-tool .an-actions { display: flex; flex-wrap: wrap; gap: 10px; }

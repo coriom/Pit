@@ -51,6 +51,8 @@ describe("authoritative toolbox registry", () => {
         (tool) => tool.id,
       ),
     ).toEqual([
+      "evm-data-inspector",
+      "crypto-data-workshop",
       "pnl",
       "swap-cost",
       "token-fee-converter",

@@ -10,6 +10,7 @@ import { ajInlineHash } from "./scripts/build-aj-inline.mjs";
 import { akInlineHash } from "./scripts/build-ak-inline.mjs";
 import { alInlineHash } from "./scripts/build-al-inline.mjs";
 import { amInlineHash } from "./scripts/build-am-inline.mjs";
+import { anInlineHash } from "./scripts/build-an-inline.mjs";
 export default defineConfig({
   output: "static",
   devToolbar: { enabled: false },
@@ -42,6 +43,8 @@ export default defineConfig({
           alInlineHash("borrowing"),
           amInlineHash("amm"),
           amInlineHash("concentrated"),
+          anInlineHash("evm"),
+          anInlineHash("csv"),
         ],
       },
       styleDirective: { resources: ["'self'", "'unsafe-inline'"] },

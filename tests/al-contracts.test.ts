@@ -31,7 +31,7 @@ const growth = {
 };
 describe("Phase AL closed local contracts", () => {
   it("allows only two new pure IDs and rejects execution IDs", () => {
-    expect(PURE_TOOL_CONTRACTS.map((item) => item.id).slice(-4, -2)).toEqual([
+    expect(PURE_TOOL_CONTRACTS.slice(10, 12).map((item) => item.id)).toEqual([
       "collateral-health",
       "borrowing-cost",
     ]);

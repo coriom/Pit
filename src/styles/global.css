@@ -1,4 +1,11 @@
 @import "tailwindcss";
+/* Audit prose is not a style source for either static artifact. */
+@source not "../../docs";
+/* Preserve the reviewed utility set that earlier builds incidentally found in audit text. */
+@source inline("collapse isolate table");
+/* Phase AN pages use their own scoped styles; keep their prose out of the frozen beta utility scan. */
+@source not "../components/CryptoDataWorkshop.astro";
+@source not "../lib/crypto-data-workshop-browser.ts";
 :root {
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
   color: #e8efed;

@@ -1,0 +1,32 @@
+---
+import { anInlineScript } from "../../scripts/build-an-inline.mjs";
+import "../styles/an-tools.css";
+const script = anInlineScript("evm");
+---
+<section class="panel an-tool" data-an-evm>
+  <p class="notice">Offline data inspection · no wallet, RPC, lookup or transaction</p>
+  <p>Paste an address, canonical signature or calldata. PIT checks only the supplied bytes and the bounded ABI you provide.</p>
+  <form novalidate>
+    <label>Inspection mode<select name="mode" data-mode><option value="address">Address &amp; checksum</option><option value="signature">Function &amp; event signatures</option><option value="decode">ABI call decoder</option></select></label>
+    <fieldset data-panel="address"><legend>Does this address carry a valid EIP-55 checksum?</legend>
+      <label>EVM address<input name="address" value="0x52908400098527886E0F7030069857D2E4169EE7" maxlength="42" autocomplete="off" spellcheck="false" /></label>
+      <label>Optional chain ID (descriptor only)<input name="chainId" value="" inputmode="numeric" maxlength="10" autocomplete="off" /></label>
+      <p>Lowercase and uppercase addresses may be syntactically valid without a mixed-case checksum. This does not establish ownership or contract existence.</p>
+    </fieldset>
+    <fieldset data-panel="signature" hidden><legend>What selector or topic does a canonical signature produce?</legend>
+      <label>Signature kind<select name="kind"><option value="function">Function selector</option><option value="event">Non-anonymous event topic0</option></select></label>
+      <label>Canonical signature<input name="signature" value="transfer(address,uint256)" maxlength="512" autocomplete="off" spellcheck="false" /></label>
+      <p>Use Ethereum Keccak-256, canonical static primitive types and no parameter names or spaces. No remote four-byte database is consulted.</p>
+    </fieldset>
+    <fieldset data-panel="decode" hidden><legend>Which supplied ABI function matches these bytes?</legend>
+      <label>Static ABI JSON function fragment or array<textarea name="abiJson" maxlength="8192" spellcheck="false">{`{"type":"function","name":"transfer","inputs":[{"name":"to","type":"address"},{"name":"amount","type":"uint256"}]}`}</textarea></label>
+      <label>Hex calldata<textarea name="calldata" maxlength="8194" spellcheck="false">0xa9059cbb00000000000000000000000052908400098527886e0f7030069857d2e4169ee70000000000000000000000000000000000000000000000000000000000000064</textarea></label>
+      <p>At most eight functions and eight static primitive parameters each. Arrays, tuples, dynamic bytes and strings are rejected. Decoding cannot prove execution success.</p>
+    </fieldset>
+    <div class="an-actions"><button type="button" data-sample>Load fictional example</button><button class="primary" type="submit">Inspect locally</button></div>
+  </form>
+  <p role="alert" data-error hidden></p>
+  <section data-result role="status" aria-live="polite" hidden><h2>Inspection result</h2><p data-primary></p><dl data-details></dl><button type="button" data-download>Download local JSON</button></section>
+  <div class="rule"><h2>Limits</h2><p>Checksum is a typo-detection aid, not recipient verification. The same address text can denote unrelated things on different chains. Static ABI decoding inspects data only; it does not assess a contract, send a call or sign.</p><p>For live allowances on a small reviewed Sepolia pair set, use <a href="/tools/token-approvals/">Token Approval Inspector</a>.</p></div>
+</section>
+<script is:inline set:html={script}></script>

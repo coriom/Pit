@@ -55,6 +55,9 @@ import {
 } from "./am-tool-contracts";
 import type { AmmResult } from "./amm-pool-math";
 import type { ClResult } from "./concentrated-liquidity";
+import { evmDataInspectorContract, cryptoDataWorkshopContract, runAnTool } from "./an-tool-contracts";
+import type { EvmResult } from "./evm-data-inspector";
+import type { WorkshopResult } from "./crypto-data-workshop";
 
 export const TOOL_CONTRACT_VERSION = 1 as const;
 export type ToolCapability =
@@ -160,7 +163,9 @@ export type PureToolContract<I, O> = Readonly<{
     | "collateral-health"
     | "borrowing-cost"
     | "amm-pool-math"
-    | "concentrated-liquidity";
+    | "concentrated-liquidity"
+    | "evm-data-inspector"
+    | "crypto-data-workshop";
   version: typeof TOOL_CONTRACT_VERSION;
   title: string;
   category: ToolCategory;
@@ -502,6 +507,8 @@ export const PURE_TOOL_CONTRACTS = [
   borrowingCostContract,
   ammPoolContract,
   concentratedLiquidityContract,
+  evmDataInspectorContract,
+  cryptoDataWorkshopContract,
 ] as const;
 
 export function compatiblePorts(source: ToolPort, target: ToolPort): boolean {
@@ -674,6 +681,16 @@ export function runPureTool(
   context?: ToolRunContext,
 ): ToolRunResult<ClResult>;
 export function runPureTool(
+  id: "evm-data-inspector",
+  value: unknown,
+  context?: ToolRunContext,
+): ToolRunResult<EvmResult>;
+export function runPureTool(
+  id: "crypto-data-workshop",
+  value: unknown,
+  context?: ToolRunContext,
+): ToolRunResult<WorkshopResult>;
+export function runPureTool(
   id: string,
   value: unknown,
   context?: ToolRunContext,
@@ -692,6 +709,8 @@ export function runPureTool(
   | BorrowingResult
   | AmmResult
   | ClResult
+  | EvmResult
+  | WorkshopResult
 >;
 export function runPureTool(
   id: string,
@@ -712,6 +731,8 @@ export function runPureTool(
   | BorrowingResult
   | AmmResult
   | ClResult
+  | EvmResult
+  | WorkshopResult
 > {
   if (id === "swap-cost") return run(swapCostContract, value, context);
   if (id === "portfolio-exposure")
@@ -728,6 +749,8 @@ export function runPureTool(
     return runAlTool(id, value);
   if (id === "amm-pool-math" || id === "concentrated-liquidity")
     return runAmTool(id, value);
+  if (id === "evm-data-inspector" || id === "crypto-data-workshop")
+    return runAnTool(id, value);
   return {
     status: "ERROR",
     error: {

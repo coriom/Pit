@@ -355,7 +355,7 @@ describe("Phase AM bounded concentrated-range model", () => {
 
 describe("closed AM contracts", () => {
   it("adds exactly two reviewed IDs and rejects execution IDs", () => {
-    expect(PURE_TOOL_CONTRACTS.slice(-2).map((c) => c.id)).toEqual([
+    expect(PURE_TOOL_CONTRACTS.slice(12, 14).map((c) => c.id)).toEqual([
       "amm-pool-math",
       "concentrated-liquidity",
     ]);

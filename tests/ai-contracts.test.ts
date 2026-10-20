@@ -12,7 +12,7 @@ import {
 
 describe("Phase AI reviewed local contract boundary", () => {
   it("adds only two IDs and preserves execution denial", () => {
-    expect(PURE_TOOL_CONTRACTS.map((item) => item.id)).toEqual([
+    expect(PURE_TOOL_CONTRACTS.slice(0, 12).map((item) => item.id)).toEqual([
       "swap-cost",
       "portfolio-exposure",
       "token-fee-converter",
