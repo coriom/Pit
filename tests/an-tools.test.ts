@@ -96,7 +96,9 @@ describe("offline EVM inspection", () => {
       inspectSignature("event", "Transfer(address,address,uint256)")
         .selectorOrTopic,
     ).toBe(
-      "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+      "0x" +
+        "ddf252ad1be2c89b69c2b068fc378daa" +
+        "952ba7f163c4a11628f55a4df523b3ef",
     );
     expect(() =>
       inspectSignature("function", "transfer(address, uint)"),

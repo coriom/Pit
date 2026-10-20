@@ -25,7 +25,7 @@ The [Solidity ABI specification](https://docs.soliditylang.org/en/latest/abi-spe
 
 Calldata decoding accepts one function object or an array of at most eight function objects in JSON (`type`, `name`, `inputs`, each input with `name` and `type`). ABI input is at most 8 KiB; calldata at most 4 KiB. The parser rejects unsupported fields, duplicate/ambiguous selectors, unsupported types, wrong selectors, truncated words and trailing bytes. Only one 32-byte word per static argument is accepted. Parameter names and decoded data remain untrusted text and are rendered with `textContent`. Decoding does not simulate or execute a call and proves nothing about contract safety or transaction success.
 
-Independent published vectors: EIP-55 `0x52908400098527886E0F7030069857D2E4169EE7`; `transfer(address,uint256)` → `0xa9059cbb`; `approve(address,uint256)` → `0x095ea7b3`; `Transfer(address,address,uint256)` → `0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef`. Fixed ERC-20 transfer calldata to that address with final word `0x64` decodes to amount decimal `100`. Ethereum Keccak-256 is **not** standardized SHA3-256.
+Independent published vectors: EIP-55 `0x52908400098527886E0F7030069857D2E4169EE7`; `transfer(address,uint256)` → `0xa9059cbb`; `approve(address,uint256)` → `0x095ea7b3`; `Transfer(address,address,uint256)` → `0x` + `ddf252ad1be2c89b69c2b068fc378daa` + `952ba7f163c4a11628f55a4df523b3ef` (concatenate without spaces). Fixed ERC-20 transfer calldata to that address with final word `0x64` decodes to amount decimal `100`. Ethereum Keccak-256 is **not** standardized SHA3-256.
 
 ## CSV grammar, normalization and export safety
 
