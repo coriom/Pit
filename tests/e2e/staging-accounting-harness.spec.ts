@@ -206,6 +206,7 @@ test("preexisting records and unapproved origins fail closed", async ({ page }) 
 test("CSV selection is retained before asynchronous fixture readback", async ({ page }) => {
   await open(page);
   await page.getByRole("button", { name: "Create" }).click();
+  await expect(page.locator("#report")).toContainText("CREATED");
   const pending = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export" }).click();
   const download = await pending;
@@ -220,6 +221,7 @@ test("CSV selection is retained before asynchronous fixture readback", async ({ 
 test("CSV selection survives report updates and input replacement without re-reading a stale filename", async ({ page }) => {
   await open(page);
   await page.getByRole("button", { name: "Create" }).click();
+  await expect(page.locator("#report")).toContainText("CREATED");
   const pending = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export" }).click();
   const download = await pending;

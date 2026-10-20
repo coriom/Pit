@@ -23,8 +23,14 @@ test("bounded CSV workshop stays responsive at 1,000 rows and 30 columns", async
   });
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+  await cdp.send("Performance.enable");
+  const heapBytes = async () =>
+    (await cdp.send("Performance.getMetrics")).metrics.find(
+      (metric) => metric.name === "JSHeapUsedSize",
+    )?.value ?? 0;
   await page.setViewportSize({ width: 390, height: 780 });
   await page.goto("/tools/crypto-data-workshop/");
+  const heapSamples = [await heapBytes()];
   const header = [
     "id",
     "chain",
@@ -49,23 +55,23 @@ test("bounded CSV workshop stays responsive at 1,000 rows and 30 columns", async
   const bytes = Buffer.from(source, "utf8");
   expect(bytes.length).toBeLessThanOrEqual(262_144);
   const startUpload = Date.now();
-  await page
-    .locator("[data-file]")
-    .setInputFiles({
-      name: "fictional-limit.csv",
-      mimeType: "text/csv",
-      buffer: bytes,
-    });
+  await page.locator("[data-file]").setInputFiles({
+    name: "fictional-limit.csv",
+    mimeType: "text/csv",
+    buffer: bytes,
+  });
   await expect(page.locator("[data-file-status]")).toContainText(
     "1000 data rows · 30 columns",
   );
   const uploadMs = Date.now() - startUpload;
+  heapSamples.push(await heapBytes());
   const startInspect = Date.now();
   await page.getByRole("button", { name: "Run local review" }).click();
   await expect(page.locator("[data-summary]")).toContainText(
     "COMPLETE · 1000 data rows · 30 columns",
   );
   const inspectMs = Date.now() - startInspect;
+  heapSamples.push(await heapBytes());
   await page.getByLabel("Workshop mode").selectOption("normalize");
   for (const [field, source] of Object.entries({
     recordId: "id",
@@ -81,6 +87,7 @@ test("bounded CSV workshop stays responsive at 1,000 rows and 30 columns", async
   await page.getByRole("button", { name: "Run local review" }).click();
   await expect(page.locator("[data-summary]")).toContainText("COMPLETE");
   const normalizeMs = Date.now() - startNormalize;
+  heapSamples.push(await heapBytes());
   await page.getByLabel("Workshop mode").selectOption("dedupe");
   await page.locator('[name="identityA"]').selectOption("recordId");
   await page.locator('[name="identityB"]').selectOption("eventId");
@@ -88,6 +95,7 @@ test("bounded CSV workshop stays responsive at 1,000 rows and 30 columns", async
   await page.getByRole("button", { name: "Run local review" }).click();
   await expect(page.locator("[data-summary]")).toContainText("COMPLETE");
   const dedupeMs = Date.now() - startDedupe;
+  heapSamples.push(await heapBytes());
   const startExport = Date.now();
   const [download] = await Promise.all([
     page.waitForEvent("download"),
@@ -97,11 +105,12 @@ test("bounded CSV workshop stays responsive at 1,000 rows and 30 columns", async
   ]);
   const reportBytes = (await readFile(await download.path()!)).length;
   const exportMs = Date.now() - startExport;
+  heapSamples.push(await heapBytes());
   expect(await page.locator("[data-preview] td").count()).toBeLessThanOrEqual(
     180,
   );
   expect(unexpected).toEqual([]);
   console.log(
-    `AO_CSV_PERFORMANCE ${JSON.stringify({ browserName, cpuThrottle: 4, viewport: "390x780", sourceBytes: bytes.length, rows: 1000, columns: 30, uploadMs, inspectMs, normalizeMs, dedupeMs, exportMs, reportBytes })}`,
+    `AO_CSV_PERFORMANCE ${JSON.stringify({ browserName, cpuThrottle: 4, viewport: "390x780", sourceBytes: bytes.length, rows: 1000, columns: 30, uploadMs, inspectMs, normalizeMs, dedupeMs, exportMs, reportBytes, heapSamplesBytes: heapSamples, highestObservedHeapBytes: Math.max(...heapSamples) })}`,
   );
 });
