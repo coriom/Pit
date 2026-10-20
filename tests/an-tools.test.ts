@@ -140,6 +140,50 @@ describe("offline EVM inspection", () => {
         .details[1].value,
     ).toBe("0x52908400098527886E0F7030069857D2E4169EE7");
   });
+  it("rejects noncanonical static ABI padding before decoding", () => {
+    const fn = (name: string, type: string) =>
+      JSON.stringify({
+        type: "function",
+        name,
+        inputs: [{ name: "value", type }],
+      });
+    const call = (name: string, type: string, word: string) =>
+      `${inspectSignature("function", `${name}(${type})`).selectorOrTopic}${word}`;
+    expect(() =>
+      decodeStaticCall(
+        fn("a", "address"),
+        call("a", "address", `01${"00".repeat(31)}`),
+      ),
+    ).toThrow("high padding");
+    expect(() =>
+      decodeStaticCall(
+        fn("b", "bool"),
+        call("b", "bool", `${"00".repeat(31)}02`),
+      ),
+    ).toThrow("zero or one");
+    expect(() =>
+      decodeStaticCall(
+        fn("u", "uint8"),
+        call("u", "uint8", `${"00".repeat(30)}0101`),
+      ),
+    ).toThrow("high bits");
+    expect(() =>
+      decodeStaticCall(
+        fn("i", "int8"),
+        call("i", "int8", `${"00".repeat(31)}ff`),
+      ),
+    ).toThrow("sign extension");
+    expect(() =>
+      decodeStaticCall(
+        fn("x", "bytes1"),
+        call("x", "bytes1", `ab01${"00".repeat(30)}`),
+      ),
+    ).toThrow("trailing padding");
+    expect(
+      decodeStaticCall(fn("i", "int8"), call("i", "int8", `${"ff".repeat(32)}`))
+        .parameters[0].value,
+    ).toBe("-1");
+  });
 });
 
 describe("bounded local CSV workshop", () => {
@@ -240,7 +284,9 @@ describe("bounded local CSV workshop", () => {
     expect(reviewed.status).toBe("COMPLETE");
     expect(reviewed.includedRows).toEqual([1, 2]);
     expect(reviewed.excludedRows).toEqual([3]);
-    expect(() => calculateWorkshop({ ...base, decisions: { "2": "exclude" } })).toThrow("nonduplicate");
+    expect(() =>
+      calculateWorkshop({ ...base, decisions: { "2": "exclude" } }),
+    ).toThrow("nonduplicate");
     expect(workshopReviewedCSV(reviewed)).toContain('"1250000"');
     expect(
       JSON.parse(
@@ -257,7 +303,17 @@ describe("bounded local CSV workshop", () => {
     expect(conflict.duplicates[0].conflict).toBe(true);
   });
   it("escapes spreadsheet formulas while JSON remains exact", () => {
-    for (const value of ["=SUM(1,1)", "+cmd", "-cmd", "@cmd", " \t=1", "\n=1"])
+    for (const value of [
+      "=SUM(1,1)",
+      "+cmd",
+      "-cmd",
+      "@cmd",
+      " \t=1",
+      "\n=1",
+      "\u200B=1",
+      "\u202E+cmd",
+      "\u0085@cmd",
+    ])
       expect(spreadsheetCell(value).startsWith("\"'")).toBe(true);
     expect(spreadsheetCell("ordinary")).toBe('"ordinary"');
     const hostile = calculateWorkshop({

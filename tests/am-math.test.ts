@@ -260,6 +260,105 @@ describe("Phase AM bounded concentrated-range model", () => {
     const same = calculateConcentrated({ ...clBase, futurePrice: "1" });
     expect(get(same, "lpMinusHodl")).toBe(0n);
   });
+  it("bounds propagated valuation drift against independent Decimal reference vectors", () => {
+    // Decimal(110-digit) continuous-model references were calculated outside
+    // this engine; tolerances include fixed-root propagation and raw-unit floor.
+    for (const vector of [
+      {
+        lowerPrice: "1",
+        upperPrice: "1.00000001",
+        initialPrice: "1.000000004",
+        futurePrice: "1.000000009",
+        budget0: "1000",
+        budget1: "1000",
+        decimals0: 18,
+        decimals1: 18,
+        expected: 1666666679916666665333n,
+      },
+      {
+        lowerPrice: "0.000000000001",
+        upperPrice: "0.000000000002",
+        initialPrice: "0.0000000000015",
+        futurePrice: "0.000000000002",
+        budget0: "1000",
+        budget1: "1000",
+        decimals0: 18,
+        decimals1: 18,
+        expected: 3786583057n,
+      },
+      {
+        lowerPrice: "100000000000",
+        upperPrice: "100000000001",
+        initialPrice: "100000000000.5",
+        futurePrice: "100000000001",
+        budget0: "1000",
+        budget1: "1000",
+        decimals0: 18,
+        decimals1: 18,
+        expected: 1999999999997500000000n,
+      },
+      {
+        lowerPrice: "0.25",
+        upperPrice: "4",
+        initialPrice: "1",
+        futurePrice: "4",
+        budget0: "50",
+        budget1: "50",
+        decimals0: 18,
+        decimals1: 6,
+        expected: 150000000n,
+      },
+    ]) {
+      const actual = get(
+        calculateConcentrated({ ...clBase, ...vector }),
+        "futureLpValue",
+      );
+      const drift =
+        actual > vector.expected
+          ? actual - vector.expected
+          : vector.expected - actual;
+      expect(drift).toBeLessThanOrEqual(vector.expected / 1_000_000_000n + 2n);
+    }
+  });
+  it("rejects root spans too narrow for a credible v1 composition", () => {
+    expect(() =>
+      calculateConcentrated({
+        ...clBase,
+        lowerPrice: "1",
+        upperPrice: "1.000000000001",
+        initialPrice: "1",
+        futurePrice: "1.000000000001",
+      }),
+    ).toThrow("too narrow");
+  });
+  it("rejects token precision that would erase material value at a future boundary", () => {
+    expect(() =>
+      calculateConcentrated({
+        ...clBase,
+        lowerPrice: "100000000000",
+        upperPrice: "100000000001",
+        initialPrice: "100000000000.5",
+        futurePrice: "100000000000",
+        budget0: "1000",
+        budget1: "1000",
+        decimals0: 6,
+        decimals1: 6,
+      }),
+    ).toThrow(/precision is too coarse|rounds to zero/);
+    expect(() =>
+      calculateConcentrated({
+        ...clBase,
+        lowerPrice: "0.000000000001",
+        upperPrice: "0.000000000002",
+        initialPrice: "0.000000000001",
+        futurePrice: "0.000000000002",
+        budget0: "1000",
+        budget1: "1000",
+        decimals0: 6,
+        decimals1: 6,
+      }),
+    ).toThrow(/precision is too coarse|rounds to zero/);
+  });
   it("derives below/within/above compositions without exceeding budgets", () => {
     for (const initialPrice of ["0.1", "1", "10"]) {
       const r = calculateConcentrated({

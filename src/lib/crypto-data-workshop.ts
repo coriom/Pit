@@ -387,7 +387,11 @@ export function calculateWorkshop(input: WorkshopInput): WorkshopResult {
     if (input.mode === "dedupe" && !reasons.length) {
       duplicates = analyzeDuplicates(normalizedRows, input.identityFields);
       const duplicateRows = new Set(duplicates.flatMap((g) => g.rowNumbers));
-      if (Object.keys(input.decisions).some((key) => !duplicateRows.has(Number(key))))
+      if (
+        Object.keys(input.decisions).some(
+          (key) => !duplicateRows.has(Number(key)),
+        )
+      )
         fail("Duplicate decisions refer to an unknown or nonduplicate row.");
       for (const row of normalizedRows) {
         if (!duplicateRows.has(row.sourceRow)) {
@@ -427,7 +431,10 @@ export function calculateWorkshop(input: WorkshopInput): WorkshopResult {
 
 /** Spreadsheet-safe CSV is intentionally text-modified; JSON preserves exact input. */
 export function spreadsheetCell(text: string): string {
-  const dangerous = /^[\s\u0000-\u001F\uFEFF]*[=+\-@]/u.test(text);
+  const dangerous =
+    /^[\s\u0000-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]*[=+\-@]/u.test(
+      text,
+    );
   const safe = dangerous ? `'${text}` : text;
   return `"${safe.replaceAll('"', '""')}"`;
 }

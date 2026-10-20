@@ -109,6 +109,10 @@ export function calculateConcentrated(input: ClInput): ClResult {
     q0 = root(p0),
     q1 = root(p1);
   if (a >= b) fail("Range collapses at the supported square-root precision.");
+  // A sub-nanounit sqrt-price span amplifies the <1/Q root truncation into
+  // materially misleading token composition. Reject that domain in v1.
+  if (b - a < 1_000_000_000n)
+    fail("Price range is too narrow for this illustrative fixed-point model.");
   const budget0 = cap(
     parse(input.budget0, d0, "Initial token0 budget"),
     "Token0 budget",
@@ -131,6 +135,27 @@ export function calculateConcentrated(input: ClInput): ClResult {
     future = amounts(L, q1, a, b, d0, d1);
   if (initial.token0 > budget0 || initial.token1 > budget1)
     fail("Derived liquidity exceeds a supplied budget.");
+  const checkGranularity = (
+    q: bigint,
+    p: bigint,
+    value0: bigint,
+    value1: bigint,
+  ) => {
+    const valueRaw = quoteValue(value0, value1, p, d0, d1);
+    if (valueRaw <= 0n)
+      fail("Position value rounds to zero at the supplied token precision.");
+    // One raw unit of each active token must be worth no more than 0.01% of
+    // the modeled value. Otherwise raw-unit flooring can dominate the result.
+    if (
+      q < b &&
+      p * 10n ** BigInt(d1) * 10_000n > valueRaw * Q * 10n ** BigInt(d0)
+    )
+      fail("Token0 precision is too coarse for a credible position value.");
+    if (q > a && 10_000n > valueRaw)
+      fail("Token1 precision is too coarse for a credible position value.");
+  };
+  checkGranularity(q0, p0, initial.token0, initial.token1);
+  checkGranularity(q1, p1, future.token0, future.token1);
   const lp = quoteValue(future.token0, future.token1, p1, d0, d1);
   const hodl = quoteValue(initial.token0, initial.token1, p1, d0, d1);
   const diff = lp - hodl;
@@ -200,6 +225,8 @@ export function calculateConcentrated(input: ClInput): ClResult {
     assumptions: [
       "Continuous, fee-free range model; P is token1 per token0.",
       "Initial L is floored to satisfy both manual token budgets; token amounts floor to raw units.",
+      "Square-root price span must be at least 0.000000001; smaller ranges are unsupported.",
+      "Each active token's smallest unit must represent at most 0.01% of position value at both modeled prices.",
     ],
     limitations: [
       "Not Uniswap TickMath, Q64.96, fee growth, execution or a real position.",

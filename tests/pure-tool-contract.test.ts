@@ -74,9 +74,11 @@ describe("versioned pure tool contracts", () => {
     for (const id of [
       "swap",
       "perps",
+      "wallet",
       "taxlot-export",
       "token-approvals",
       "uniswap-execution",
+      "unreviewed-tool",
     ])
       expect(runPureTool(id, {}).status).toBe("ERROR");
   });

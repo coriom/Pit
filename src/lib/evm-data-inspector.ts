@@ -166,6 +166,36 @@ export function decodeStaticCall(abiJson: string, calldata: string) {
         ? "Calldata is truncated."
         : "Unexpected trailing calldata bytes.",
     );
+  // Some decoders return a value even when unused bits in a static ABI word
+  // are noncanonical. Reject those encodings before presenting trusted-looking
+  // parameters; this inspector deliberately supports only static primitives.
+  fragment.inputs.forEach((param, index) => {
+    const word = calldata.slice(10 + index * 64, 74 + index * 64).toLowerCase();
+    const bits = BigInt(`0x${word}`);
+    if (param.type === "address" && bits >> 160n !== 0n)
+      reject("Address ABI word has nonzero high padding.");
+    if (param.type === "bool" && bits !== 0n && bits !== 1n)
+      reject("Boolean ABI word must encode zero or one.");
+    const integer = /^(u?int)(\d+)$/.exec(param.type);
+    if (integer) {
+      const width = BigInt(integer[2]);
+      const high = bits >> width;
+      if (integer[1] === "uint") {
+        if (high !== 0n) reject("Unsigned ABI word has nonzero high bits.");
+      } else {
+        const negative = ((bits >> (width - 1n)) & 1n) === 1n;
+        const expectedHigh = negative ? (1n << (256n - width)) - 1n : 0n;
+        if (high !== expectedHigh)
+          reject("Signed ABI word has invalid sign extension.");
+      }
+    }
+    const fixedBytes = /^bytes(\d+)$/.exec(param.type);
+    if (fixedBytes) {
+      const unusedBits = BigInt((32 - Number(fixedBytes[1])) * 8);
+      if (unusedBits && (bits & ((1n << unusedBits) - 1n)) !== 0n)
+        reject("Fixed-bytes ABI word has nonzero trailing padding.");
+    }
+  });
   let args: readonly unknown[] = [];
   try {
     args =
