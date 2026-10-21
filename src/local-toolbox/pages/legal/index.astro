@@ -1,0 +1,12 @@
+---
+import "../../../styles/global.css";
+import "../../local.css";
+const canonical = Astro.site ? new URL("/legal/", Astro.site).href : undefined;
+---
+<html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width" /><meta name="description" content="Scope, limitations and publisher information for PIT's browser-local DeFi calculation toolbox." />{canonical && <link rel="canonical" href={canonical} />}<title>Site information · PIT Toolbox</title></head><body><a class="local-skip" href="#main-content">Skip to main content</a><main class="shell" id="main-content">
+  <header><a href="../" class="brand">pit<span>.</span></a><nav aria-label="Main navigation"><a href="../">Home</a><a href="../tools/">Toolbox</a><a href="../privacy/">Privacy</a></nav><span class="tag">BROWSER-LOCAL TOOLS</span></header>
+  <article class="local-notice"><h1>Site information and limitations</h1><p>PIT's isolated toolbox provides manually driven educational calculations and data inspection. Results depend on your inputs, valuation assumptions, fee coverage, dates and the limits stated by each tool. They may be incomplete or stale. They are not live prices, executable quotes, investment or tax advice, or a guarantee of results.</p>
+    <h2>No transactions</h2><p>This website does not connect a wallet, submit a trade, bridge, staking or borrowing transaction, or discover your on-chain positions. The surrounding PIT testnet application is a separate product surface and is not part of this toolbox.</p>
+    <h2>Publisher details</h2><p data-publication-pending="publisher-and-legal-details"><strong>Before public release:</strong> the publisher must supply its legal name and status, a working contact method and any legally required address or registration details. Applicable jurisdiction, consumer notices and final legal wording require operator or legal review. No identity or contact details are claimed here.</p>
+  </article><footer><a href="../tools/">All tools</a> · <a href="../privacy/">Privacy</a></footer>
+</main></body></html>

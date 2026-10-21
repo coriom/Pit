@@ -16,4 +16,10 @@
 .local-card p { margin: 8px 0; }
 .local-card:hover,.local-card:focus-visible { outline: 2px solid #d8f977; outline-offset: 2px; }
 .local-card small { color: #d8f977; }
-@media (max-width: 760px) { .local-filter-list button { flex: 1 1 140px; } }
+.local-skip { position: absolute; left: 1rem; top: -6rem; z-index: 20; background: #d8f977; color: #172010; padding: .6rem 1rem; border-radius: .35rem; }
+.local-skip:focus { top: 1rem; }
+.local-notice { max-width: 760px; }
+.local-notice h2 { margin: 2rem 0 .6rem; }
+.local-notice p,.local-notice li { line-height: 1.65; }
+.local-notice ul { list-style: disc; padding-left: 1.4rem; }
+@media (max-width: 760px) { .local-filter-list button { flex: 1 1 140px; } .shell > header { flex-wrap: wrap; gap: .6rem; } .shell > header nav { display: flex; flex-wrap: wrap; gap: .6rem 1rem; } }

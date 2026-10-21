@@ -4,6 +4,8 @@ dist-readonly-beta/
 dist-readonly-beta-host/
 dist-local-toolbox/
 dist-local-toolbox-host/
+dist-local-toolbox-public/
+dist-local-toolbox-public-host/
 .astro/
 .env*
 !.env.example

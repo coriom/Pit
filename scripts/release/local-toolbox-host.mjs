@@ -2,9 +2,12 @@ import { createHash } from "node:crypto";
 import { copyFile, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join, posix, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { publicOriginFromEnv, publicRobots, publicSitemap } from "./local-toolbox-publishing.mjs";
 
 export const CANDIDATE_ROOT = "dist-local-toolbox";
 export const HOST_ROOT = "dist-local-toolbox-host";
+export const PUBLIC_CANDIDATE_ROOT = "dist-local-toolbox-public";
+export const PUBLIC_HOST_ROOT = "dist-local-toolbox-public-host";
 export const LOCAL_IDS = [
   "pnl", "swap-cost", "token-fee-converter", "yield-growth", "trade-risk",
   "execution-math", "bridge-cost", "portfolio-exposure", "portfolio-rebalance",
@@ -13,7 +16,7 @@ export const LOCAL_IDS = [
   "concentrated-liquidity", "impermanent-loss", "evm-data-inspector",
   "crypto-data-workshop",
 ];
-export const LOCAL_PAGES = ["index.html", "tools/index.html", ...LOCAL_IDS.map((id) => `tools/${id}/index.html`)].sort();
+export const LOCAL_PAGES = ["index.html", "tools/index.html", "privacy/index.html", "legal/index.html", ...LOCAL_IDS.map((id) => `tools/${id}/index.html`)].sort();
 const CONTENT_POLICY = [
   "default-src 'none'", "connect-src 'none'", "font-src 'self'", "img-src 'self'",
   "object-src 'none'", "base-uri 'self'", "form-action 'self'",
@@ -23,9 +26,9 @@ const OTHER_HEADERS = {
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "no-referrer",
   "X-Frame-Options": "DENY",
-  "X-Robots-Tag": "noindex, nofollow",
   "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
 };
+const privateHeaders = { ...OTHER_HEADERS, "X-Robots-Tag": "noindex, nofollow" };
 const forbiddenCode = /\b(?:fetch\s*\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon|indexedDB|localStorage|sessionStorage|eth_sendTransaction|eth_sendRawTransaction|eth_requestAccounts|personal_sign|eth_signTypedData|connectKit|wagmi|cowprotocol|hyperliquid|pit-taxlot-v1)\b|\bwindow\.ethereum\b/i;
 const forbiddenAssets = /(?:autonomous-signer|private\.key|walletconnect|metamask|connectkit|taxlot|staging-accounting|uniswap-execution)/i;
 
@@ -97,22 +100,28 @@ function validatePolicy(htmlByPage, policy) {
   return { scriptHashes: [...scriptActual].sort(), styleHashes: [...styleActual].sort() };
 }
 
-async function candidateInventory(root) {
+async function candidateInventory(root, publicOrigin = null) {
   const files = await walk(root);
   const assets = files.filter((file) => file.startsWith("_astro/"));
   if (assets.length !== 1 || !/^_astro\/[\w.-]+\.css$/.test(assets[0]) || forbiddenAssets.test(assets[0]) ||
-      JSON.stringify(files) !== JSON.stringify([...LOCAL_PAGES, "robots.txt", ...assets].sort()))
+      JSON.stringify(files) !== JSON.stringify([...LOCAL_PAGES, "robots.txt", ...(publicOrigin ? ["sitemap.xml"] : []), ...assets].sort()))
     throw Error("Local toolbox file or route inventory differs from explicit allowlist");
-  if (await readFile(join(root, "robots.txt"), "utf8") !== "User-agent: *\nDisallow: /\n")
+  if (await readFile(join(root, "robots.txt"), "utf8") !== (publicOrigin ? publicRobots(publicOrigin) : "User-agent: *\nDisallow: /\n"))
     throw Error("Local toolbox robots policy changed");
+  if (publicOrigin && await readFile(join(root, "sitemap.xml"), "utf8") !== publicSitemap(publicOrigin, LOCAL_IDS))
+    throw Error("Local toolbox sitemap differs from approved routes");
   const css = await readFile(join(root, assets[0]), "utf8");
   if (/@import\s+(?:url\()?\s*["']?https?:\/\/|url\(\s*["']?https?:\/\//i.test(css))
     throw Error("Remote CSS in local toolbox");
   return { files, assets };
 }
 
-export async function prepareLocalCandidate(root = CANDIDATE_ROOT) {
-  const { files, assets } = await candidateInventory(root);
+export async function prepareLocalCandidate(root = CANDIDATE_ROOT, { publicOrigin = null } = {}) {
+  if (publicOrigin) {
+    await writeFile(join(root, "robots.txt"), publicRobots(publicOrigin));
+    await writeFile(join(root, "sitemap.xml"), publicSitemap(publicOrigin, LOCAL_IDS));
+  }
+  const { files, assets } = await candidateInventory(root, publicOrigin);
   const htmlByPage = await Promise.all(LOCAL_PAGES.map(async (page) => [page, await readFile(join(root, page), "utf8")]));
   const scriptHashes = new Set(), styleHashes = new Set();
   for (const [page, html] of htmlByPage) {
@@ -132,14 +141,15 @@ export async function prepareLocalCandidate(root = CANDIDATE_ROOT) {
       .replace(/<meta\s+http-equiv="content-security-policy"\s+content="[^"]+"\s*\/?\s*>/i,
         `<meta http-equiv="content-security-policy" content="${policy}">`)
       .replaceAll('="/_astro/', `="${prefix}_astro/`)
-      .replace("</head>", '<meta name="robots" content="noindex,nofollow"></head>');
+      .replace("</head>", `<meta name="robots" content="${publicOrigin ? "index,follow" : "noindex,nofollow"}"></head>`);
     await writeFile(join(root, page), prepared);
   }
-  return validateLocalCandidate(root, { expectedAssets: assets, expectedFiles: files });
+  return validateLocalCandidate(root, { expectedAssets: assets, expectedFiles: files, publicOrigin });
 }
 
 export async function validateLocalCandidate(root = CANDIDATE_ROOT, expected = {}) {
-  const { files, assets } = await candidateInventory(root);
+  const { publicOrigin = null } = expected;
+  const { files, assets } = await candidateInventory(root, publicOrigin);
   if (expected.expectedAssets && JSON.stringify(assets) !== JSON.stringify(expected.expectedAssets)) throw Error("Local toolbox assets changed while preparing");
   if (expected.expectedFiles && JSON.stringify(files) !== JSON.stringify(expected.expectedFiles)) throw Error("Local toolbox files changed while preparing");
   const htmlByPage = await Promise.all(LOCAL_PAGES.map(async (page) => [page, await readFile(join(root, page), "utf8")]));
@@ -147,15 +157,22 @@ export async function validateLocalCandidate(root = CANDIDATE_ROOT, expected = {
   const hashes = validatePolicy(htmlByPage, policy);
   const allowed = new Set(files);
   for (const [page, html] of htmlByPage) {
-    if (!html.includes('<meta name="robots" content="noindex,nofollow">')) throw Error(`Noindex missing: ${page}`);
-    assertLinks(html, page, allowed);
-    if (/\b(?:src|href)=["'](?:https?:|\/\/)/i.test(html)) throw Error(`Remote resource: ${page}`);
+    const expectedRobots = publicOrigin ? "index,follow" : "noindex,nofollow";
+    if (!html.includes(`<meta name="robots" content="${expectedRobots}">`)) throw Error(`Robots meta differs: ${page}`);
+    if (publicOrigin && html.includes("data-publication-pending")) throw Error(`Publisher details still pending: ${page}`);
+    const canonicalLinks = [...html.matchAll(/<link\s+rel="canonical"\s+href="([^"]+)"\s*\/?\s*>/gi)];
+    const path = page === "index.html" ? "/" : `/${page.slice(0, -"index.html".length)}`;
+    if (publicOrigin ? canonicalLinks.length !== 1 || canonicalLinks[0][1] !== `${publicOrigin}${path}` : canonicalLinks.length !== 0)
+      throw Error(`Canonical metadata differs: ${page}`);
+    const withoutCanonical = html.replace(/<link\s+rel="canonical"\s+href="[^"]+"\s*\/?\s*>/gi, "");
+    assertLinks(withoutCanonical, page, allowed);
+    if (/\b(?:src|href)=["'](?:https?:|\/\/)/i.test(withoutCanonical)) throw Error(`Remote resource: ${page}`);
   }
   return { files, pages: LOCAL_PAGES.length, assets, ...hashes, policy, sha256: await inventoryHash(root, files) };
 }
 
-export async function validateLocalHost(candidateRoot = CANDIDATE_ROOT, hostRoot = HOST_ROOT) {
-  const candidate = await validateLocalCandidate(candidateRoot);
+export async function validateLocalHost(candidateRoot = CANDIDATE_ROOT, hostRoot = HOST_ROOT, { publicOrigin = null } = {}) {
+  const candidate = await validateLocalCandidate(candidateRoot, { publicOrigin });
   const hostFiles = await walk(hostRoot);
   const expected = ["manifest.json", "vercel.json", ...candidate.files.map((file) => `public/${file}`)].sort();
   if (JSON.stringify(hostFiles) !== JSON.stringify(expected)) throw Error("Host package has an unreviewed file");
@@ -165,7 +182,7 @@ export async function validateLocalHost(candidateRoot = CANDIDATE_ROOT, hostRoot
     framework: null,
     outputDirectory: "public",
     headers: [{ source: "/(.*)", headers: Object.entries({
-      "Content-Security-Policy": `${candidate.policy}; frame-ancestors 'none'`, ...OTHER_HEADERS,
+      "Content-Security-Policy": `${candidate.policy}; frame-ancestors 'none'`, ...(publicOrigin ? OTHER_HEADERS : privateHeaders),
     }).map(([key, value]) => ({ key, value })) }],
   };
   if (JSON.stringify(config) !== JSON.stringify(expectedConfig) || Object.keys(config).length !== 4)
@@ -185,8 +202,8 @@ export async function validateLocalHost(candidateRoot = CANDIDATE_ROOT, hostRoot
   return { ...candidate, hostFiles, manifest, config, hostSha256: await inventoryHash(hostRoot, hostFiles) };
 }
 
-export async function prepareLocalHost(candidateRoot = CANDIDATE_ROOT, hostRoot = HOST_ROOT) {
-  const candidate = await prepareLocalCandidate(candidateRoot);
+export async function prepareLocalHost(candidateRoot = CANDIDATE_ROOT, hostRoot = HOST_ROOT, { publicOrigin = null } = {}) {
+  const candidate = await prepareLocalCandidate(candidateRoot, { publicOrigin });
   await rm(hostRoot, { recursive: true, force: true });
   await mkdir(join(hostRoot, "public"), { recursive: true });
   for (const file of candidate.files) {
@@ -198,7 +215,7 @@ export async function prepareLocalHost(candidateRoot = CANDIDATE_ROOT, hostRoot 
     framework: null,
     outputDirectory: "public",
     headers: [{ source: "/(.*)", headers: Object.entries({
-      "Content-Security-Policy": `${candidate.policy}; frame-ancestors 'none'`, ...OTHER_HEADERS,
+      "Content-Security-Policy": `${candidate.policy}; frame-ancestors 'none'`, ...(publicOrigin ? OTHER_HEADERS : privateHeaders),
     }).map(([key, value]) => ({ key, value })) }],
   };
   await writeFile(join(hostRoot, "vercel.json"), `${JSON.stringify(config, null, 2)}\n`);
@@ -207,10 +224,16 @@ export async function prepareLocalHost(candidateRoot = CANDIDATE_ROOT, hostRoot 
     return { path: file, bytes: data.length, sha256: hash(data) };
   }));
   await writeFile(join(hostRoot, "manifest.json"), `${JSON.stringify({ version: 1, candidateSha256: candidate.sha256, files }, null, 2)}\n`);
-  return validateLocalHost(candidateRoot, hostRoot);
+  return validateLocalHost(candidateRoot, hostRoot, { publicOrigin });
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  const result = process.argv.includes("--verify") ? await validateLocalHost() : await prepareLocalHost();
+  const publicOrigin = publicOriginFromEnv();
+  if (Boolean(publicOrigin) !== process.argv.includes("--public")) throw Error("Toolbox build mode and package mode differ");
+  const candidateRoot = publicOrigin ? PUBLIC_CANDIDATE_ROOT : CANDIDATE_ROOT;
+  const hostRoot = publicOrigin ? PUBLIC_HOST_ROOT : HOST_ROOT;
+  const result = process.argv.includes("--verify")
+    ? await validateLocalHost(candidateRoot, hostRoot, { publicOrigin })
+    : await prepareLocalHost(candidateRoot, hostRoot, { publicOrigin });
   console.log(`LOCAL TOOLBOX PACKAGE PASS — ${result.pages} pages; ${result.files.length} served files; ${result.hostFiles.length} package files; ${result.scriptHashes.length} exact script hashes; candidate SHA-256 ${result.sha256}; package SHA-256 ${result.hostSha256}; NOT DEPLOYED`);
 }

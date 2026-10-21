@@ -71,7 +71,7 @@ async function assertNoSideEffects(page: Page, report: Awaited<ReturnType<typeof
   expect(await page.evaluate(() => (window as any).__localForbidden)).toEqual([]);
 }
 
-test("all 22 emitted pages load under strict headers; excluded routes stay absent", async ({ page, browserName }) => {
+test("all 24 emitted pages load under strict headers; excluded routes stay absent", async ({ page, browserName }) => {
   test.setTimeout(180_000);
   const report = await guard(page);
   for (const file of LOCAL_PAGES) {
@@ -97,7 +97,26 @@ test("all 22 emitted pages load under strict headers; excluded routes stay absen
   });
   expect(await page.evaluate(() => (window as any).__arInjected)).toBeUndefined();
   await assertNoSideEffects(page, report);
-  console.log(`AR_LOCAL_ARTIFACT ${browserName}: 22 pages, 5 excluded routes, CSP and privacy PASS`);
+  console.log(`AR_LOCAL_ARTIFACT ${browserName}: 24 pages, 5 excluded routes, CSP and privacy PASS`);
+});
+
+test("private notice pages, metadata and keyboard navigation remain usable on mobile", async ({ page }) => {
+  const report = await guard(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${origin}/`);
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Skip to main content" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  expect(new URL(page.url()).hash).toBe("#main-content");
+  await page.getByRole("link", { name: "Privacy" }).first().click();
+  await expect(page.getByRole("heading", { name: "Privacy", exact: true })).toBeVisible();
+  await expect(page.locator("article")).toContainText("normal HTTP request metadata");
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex,nofollow");
+  await page.getByRole("link", { name: "Site information" }).first().click();
+  await expect(page.getByRole("heading", { name: "Site information and limitations" })).toBeVisible();
+  await expect(page.locator("article")).toContainText("Before public release");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2)).toBe(true);
+  await assertNoSideEffects(page, report);
 });
 
 test("search and task filters keep the twenty tools reachable by keyboard on mobile", async ({ page }) => {

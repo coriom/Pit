@@ -10,13 +10,17 @@ import { akInlineHash } from "./scripts/build-ak-inline.mjs";
 import { alInlineHash } from "./scripts/build-al-inline.mjs";
 import { amInlineHash } from "./scripts/build-am-inline.mjs";
 import { anInlineHash } from "./scripts/build-an-inline.mjs";
+import { publicOriginFromEnv } from "./scripts/release/local-toolbox-publishing.mjs";
+
+const publicOrigin = publicOriginFromEnv();
 
 // Separate entry tree and static public directory. The full PIT route tree,
 // wallet integrations and testnet assets are not build inputs.
 export default defineConfig({
   srcDir: "./src/local-toolbox",
   publicDir: "./src/local-toolbox/public",
-  outDir: "./dist-local-toolbox",
+  outDir: publicOrigin ? "./dist-local-toolbox-public" : "./dist-local-toolbox",
+  site: publicOrigin ?? undefined,
   output: "static",
   devToolbar: { enabled: false },
   vite: {

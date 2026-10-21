@@ -12,25 +12,28 @@ const modeLabel = {
   "read-only": "Read-only · no transaction",
   execution: "Execution · wallet approval required",
 }[tool.executionMode];
+const localCanonical = localOnly && Astro.site ? new URL(tool.path, Astro.site).href : undefined;
 ---
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <meta name="description" content={seo.description} />
+    {localCanonical && <link rel="canonical" href={localCanonical} />}
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="PIT" />
     <meta property="og:title" content={seo.title} />
     <meta property="og:description" content={seo.description} />
+    {localCanonical && <meta property="og:url" content={localCanonical} />}
     <script type="application/ld+json" set:html={jsonLd} />
     <title>{seo.title}</title>
   </head>
   <body>
-    <main class="shell">
+    <main class="shell" id={localOnly ? "main-content" : undefined}>
       <header>
         <a href="../../" class="brand">pit<span>.</span></a>
-        <nav><a href="../">Toolbox</a><a href="../../">Home</a>{!betaOnly && !localOnly && <><a href="../../tools/swap/">Trading lab</a><a href="../../fees/">Fees</a><a href="../../legal/">Legal</a></>}</nav>
-        <span class="tag">{betaOnly ? "READ-ONLY CANDIDATE" : localOnly ? "LOCAL TOOLBOX CANDIDATE" : "TESTNET PREVIEW"}</span>
+        {localOnly ? <nav aria-label="Main navigation"><a href="../">Toolbox</a><a href="../../">Home</a><a href="../../privacy/">Privacy</a><a href="../../legal/">Site information</a></nav> : <nav><a href="../">Toolbox</a><a href="../../">Home</a>{!betaOnly && <><a href="../../tools/swap/">Trading lab</a><a href="../../fees/">Fees</a><a href="../../legal/">Legal</a></>}</nav>}
+        <span class="tag">{betaOnly ? "READ-ONLY CANDIDATE" : localOnly ? Astro.site ? "LOCAL TOOLBOX" : "LOCAL TOOLBOX CANDIDATE" : "TESTNET PREVIEW"}</span>
       </header>
       <section class="hero">
         <div class="eyebrow">{tool.category} / {tool.status}</div>
@@ -43,7 +46,7 @@ const modeLabel = {
         <h2>Other tools</h2>
         <ul>{related.map((entry) => <li><a href={`../${entry.slug}/`}>{entry.title}</a> · {entry.category} · {entry.executionMode}</li>)}</ul>
       </section>}
-      <footer><a href="../">← All tools</a> · Non-custodial · No address analytics</footer>
+      {localOnly ? <footer><a href="../">← All tools</a> · <a href="../../privacy/">Privacy</a> · <a href="../../legal/">Site information</a> · Manual scenarios; no financial advice</footer> : <footer><a href="../">← All tools</a> · Non-custodial · No address analytics</footer>}
     </main>
   </body>
 </html>
