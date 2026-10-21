@@ -1,0 +1,84 @@
+---
+import TokenFeeConverter from "../../../../components/TokenFeeConverter.astro";
+import YieldGrowthPlanner from "../../../../components/YieldGrowthPlanner.astro";
+import TradeRiskPlanner from "../../../../components/TradeRiskPlanner.astro";
+import ExecutionMathLab from "../../../../components/ExecutionMathLab.astro";
+import PortfolioRebalancePlanner from "../../../../components/PortfolioRebalancePlanner.astro";
+import PerformanceDrawdownAnalyzer from "../../../../components/PerformanceDrawdownAnalyzer.astro";
+import StakingRewardsPlanner from "../../../../components/StakingRewardsPlanner.astro";
+import VestingUnlockPlanner from "../../../../components/VestingUnlockPlanner.astro";
+import CollateralHealthPlanner from "../../../../components/CollateralHealthPlanner.astro";
+import BorrowingCostPlanner from "../../../../components/BorrowingCostPlanner.astro";
+import AmmPoolMathLab from "../../../../components/AmmPoolMathLab.astro";
+import ConcentratedLiquidityPlanner from "../../../../components/ConcentratedLiquidityPlanner.astro";
+import EvmDataInspector from "../../../../components/EvmDataInspector.astro";
+import CryptoDataWorkshop from "../../../../components/CryptoDataWorkshop.astro";
+import { AVAILABLE_LOCAL_TASKS } from "../../../../lib/local-task-registry";
+import { LOCAL_TOOLS } from "../../../../lib/local-toolbox";
+import "../../../../styles/global.css";
+import "../../../local.css";
+
+export function getStaticPaths() {
+  return AVAILABLE_LOCAL_TASKS.map((task) => ({ params: { id: task.id }, props: { task } }));
+}
+const { task } = Astro.props;
+const parent = LOCAL_TOOLS.find((entry) => entry.id === task.engineId)!;
+const related = AVAILABLE_LOCAL_TASKS.filter((entry) => entry.engineId === task.engineId && entry.id !== task.id);
+const canonical = Astro.site ? new URL(task.path, Astro.site).href : undefined;
+---
+<html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width" /><meta name="description" content={task.question} />{canonical && <link rel="canonical" href={canonical} />}<meta property="og:type" content="website" /><meta property="og:site_name" content="PIT" /><meta property="og:title" content={task.title} /><meta property="og:description" content={task.question} />{canonical && <meta property="og:url" content={canonical} />}<title>{task.title} · PIT Toolbox</title></head><body><a class="local-skip" href="#main-content">Skip to main content</a><main class="shell" id="main-content">
+  <header><a href="../../" class="brand">pit<span>.</span></a><nav aria-label="Main navigation"><a href="../../">Home</a><a href="../../tools/">Toolbox</a><a href="../../privacy/">Privacy</a><a href="../../legal/">Site information</a></nav><span class="tag">LOCAL · NO WALLET</span></header>
+  <section class="hero local-task-intro"><div class="eyebrow">{task.category} · browser-local calculation</div><h1>{task.title}</h1><p>{task.question}</p><p class="muted">Use the labelled manual inputs below. PIT calculates {task.output.toLowerCase()}.</p><p class="muted">{task.assumptions}</p>{task.engineId === "crypto-data-workshop" && task.mode !== "inspect" && <p class="notice">Start with a chosen local file or the fictional example. Run CSV inspect to verify its structure, then return to this mode and explicitly confirm the mapping before export.</p>}</section>
+  <div data-task-shell data-task-engine={task.engineId} data-initial-mode={task.mode} data-focus-label={task.focusLabel} data-preset-name={task.preset?.name} data-preset-value={task.preset?.value}>
+    {task.engineId === "token-fee-converter" && <TokenFeeConverter />}
+    {task.engineId === "yield-growth" && <YieldGrowthPlanner />}
+    {task.engineId === "trade-risk" && <TradeRiskPlanner />}
+    {task.engineId === "execution-math" && <ExecutionMathLab />}
+    {task.engineId === "portfolio-rebalance" && <PortfolioRebalancePlanner />}
+    {task.engineId === "performance-drawdown" && <PerformanceDrawdownAnalyzer />}
+    {task.engineId === "staking-rewards" && <StakingRewardsPlanner />}
+    {task.engineId === "vesting-unlocks" && <VestingUnlockPlanner />}
+    {task.engineId === "collateral-health" && <CollateralHealthPlanner />}
+    {task.engineId === "borrowing-cost" && <BorrowingCostPlanner />}
+    {task.engineId === "amm-pool-math" && <AmmPoolMathLab />}
+    {task.engineId === "concentrated-liquidity" && <ConcentratedLiquidityPlanner />}
+    {task.engineId === "evm-data-inspector" && <EvmDataInspector localOnly />}
+    {task.engineId === "crypto-data-workshop" && <CryptoDataWorkshop />}
+    {task.focusLabel && <div class="local-focus-result" data-task-focused hidden><h3>Focused result · {task.output}</h3><p data-task-focused-value></p></div>}
+  </div>
+  <section class="panel local-task-related" aria-label="Related local calculations"><h2>Related calculations</h2><p><a href={`../../tools/${parent.slug}/`}>Open full {parent.title} workspace</a></p><ul>{related.map((entry) => <li><a href={`../${entry.id}/`}>{entry.title}</a></li>)}</ul></section>
+  <footer><a href="../../tools/">← All tools</a> · <a href="../../privacy/">Privacy</a> · <a href="../../legal/">Site information</a> · Manual scenarios; no financial advice</footer>
+</main><script is:inline>
+  const shell = document.querySelector('[data-task-shell]');
+  const mode = shell?.querySelector('select[name="mode"]');
+  if (shell && mode instanceof HTMLSelectElement) {
+    mode.value = shell.getAttribute('data-initial-mode') || '';
+    mode.dispatchEvent(new Event('change', { bubbles: true }));
+    const presetName = shell.getAttribute('data-preset-name');
+    const presetValue = shell.getAttribute('data-preset-value');
+    const preset = presetName ? shell.querySelector('[name="' + presetName + '"]') : null;
+    if (preset instanceof HTMLSelectElement && presetValue) {
+      preset.value = presetValue;
+      preset.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    const label = mode.closest('label');
+    if (label && shell.getAttribute('data-task-engine') !== 'crypto-data-workshop') label.hidden = true;
+  }
+  const focus = shell?.querySelector('[data-task-focused]');
+  const form = shell?.querySelector('form');
+  const report = shell?.querySelector('[data-result], [data-report]');
+  if (focus instanceof HTMLElement && form && report instanceof HTMLElement) {
+    report.prepend(focus);
+    const label = shell.getAttribute('data-focus-label');
+    const value = focus.querySelector('[data-task-focused-value]');
+    const update = () => {
+      if (report.hidden) { focus.hidden = true; return; }
+      const field = [...report.querySelectorAll('dt')].find((entry) => entry.textContent?.trim() === label);
+      if (value) value.textContent = field?.nextElementSibling?.textContent?.trim() || 'Unavailable under the current assumptions. Review the detailed result.';
+      focus.hidden = false;
+    };
+    form.addEventListener('submit', () => queueMicrotask(update));
+    form.addEventListener('input', () => { focus.hidden = true; });
+    form.addEventListener('change', () => { focus.hidden = true; });
+  }
+</script></body></html>

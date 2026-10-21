@@ -1,4 +1,4 @@
-export const publicRoutes = (ids) => ["/", "/tools/", ...ids.map((id) => `/tools/${id}/`)];
+export const publicRoutes = (ids, taskIds = []) => ["/", "/tools/", ...ids.map((id) => `/tools/${id}/`), ...taskIds.map((id) => `/tasks/${id}/`)];
 
 export function publicOriginFromEnv(env = process.env) {
   if (env.PIT_TOOLBOX_BUILD_MODE !== "public") return null;
@@ -14,9 +14,9 @@ export function publicOriginFromEnv(env = process.env) {
   return url.origin;
 }
 
-export function publicSitemap(origin, ids) {
+export function publicSitemap(origin, ids, taskIds = []) {
   if (!/^https:\/\/[^/?#]+$/.test(origin)) throw Error("Invalid sitemap origin");
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${publicRoutes(ids).map((path) => `  <url><loc>${origin}${path}</loc></url>`).join("\n")}\n</urlset>\n`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${publicRoutes(ids, taskIds).map((path) => `  <url><loc>${origin}${path}</loc></url>`).join("\n")}\n</urlset>\n`;
 }
 
 export function publicRobots(origin) {

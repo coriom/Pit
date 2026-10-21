@@ -22,4 +22,11 @@
 .local-notice h2 { margin: 2rem 0 .6rem; }
 .local-notice p,.local-notice li { line-height: 1.65; }
 .local-notice ul { list-style: disc; padding-left: 1.4rem; }
+.local-task-intro { max-width: 800px; }
+[data-task-shell] label[hidden] { display: none !important; }
+.local-task-related { margin-top: 1.5rem; }
+.local-task-related ul { display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; padding-left: 1.2rem; }
+.local-focus-result { border: 1px solid #d8f977; border-radius: .6rem; padding: .85rem 1rem; margin: .8rem 0 1.2rem; background: #172810; }
+.local-focus-result h3 { margin: 0 0 .35rem; font-size: 1rem; }
+.local-focus-result p { margin: 0; font-size: clamp(1.15rem,2.5vw,1.6rem); font-weight: 700; overflow-wrap: anywhere; }
 @media (max-width: 760px) { .local-filter-list button { flex: 1 1 140px; } .shell > header { flex-wrap: wrap; gap: .6rem; } .shell > header nav { display: flex; flex-wrap: wrap; gap: .6rem 1rem; } }

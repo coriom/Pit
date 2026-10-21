@@ -1,0 +1,1804 @@
+{
+  "version": 1,
+  "definition": "A distinct manual user question with a stable direct URL; multi-mode workspaces are not double-counted.",
+  "counts": {
+    "complete": 95,
+    "existingSinglePage": 6,
+    "extractedDirectTask": 89,
+    "genuinelyNewEngine": 0,
+    "pending": 0
+  },
+  "tasks": [
+    {
+      "id": "pnl",
+      "path": "/tools/pnl/",
+      "title": "Trade PnL Calculator",
+      "category": "Portfolio & performance",
+      "engineId": "pnl",
+      "mode": "single",
+      "question": "What signed gain or loss follows from a manual entry, exit, size and fees?",
+      "requiredInputs": [
+        "entryPrice",
+        "exitPrice",
+        "quantity",
+        "fees"
+      ],
+      "output": "Signed trade profit or loss",
+      "assumptions": "Manual spot-style prices; no tax cost-basis or live trade data.",
+      "status": "existing"
+    },
+    {
+      "id": "swap-cost",
+      "path": "/tools/swap-cost/",
+      "title": "Swap Cost Simulator",
+      "category": "Costs & conversions",
+      "engineId": "swap-cost",
+      "mode": "single",
+      "question": "Which of two manual swap scenarios has lower modeled total cost?",
+      "requiredInputs": [
+        "routes",
+        "feeCoverage",
+        "gas",
+        "sourceBudget"
+      ],
+      "output": "Coverage-aware route comparison",
+      "assumptions": "No executable quote, wallet call, live gas or guaranteed settlement.",
+      "status": "existing"
+    },
+    {
+      "id": "bridge-cost",
+      "path": "/tools/bridge-cost/",
+      "title": "Bridge Cost Comparator",
+      "category": "Costs & conversions",
+      "engineId": "bridge-cost",
+      "mode": "single",
+      "question": "Which hypothetical cross-chain route delivers more modeled destination value?",
+      "requiredInputs": [
+        "sourceAsset",
+        "destinationAsset",
+        "routes",
+        "fees",
+        "gas"
+      ],
+      "output": "Coverage-aware destination-value comparison",
+      "assumptions": "Chain labels do not prove provider support or asset redeemability.",
+      "status": "existing"
+    },
+    {
+      "id": "portfolio-exposure",
+      "path": "/tools/portfolio-exposure/",
+      "title": "Portfolio Exposure Analyzer",
+      "category": "Portfolio & performance",
+      "engineId": "portfolio-exposure",
+      "mode": "single",
+      "question": "How are manually valued spot holdings allocated and concentrated?",
+      "requiredInputs": [
+        "positions",
+        "manualPrices",
+        "priceTimestamps"
+      ],
+      "output": "Known subtotal, exposure groups, concentration and coverage",
+      "assumptions": "Unknown prices never become zero; not a wallet scanner or risk score.",
+      "status": "existing"
+    },
+    {
+      "id": "liquidation",
+      "path": "/tools/liquidation/",
+      "title": "Generic Liquidation Price",
+      "category": "Lending & debt",
+      "engineId": "liquidation",
+      "mode": "single",
+      "question": "At what manual isolated-position price does a stated maintenance threshold occur?",
+      "requiredInputs": [
+        "entryPrice",
+        "positionSize",
+        "margin",
+        "maintenanceThreshold"
+      ],
+      "output": "Modeled threshold price",
+      "assumptions": "Generic arithmetic, not protocol liquidation rules or execution guarantee.",
+      "status": "existing"
+    },
+    {
+      "id": "impermanent-loss",
+      "path": "/tools/impermanent-loss/",
+      "title": "50/50 Pool Impermanent Loss",
+      "category": "Liquidity mathematics",
+      "engineId": "impermanent-loss",
+      "mode": "single",
+      "question": "How does a fee-free 50/50 constant-product position compare with holding?",
+      "requiredInputs": [
+        "startingPrice",
+        "endingPrice"
+      ],
+      "output": "Illustrative LP-versus-HODL divergence",
+      "assumptions": "Excludes fees, gas, concentrated liquidity and live pool data.",
+      "status": "existing"
+    },
+    {
+      "id": "eth-wei-gwei",
+      "path": "/tasks/eth-wei-gwei/",
+      "title": "Convert ETH, gwei and wei",
+      "category": "Costs & conversions",
+      "engineId": "token-fee-converter",
+      "mode": "native",
+      "question": "How many wei or gwei are in a stated ETH amount?",
+      "requiredInputs": [
+        "amount",
+        "unit"
+      ],
+      "output": "Exact native-unit equivalents and raw wei",
+      "assumptions": "Unit conversion only; no exchange rate or chain lookup.",
+      "status": "extracted"
+    },
+    {
+      "id": "erc20-base-units",
+      "path": "/tasks/erc20-base-units/",
+      "title": "Convert token amount and base units",
+      "category": "Costs & conversions",
+      "engineId": "token-fee-converter",
+      "mode": "token",
+      "question": "What is a token amount in raw base units at stated decimals?",
+      "requiredInputs": [
+        "tokenLabel",
+        "decimals",
+        "direction",
+        "amount"
+      ],
+      "output": "Exact raw or human-readable token amount",
+      "assumptions": "Decimals and label are manual; no token identity is verified.",
+      "status": "extracted"
+    },
+    {
+      "id": "rate-units",
+      "path": "/tasks/rate-units/",
+      "title": "Convert percent, bps and ppm",
+      "category": "Costs & conversions",
+      "engineId": "token-fee-converter",
+      "mode": "rate",
+      "question": "How does one rate translate between percent, basis points and ppm?",
+      "requiredInputs": [
+        "amount",
+        "unit"
+      ],
+      "output": "Exact equivalent rate denominations",
+      "assumptions": "A denomination conversion is not an APR/APY conversion.",
+      "status": "extracted"
+    },
+    {
+      "id": "stated-fee",
+      "path": "/tasks/stated-fee/",
+      "title": "Apply a stated fee rate",
+      "category": "Costs & conversions",
+      "engineId": "token-fee-converter",
+      "mode": "fee",
+      "question": "What fee and remaining amount follow from a manual rate?",
+      "requiredInputs": [
+        "amount",
+        "decimals",
+        "rate",
+        "rateUnit"
+      ],
+      "output": "Fee and net token amount in exact base units",
+      "assumptions": "The fee rate is manual and applied once; no venue quote is checked.",
+      "status": "extracted"
+    },
+    {
+      "id": "apr-to-apy",
+      "path": "/tasks/apr-to-apy/",
+      "title": "Convert nominal APR to APY",
+      "category": "Yield & growth",
+      "engineId": "yield-growth",
+      "mode": "apr-to-apy",
+      "question": "What effective APY follows from a nominal APR and compounding frequency?",
+      "requiredInputs": [
+        "aprPercent",
+        "periodsPerYear"
+      ],
+      "output": "Modeled effective APY",
+      "assumptions": "Constant nominal rate and discrete compounding; no future yield guarantee.",
+      "status": "extracted"
+    },
+    {
+      "id": "apy-to-apr",
+      "path": "/tasks/apy-to-apr/",
+      "title": "Convert APY to nominal APR",
+      "category": "Yield & growth",
+      "engineId": "yield-growth",
+      "mode": "apy-to-apr",
+      "question": "What nominal APR corresponds to a stated APY and compounding schedule?",
+      "requiredInputs": [
+        "apyPercent",
+        "periodsPerYear"
+      ],
+      "output": "Bounded inverse nominal APR",
+      "assumptions": "A deterministic inverse within documented precision; rates are assumptions.",
+      "status": "extracted"
+    },
+    {
+      "id": "annualize-periodic-return",
+      "path": "/tasks/annualize-periodic-return/",
+      "title": "Annualize a periodic return",
+      "category": "Yield & growth",
+      "engineId": "yield-growth",
+      "mode": "periodic-to-annual",
+      "question": "What annualized return follows if one period return repeats?",
+      "requiredInputs": [
+        "periodicPercent",
+        "periodsPerYear"
+      ],
+      "output": "Modeled annualized return",
+      "assumptions": "Repeated constant period return is illustrative, not observed performance.",
+      "status": "extracted"
+    },
+    {
+      "id": "simple-interest",
+      "path": "/tasks/simple-interest/",
+      "title": "Calculate simple-interest growth",
+      "category": "Yield & growth",
+      "engineId": "yield-growth",
+      "mode": "simple",
+      "question": "What is a future value under simple interest?",
+      "requiredInputs": [
+        "principal",
+        "annualRatePercent",
+        "years",
+        "currency"
+      ],
+      "output": "Starting principal, modeled growth and future value",
+      "assumptions": "Whole years, one manual currency, no compounding or taxes.",
+      "status": "extracted"
+    },
+    {
+      "id": "compound-growth",
+      "path": "/tasks/compound-growth/",
+      "title": "Calculate compound growth",
+      "category": "Yield & growth",
+      "engineId": "yield-growth",
+      "mode": "compound",
+      "question": "What future value follows from discrete compounding?",
+      "requiredInputs": [
+        "principal",
+        "nominalAprPercent",
+        "periodsPerYear",
+        "years",
+        "currency"
+      ],
+      "output": "Modeled growth and future value",
+      "assumptions": "Whole periods and fixed nominal APR; no prediction.",
+      "status": "extracted"
+    },
+    {
+      "id": "recurring-contributions",
+      "path": "/tasks/recurring-contributions/",
+      "title": "Model recurring contributions",
+      "category": "Yield & growth",
+      "engineId": "yield-growth",
+      "mode": "contributions",
+      "question": "How does beginning versus end contribution timing change growth?",
+      "requiredInputs": [
+        "principal",
+        "contribution",
+        "nominalAprPercent",
+        "periodsPerYear",
+        "years",
+        "timing",
+        "currency"
+      ],
+      "output": "Principal, contributions, growth and ending value",
+      "assumptions": "Fixed manual rate and whole periods; contribution timing is explicit.",
+      "status": "extracted"
+    },
+    {
+      "id": "income-principal",
+      "path": "/tasks/income-principal/",
+      "title": "Estimate principal for annual income",
+      "category": "Yield & growth",
+      "engineId": "yield-growth",
+      "mode": "required-principal",
+      "question": "What principal would a stated income require at an assumed APY?",
+      "requiredInputs": [
+        "annualIncome",
+        "effectiveApyPercent",
+        "currency"
+      ],
+      "output": "Conservatively rounded required principal",
+      "assumptions": "Assumed APY is not guaranteed income or a recommendation.",
+      "status": "extracted"
+    },
+    {
+      "id": "loss-recovery",
+      "path": "/tasks/loss-recovery/",
+      "title": "Calculate gain needed after a loss",
+      "category": "Yield & growth",
+      "engineId": "yield-growth",
+      "mode": "recovery",
+      "question": "What gain would restore a value after a percentage loss?",
+      "requiredInputs": [
+        "lossPercent"
+      ],
+      "output": "Required recovery gain or unreachable status",
+      "assumptions": "Price-only arithmetic; fees and new capital are excluded.",
+      "status": "extracted"
+    },
+    {
+      "id": "average-entry",
+      "path": "/tasks/average-entry/",
+      "title": "Calculate weighted average entry",
+      "category": "Trade & execution",
+      "engineId": "trade-risk",
+      "mode": "average",
+      "question": "What was the fee-adjusted entry across manual spot fills?",
+      "requiredInputs": [
+        "fills",
+        "baseDecimals",
+        "quoteDecimals",
+        "exitFeeBps",
+        "exitFixedFeeQuote"
+      ],
+      "output": "Gross and adjusted average entry and break-even exit",
+      "assumptions": "Long-only spot; fees must share the quote unit; not tax cost basis.",
+      "status": "extracted"
+    },
+    {
+      "id": "stop-risk-size",
+      "path": "/tasks/stop-risk-size/",
+      "title": "Size a long-only stop scenario",
+      "category": "Trade & execution",
+      "engineId": "trade-risk",
+      "mode": "risk",
+      "question": "What quantity fits a stated modeled stop-loss budget?",
+      "requiredInputs": [
+        "entryPrice",
+        "stopPrice",
+        "quantity",
+        "lossBudgetQuote",
+        "baseDecimals",
+        "quoteDecimals",
+        "fees"
+      ],
+      "output": "Modeled loss and conservatively bounded quantity",
+      "assumptions": "A stop may execute at a worse price; not maximum real-world loss.",
+      "status": "extracted"
+    },
+    {
+      "id": "risk-reward",
+      "path": "/tasks/risk-reward/",
+      "title": "Compare modeled risk and reward",
+      "category": "Trade & execution",
+      "engineId": "trade-risk",
+      "mode": "reward",
+      "question": "What is net target reward relative to modeled stop loss?",
+      "requiredInputs": [
+        "entryPrice",
+        "stopPrice",
+        "targetPrice",
+        "quantity",
+        "fees"
+      ],
+      "output": "Net reward, loss and reward-to-risk ratio",
+      "assumptions": "Manual long-only prices; no fill or target outcome is guaranteed.",
+      "status": "extracted"
+    },
+    {
+      "id": "bid-ask-spread",
+      "path": "/tasks/bid-ask-spread/",
+      "title": "Measure bid–ask spread",
+      "category": "Trade & execution",
+      "engineId": "execution-math",
+      "mode": "spread",
+      "question": "How wide is a manual bid–ask spread relative to its midpoint?",
+      "requiredInputs": [
+        "bid",
+        "ask",
+        "referencePrice",
+        "executionPrice",
+        "quoteDecimals"
+      ],
+      "output": "Midpoint, absolute spread and execution deviation",
+      "assumptions": "Entered prices are not live quotes; spread differs from slippage.",
+      "status": "extracted"
+    },
+    {
+      "id": "slippage-bounds",
+      "path": "/tasks/slippage-bounds/",
+      "title": "Calculate slippage bounds",
+      "category": "Trade & execution",
+      "engineId": "execution-math",
+      "mode": "slippage",
+      "question": "What minimum receive or maximum spend follows from a tolerance?",
+      "requiredInputs": [
+        "expectedAmount",
+        "tokenDecimals",
+        "direction",
+        "toleranceBps"
+      ],
+      "output": "Conservatively rounded token-base-unit bound",
+      "assumptions": "Manual expected amount; no executable quote or transaction.",
+      "status": "extracted"
+    },
+    {
+      "id": "gas-budget",
+      "path": "/tasks/gas-budget/",
+      "title": "Estimate a transaction gas budget",
+      "category": "Costs & conversions",
+      "engineId": "execution-math",
+      "mode": "gas",
+      "question": "What native-token gas cost follows from gas units and gwei?",
+      "requiredInputs": [
+        "transactionGasUnits",
+        "gasPriceGwei",
+        "approvalRequired",
+        "budgetNative",
+        "coverage"
+      ],
+      "output": "Wei cost, native cost and maximum supported gas price",
+      "assumptions": "No live gas, L2 data fee or execution success is inferred.",
+      "status": "extracted"
+    },
+    {
+      "id": "target-rebalance",
+      "path": "/tasks/target-rebalance/",
+      "title": "Plan a target allocation",
+      "category": "Portfolio & performance",
+      "engineId": "portfolio-rebalance",
+      "mode": "target",
+      "question": "What ideal value trades approach a manual target allocation?",
+      "requiredInputs": [
+        "buckets",
+        "targetBps",
+        "currencyLabel",
+        "feeBps"
+      ],
+      "output": "Drift, desired values and fee-free turnover",
+      "assumptions": "Complete manual valuations and targets summing to 100%; no orders.",
+      "status": "extracted"
+    },
+    {
+      "id": "contribution-rebalance",
+      "path": "/tasks/contribution-rebalance/",
+      "title": "Rebalance using contributions only",
+      "category": "Portfolio & performance",
+      "engineId": "portfolio-rebalance",
+      "mode": "contribution",
+      "question": "Can a cash contribution reach a target without selling?",
+      "requiredInputs": [
+        "buckets",
+        "targetBps",
+        "contribution",
+        "currencyLabel"
+      ],
+      "output": "Feasibility, allocations and minimum needed contribution",
+      "assumptions": "No sales, same manual currency, complete included buckets only.",
+      "status": "extracted"
+    },
+    {
+      "id": "portfolio-shock",
+      "path": "/tasks/portfolio-shock/",
+      "title": "Model a portfolio shock",
+      "category": "Portfolio & performance",
+      "engineId": "portfolio-rebalance",
+      "mode": "shock",
+      "question": "How would manual bucket shocks change included portfolio value?",
+      "requiredInputs": [
+        "buckets",
+        "shockBps",
+        "currencyLabel"
+      ],
+      "output": "Projected values, gain/loss and new weights",
+      "assumptions": "Shocks have no probability and do not forecast market prices.",
+      "status": "extracted"
+    },
+    {
+      "id": "flow-adjusted-performance",
+      "path": "/tasks/flow-adjusted-performance/",
+      "title": "Analyze performance with cash flows",
+      "category": "Portfolio & performance",
+      "engineId": "performance-drawdown",
+      "mode": "performance",
+      "question": "How did manual portfolio values perform after external flows?",
+      "requiredInputs": [
+        "snapshots",
+        "dates",
+        "externalFlow",
+        "currencyLabel"
+      ],
+      "output": "Nominal gain and chained time-weighted return",
+      "assumptions": "Flows occur at each interval end; missing valuation boundaries cannot be reconstructed.",
+      "status": "extracted"
+    },
+    {
+      "id": "flow-adjusted-drawdown",
+      "path": "/tasks/flow-adjusted-drawdown/",
+      "title": "Analyze drawdown and recovery",
+      "category": "Portfolio & performance",
+      "engineId": "performance-drawdown",
+      "mode": "drawdown",
+      "question": "How far did a flow-neutral performance index fall from its peak?",
+      "requiredInputs": [
+        "snapshots",
+        "dates",
+        "externalFlow",
+        "currencyLabel"
+      ],
+      "output": "Maximum/current drawdown, peak, trough and recovery status",
+      "assumptions": "Uses manual dated snapshots, not raw balances or a risk forecast.",
+      "status": "extracted"
+    },
+    {
+      "id": "staking-reward-projection",
+      "path": "/tasks/staking-reward-projection/",
+      "title": "Project simple staking rewards",
+      "category": "Staking & vesting",
+      "engineId": "staking-rewards",
+      "mode": "projection",
+      "question": "What gross and commission-adjusted rewards follow from an assumed APR?",
+      "requiredInputs": [
+        "stake",
+        "grossAprBps",
+        "elapsedDays",
+        "commissionBps",
+        "decimals"
+      ],
+      "output": "Gross reward, commission and net token reward",
+      "assumptions": "ACT/365 simple accrual; an assumed APR is not live protocol yield.",
+      "status": "extracted"
+    },
+    {
+      "id": "claim-economics",
+      "path": "/tasks/claim-economics/",
+      "title": "Check modeled claim economics",
+      "category": "Staking & vesting",
+      "engineId": "staking-rewards",
+      "mode": "claim",
+      "question": "Would a manual reward balance exceed known claim costs?",
+      "requiredInputs": [
+        "grossReward",
+        "commissionCoverage",
+        "claimFee",
+        "feeDenomination",
+        "decimals"
+      ],
+      "output": "Net claim value and break-even reward threshold",
+      "assumptions": "Unconverted native fees make coverage incomplete; no on-chain claimability is checked.",
+      "status": "extracted"
+    },
+    {
+      "id": "restaking-scenario",
+      "path": "/tasks/restaking-scenario/",
+      "title": "Compare restaking and penalties",
+      "category": "Staking & vesting",
+      "engineId": "staking-rewards",
+      "mode": "restake",
+      "question": "How would same-asset restaking and a hypothetical slash change principal?",
+      "requiredInputs": [
+        "stake",
+        "grossAprBps",
+        "periodsPerYear",
+        "commissionBps",
+        "slashBps"
+      ],
+      "output": "Modeled principal, rewards, costs and ending value",
+      "assumptions": "Same-asset assumption must be explicit; slashing and returns are hypothetical.",
+      "status": "extracted"
+    },
+    {
+      "id": "linear-vesting",
+      "path": "/tasks/linear-vesting/",
+      "title": "Calculate linear vesting with cliff",
+      "category": "Staking & vesting",
+      "engineId": "vesting-unlocks",
+      "mode": "linear",
+      "question": "How much allocation is modeled unlocked at a supplied UTC date?",
+      "requiredInputs": [
+        "totalAllocation",
+        "startDate",
+        "endDate",
+        "cliffDate",
+        "observationDate",
+        "decimals"
+      ],
+      "output": "Unlocked, locked and manually unreceived token amounts",
+      "assumptions": "Cliff releases accrued amount; no contract or actual claim status is read.",
+      "status": "extracted"
+    },
+    {
+      "id": "initial-unlock-vesting",
+      "path": "/tasks/initial-unlock-vesting/",
+      "title": "Model initial unlock and linear vesting",
+      "category": "Staking & vesting",
+      "engineId": "vesting-unlocks",
+      "mode": "initial-linear",
+      "question": "What is unlocked after an initial share and later linear vesting?",
+      "requiredInputs": [
+        "totalAllocation",
+        "initialUnlockBps",
+        "startDate",
+        "endDate",
+        "observationDate"
+      ],
+      "output": "Initial, subsequent, total unlocked and locked amounts",
+      "assumptions": "Initial share is counted once; UTC schedule and token identity are manual.",
+      "status": "extracted"
+    },
+    {
+      "id": "tranche-unlocks",
+      "path": "/tasks/tranche-unlocks/",
+      "title": "Review dated token unlock tranches",
+      "category": "Staking & vesting",
+      "engineId": "vesting-unlocks",
+      "mode": "tranches",
+      "question": "Which scheduled tranches are unlocked and what comes next?",
+      "requiredInputs": [
+        "totalAllocation",
+        "tranches",
+        "observationDate",
+        "decimals"
+      ],
+      "output": "Cumulative unlocked, locked and next listed tranche",
+      "assumptions": "Tranche totals must conserve the allocation; no on-chain evidence.",
+      "status": "extracted"
+    },
+    {
+      "id": "collateral-health-factor",
+      "path": "/tasks/collateral-health-factor/",
+      "title": "Calculate collateral health and headroom",
+      "category": "Lending & debt",
+      "engineId": "collateral-health",
+      "mode": "health",
+      "question": "What modeled LTV, health factor and borrow headroom follow from manual values?",
+      "requiredInputs": [
+        "collateralValue",
+        "debtValue",
+        "maxLtvBps",
+        "liquidationThresholdBps",
+        "targetHealthFactor"
+      ],
+      "output": "LTV, health factor and constrained debt headroom",
+      "assumptions": "Single collateral and debt in one manual quote currency; no protocol rules checked.",
+      "status": "extracted"
+    },
+    {
+      "id": "collateral-adjustment",
+      "path": "/tasks/collateral-adjustment/",
+      "title": "Model repay, add and withdraw limits",
+      "category": "Lending & debt",
+      "engineId": "collateral-health",
+      "mode": "adjust",
+      "question": "What value-only change would meet selected LTV and health constraints?",
+      "requiredInputs": [
+        "collateralValue",
+        "debtValue",
+        "maxLtvBps",
+        "liquidationThresholdBps",
+        "targetHealthFactor"
+      ],
+      "output": "Conservative repay/addition/withdrawal limits",
+      "assumptions": "These are quote values, not executable token quantities or guaranteed safety.",
+      "status": "extracted"
+    },
+    {
+      "id": "collateral-shock",
+      "path": "/tasks/collateral-shock/",
+      "title": "Stress a single collateral value",
+      "category": "Lending & debt",
+      "engineId": "collateral-health",
+      "mode": "shock",
+      "question": "How would a stated collateral shock change modeled LTV and health?",
+      "requiredInputs": [
+        "collateralValue",
+        "debtValue",
+        "collateralShockBps",
+        "liquidationThresholdBps"
+      ],
+      "output": "Shocked LTV, health factor and fixed-debt buffer",
+      "assumptions": "Debt value and protocol thresholds are held constant.",
+      "status": "extracted"
+    },
+    {
+      "id": "debt-growth",
+      "path": "/tasks/debt-growth/",
+      "title": "Compare simple and compounded debt",
+      "category": "Lending & debt",
+      "engineId": "borrowing-cost",
+      "mode": "growth",
+      "question": "How might manual debt grow under two explicit interest schedules?",
+      "requiredInputs": [
+        "principal",
+        "borrowAprBps",
+        "elapsedDays",
+        "elapsedPeriods",
+        "periodsPerYear"
+      ],
+      "output": "Simple and compound financing cost and final debt",
+      "assumptions": "Fixed nominal APR; entered horizons must describe the intended comparison.",
+      "status": "extracted"
+    },
+    {
+      "id": "repayment-schedule",
+      "path": "/tasks/repayment-schedule/",
+      "title": "Model fixed debt repayments",
+      "category": "Lending & debt",
+      "engineId": "borrowing-cost",
+      "mode": "repayment",
+      "question": "How does an end-of-period payment split between interest and principal?",
+      "requiredInputs": [
+        "principal",
+        "borrowAprBps",
+        "fixedPayment",
+        "periodsPerYear",
+        "horizonPeriods"
+      ],
+      "output": "Period interest, principal reduction and payoff status",
+      "assumptions": "Fixed rate and end-of-period payments; no variable-rate forecast.",
+      "status": "extracted"
+    },
+    {
+      "id": "borrowed-capital-carry",
+      "path": "/tasks/borrowed-capital-carry/",
+      "title": "Compare manual yield and borrowing cost",
+      "category": "Lending & debt",
+      "engineId": "borrowing-cost",
+      "mode": "carry",
+      "question": "Would an assumed investment return exceed known financing costs?",
+      "requiredInputs": [
+        "principal",
+        "borrowAprBps",
+        "investmentYieldBps",
+        "elapsedDays",
+        "costCoverage"
+      ],
+      "output": "Earnings, borrowing cost and coverage-aware net carry",
+      "assumptions": "One manual currency; unknown expenses withhold a net-profit conclusion.",
+      "status": "extracted"
+    },
+    {
+      "id": "amm-reserve-price",
+      "path": "/tasks/amm-reserve-price/",
+      "title": "Read an AMM reserve-implied price",
+      "category": "Liquidity mathematics",
+      "engineId": "amm-pool-math",
+      "mode": "reserves",
+      "question": "What marginal price and invariant follow from manual pool reserves?",
+      "requiredInputs": [
+        "reserve0",
+        "reserve1",
+        "decimals0",
+        "decimals1"
+      ],
+      "output": "Forward/reverse price and reserve product",
+      "assumptions": "Constant-product illustration, not live liquidity or a swap quote.",
+      "status": "extracted"
+    },
+    {
+      "id": "amm-swap-output",
+      "path": "/tasks/amm-swap-output/",
+      "title": "Simulate a constant-product swap",
+      "category": "Liquidity mathematics",
+      "engineId": "amm-pool-math",
+      "mode": "swap",
+      "question": "What output and reserve impact follow from a manual exact-input swap?",
+      "requiredInputs": [
+        "reserve0",
+        "reserve1",
+        "amountIn",
+        "direction",
+        "feeBps"
+      ],
+      "output": "Rounded output, fee, impact and post-swap reserves",
+      "assumptions": "Pool fee differs from PIT fee; no gas, MEV or executable quote.",
+      "status": "extracted"
+    },
+    {
+      "id": "amm-proportional-liquidity",
+      "path": "/tasks/amm-proportional-liquidity/",
+      "title": "Model proportional pool liquidity",
+      "category": "Liquidity mathematics",
+      "engineId": "amm-pool-math",
+      "mode": "liquidity",
+      "question": "What paired deposit or withdrawal preserves a pool reserve ratio?",
+      "requiredInputs": [
+        "reserve0",
+        "reserve1",
+        "deposit0",
+        "available1",
+        "withdrawBps"
+      ],
+      "output": "Required pair, post-reserves, share and withdrawal quantities",
+      "assumptions": "Fee-free illustrative ownership, not protocol LP minting.",
+      "status": "extracted"
+    },
+    {
+      "id": "cl-position-composition",
+      "path": "/tasks/cl-position-composition/",
+      "title": "Inspect concentrated position composition",
+      "category": "Liquidity mathematics",
+      "engineId": "concentrated-liquidity",
+      "mode": "composition",
+      "question": "How much of each token lies in a chosen concentrated price range?",
+      "requiredInputs": [
+        "price",
+        "lowerPrice",
+        "upperPrice",
+        "budget0",
+        "budget1"
+      ],
+      "output": "Modeled token amounts, liquidity and unspent budgets",
+      "assumptions": "Continuous fee-free range model, not Uniswap v3 contract-equivalent.",
+      "status": "extracted"
+    },
+    {
+      "id": "cl-price-scenario",
+      "path": "/tasks/cl-price-scenario/",
+      "title": "Compare LP and HODL at another price",
+      "category": "Liquidity mathematics",
+      "engineId": "concentrated-liquidity",
+      "mode": "scenario",
+      "question": "How does the same initial position compare with holding at a future price?",
+      "requiredInputs": [
+        "initialPrice",
+        "futurePrice",
+        "lowerPrice",
+        "upperPrice",
+        "budgets"
+      ],
+      "output": "LP value, matched HODL value and relative divergence",
+      "assumptions": "No fee prediction; a negative relative difference is not necessarily absolute loss.",
+      "status": "extracted"
+    },
+    {
+      "id": "cl-fee-break-even",
+      "path": "/tasks/cl-fee-break-even/",
+      "title": "Check concentrated LP fee break-even",
+      "category": "Liquidity mathematics",
+      "engineId": "concentrated-liquidity",
+      "mode": "fees",
+      "question": "What manually accrued fees cover modeled LP-versus-HODL divergence?",
+      "requiredInputs": [
+        "initialPrice",
+        "futurePrice",
+        "accruedFee0",
+        "accruedFee1",
+        "costCoverage"
+      ],
+      "output": "Break-even fees and coverage-aware net comparison",
+      "assumptions": "Unknown costs prevent definitive profit assessment; no volume forecast.",
+      "status": "extracted"
+    },
+    {
+      "id": "evm-address-checksum",
+      "path": "/tasks/evm-address-checksum/",
+      "title": "Validate an EVM address checksum",
+      "category": "Data inspection",
+      "engineId": "evm-data-inspector",
+      "mode": "address",
+      "question": "Is a supplied 20-byte address syntactically valid and EIP-55 checksummed?",
+      "requiredInputs": [
+        "address"
+      ],
+      "output": "Checksummed and lowercase address with checksum status",
+      "assumptions": "Syntax or checksum does not verify recipient, contract or chain identity.",
+      "status": "extracted"
+    },
+    {
+      "id": "evm-signature-hash",
+      "path": "/tasks/evm-signature-hash/",
+      "title": "Derive an ABI selector or event topic",
+      "category": "Data inspection",
+      "engineId": "evm-data-inspector",
+      "mode": "signature",
+      "question": "What Keccak selector or topic follows from a canonical signature?",
+      "requiredInputs": [
+        "signature",
+        "kind"
+      ],
+      "output": "Four-byte selector or event topic0",
+      "assumptions": "No remote signature lookup; unsupported signatures are rejected.",
+      "status": "extracted"
+    },
+    {
+      "id": "abi-calldata-decode",
+      "path": "/tasks/abi-calldata-decode/",
+      "title": "Decode bounded ABI calldata",
+      "category": "Data inspection",
+      "engineId": "evm-data-inspector",
+      "mode": "decode",
+      "question": "Which supplied ABI function and static arguments match calldata?",
+      "requiredInputs": [
+        "abi",
+        "calldata"
+      ],
+      "output": "Matched selector and safely rendered decoded arguments",
+      "assumptions": "Decode only; no contract call, execution or security verdict.",
+      "status": "extracted"
+    },
+    {
+      "id": "csv-structure-inspect",
+      "path": "/tasks/csv-structure-inspect/",
+      "title": "Inspect a local CSV structure",
+      "category": "Data inspection",
+      "engineId": "crypto-data-workshop",
+      "mode": "inspect",
+      "question": "Are local CSV rows structurally valid and complete?",
+      "requiredInputs": [
+        "csvText",
+        "delimiter",
+        "headerChoice"
+      ],
+      "output": "Row/column counts, bounded preview and validation issues",
+      "assumptions": "Local file/text only; ambiguous delimiters require explicit choice.",
+      "status": "extracted"
+    },
+    {
+      "id": "csv-normalize-preview",
+      "path": "/tasks/csv-normalize-preview/",
+      "title": "Normalize mapped CSV fields",
+      "category": "Data inspection",
+      "engineId": "crypto-data-workshop",
+      "mode": "normalize",
+      "question": "How do explicitly mapped fields normalize without guessing units or dates?",
+      "requiredInputs": [
+        "csvText",
+        "columnMapping",
+        "decimalPrecision",
+        "timestampFormat"
+      ],
+      "output": "Preview, normalized strings and invalid-field report",
+      "assumptions": "No tax categorization, silent rounding or storage write.",
+      "status": "extracted"
+    },
+    {
+      "id": "csv-deduplicate-export",
+      "path": "/tasks/csv-deduplicate-export/",
+      "title": "Review CSV duplicate groups",
+      "category": "Data inspection",
+      "engineId": "crypto-data-workshop",
+      "mode": "dedupe",
+      "question": "Which rows share selected identity columns and need review?",
+      "requiredInputs": [
+        "csvText",
+        "identityColumns",
+        "keepExcludeDecisions"
+      ],
+      "output": "Duplicate/conflict groups and local reviewed exports",
+      "assumptions": "Matching amount/time alone does not prove the same blockchain event.",
+      "status": "extracted"
+    },
+    {
+      "id": "purchase-acquisition-cost",
+      "path": "/tasks/purchase-acquisition-cost/",
+      "title": "Total cost of spot purchases",
+      "category": "Trade & execution",
+      "engineId": "trade-risk",
+      "mode": "average",
+      "question": "What quote amount did the entered spot fills cost before exit?",
+      "requiredInputs": [
+        "fills",
+        "baseDecimals",
+        "quoteDecimals",
+        "exitFeeBps",
+        "exitFixedFeeQuote"
+      ],
+      "output": "Gross acquisition cost",
+      "assumptions": "Long-only spot; fees must share the quote unit; not tax cost basis.",
+      "status": "extracted",
+      "focusLabel": "Gross acquisition cost"
+    },
+    {
+      "id": "fee-aware-break-even",
+      "path": "/tasks/fee-aware-break-even/",
+      "title": "Fee-aware break-even exit",
+      "category": "Trade & execution",
+      "engineId": "trade-risk",
+      "mode": "average",
+      "question": "What exit price would cover entered acquisition and exit fees?",
+      "requiredInputs": [
+        "fills",
+        "baseDecimals",
+        "quoteDecimals",
+        "exitFeeBps",
+        "exitFixedFeeQuote"
+      ],
+      "output": "Minimum break-even exit price",
+      "assumptions": "Long-only spot; fees must share the quote unit; not tax cost basis.",
+      "status": "extracted",
+      "focusLabel": "Minimum break-even exit price"
+    },
+    {
+      "id": "planned-stop-distance",
+      "path": "/tasks/planned-stop-distance/",
+      "title": "Distance to a planned stop",
+      "category": "Trade & execution",
+      "engineId": "trade-risk",
+      "mode": "risk",
+      "question": "How far is a manual long-only stop below entry?",
+      "requiredInputs": [
+        "entryPrice",
+        "stopPrice",
+        "quantity",
+        "lossBudgetQuote",
+        "baseDecimals",
+        "quoteDecimals",
+        "fees"
+      ],
+      "output": "Absolute entry-to-stop price distance",
+      "assumptions": "A stop may execute at a worse price; not maximum real-world loss.",
+      "status": "extracted",
+      "focusLabel": "Entry-to-stop distance"
+    },
+    {
+      "id": "modeled-stop-loss",
+      "path": "/tasks/modeled-stop-loss/",
+      "title": "Modeled loss at a stated stop",
+      "category": "Trade & execution",
+      "engineId": "trade-risk",
+      "mode": "risk",
+      "question": "What loss follows if the supplied stop executes at that exact price?",
+      "requiredInputs": [
+        "entryPrice",
+        "stopPrice",
+        "quantity",
+        "lossBudgetQuote",
+        "baseDecimals",
+        "quoteDecimals",
+        "fees"
+      ],
+      "output": "Fee-aware modeled stop loss",
+      "assumptions": "A stop may execute at a worse price; not maximum real-world loss.",
+      "status": "extracted",
+      "focusLabel": "Modeled loss at stated stop"
+    },
+    {
+      "id": "net-target-payoff",
+      "path": "/tasks/net-target-payoff/",
+      "title": "Net payoff at a target price",
+      "category": "Trade & execution",
+      "engineId": "trade-risk",
+      "mode": "reward",
+      "question": "What quote payoff remains at a manual target after stated fees?",
+      "requiredInputs": [
+        "entryPrice",
+        "stopPrice",
+        "targetPrice",
+        "quantity",
+        "fees"
+      ],
+      "output": "Net target payoff",
+      "assumptions": "Manual long-only prices; no fill or target outcome is guaranteed.",
+      "status": "extracted",
+      "focusLabel": "Net payoff at stated target"
+    },
+    {
+      "id": "bid-ask-midpoint",
+      "path": "/tasks/bid-ask-midpoint/",
+      "title": "Find a bid–ask midpoint",
+      "category": "Trade & execution",
+      "engineId": "execution-math",
+      "mode": "spread",
+      "question": "What midpoint lies between the entered bid and ask?",
+      "requiredInputs": [
+        "bid",
+        "ask",
+        "referencePrice",
+        "executionPrice",
+        "quoteDecimals"
+      ],
+      "output": "Bid/ask midpoint",
+      "assumptions": "Entered prices are not live quotes; spread differs from slippage.",
+      "status": "extracted",
+      "focusLabel": "Bid/ask midpoint"
+    },
+    {
+      "id": "execution-reference-deviation",
+      "path": "/tasks/execution-reference-deviation/",
+      "title": "Measure execution-price deviation",
+      "category": "Trade & execution",
+      "engineId": "execution-math",
+      "mode": "spread",
+      "question": "How far does an observed execution price differ from a stated reference?",
+      "requiredInputs": [
+        "bid",
+        "ask",
+        "referencePrice",
+        "executionPrice",
+        "quoteDecimals"
+      ],
+      "output": "Deviation relative to reference price",
+      "assumptions": "Entered prices are not live quotes; spread differs from slippage.",
+      "status": "extracted",
+      "focusLabel": "Deviation vs reference"
+    },
+    {
+      "id": "maximum-input-bound",
+      "path": "/tasks/maximum-input-bound/",
+      "title": "Set a maximum input bound",
+      "category": "Trade & execution",
+      "engineId": "execution-math",
+      "mode": "slippage",
+      "question": "What maximum token spend follows from an exact-output tolerance?",
+      "requiredInputs": [
+        "expectedAmount",
+        "tokenDecimals",
+        "direction",
+        "toleranceBps"
+      ],
+      "output": "Ceiling-rounded maximum spend",
+      "assumptions": "Manual expected amount; no executable quote or transaction.",
+      "status": "extracted",
+      "focusLabel": "Maximum spend",
+      "preset": {
+        "name": "direction",
+        "value": "exact-output"
+      }
+    },
+    {
+      "id": "maximum-gas-price",
+      "path": "/tasks/maximum-gas-price/",
+      "title": "Find a budget-supported gas price",
+      "category": "Costs & conversions",
+      "engineId": "execution-math",
+      "mode": "gas",
+      "question": "What highest gwei price fits the stated native-token gas budget?",
+      "requiredInputs": [
+        "transactionGasUnits",
+        "gasPriceGwei",
+        "approvalRequired",
+        "budgetNative",
+        "coverage"
+      ],
+      "output": "Conservatively rounded maximum gas price",
+      "assumptions": "No live gas, L2 data fee or execution success is inferred.",
+      "status": "extracted",
+      "focusLabel": "Budget-supported maximum gas price"
+    },
+    {
+      "id": "rebalance-turnover",
+      "path": "/tasks/rebalance-turnover/",
+      "title": "Measure ideal rebalance turnover",
+      "category": "Portfolio & performance",
+      "engineId": "portfolio-rebalance",
+      "mode": "target",
+      "question": "What one-way traded value would a fee-free target plan imply?",
+      "requiredInputs": [
+        "buckets",
+        "targetBps",
+        "currencyLabel",
+        "feeBps"
+      ],
+      "output": "One-way ideal turnover",
+      "assumptions": "Complete manual valuations and targets summing to 100%; no orders.",
+      "status": "extracted",
+      "focusLabel": "One-way ideal turnover"
+    },
+    {
+      "id": "rebalance-fee-drag",
+      "path": "/tasks/rebalance-fee-drag/",
+      "title": "Estimate rebalance fee drag",
+      "category": "Portfolio & performance",
+      "engineId": "portfolio-rebalance",
+      "mode": "target",
+      "question": "What separately stated fee drag applies to a hypothetical target trade plan?",
+      "requiredInputs": [
+        "buckets",
+        "targetBps",
+        "currencyLabel",
+        "feeBps"
+      ],
+      "output": "Separate estimated fee drag",
+      "assumptions": "Complete manual valuations and targets summing to 100%; no orders.",
+      "status": "extracted",
+      "focusLabel": "Separate estimated fee drag; target remains pre-fee"
+    },
+    {
+      "id": "minimum-contribution",
+      "path": "/tasks/minimum-contribution/",
+      "title": "Minimum contribution without selling",
+      "category": "Portfolio & performance",
+      "engineId": "portfolio-rebalance",
+      "mode": "contribution",
+      "question": "What smallest additional manual-currency contribution can reach the targets?",
+      "requiredInputs": [
+        "buckets",
+        "targetBps",
+        "contribution",
+        "currencyLabel"
+      ],
+      "output": "Minimum no-sale contribution",
+      "assumptions": "No sales, same manual currency, complete included buckets only.",
+      "status": "extracted",
+      "focusLabel": "Minimum smallest-unit contribution without selling"
+    },
+    {
+      "id": "shock-concentration",
+      "path": "/tasks/shock-concentration/",
+      "title": "Concentration after a portfolio shock",
+      "category": "Portfolio & performance",
+      "engineId": "portfolio-rebalance",
+      "mode": "shock",
+      "question": "How does the largest modeled bucket weight change after manual shocks?",
+      "requiredInputs": [
+        "buckets",
+        "shockBps",
+        "currencyLabel"
+      ],
+      "output": "Largest projected bucket weight",
+      "assumptions": "Shocks have no probability and do not forecast market prices.",
+      "status": "extracted",
+      "focusLabel": "Largest projected bucket weight"
+    },
+    {
+      "id": "flow-neutral-monetary-gain",
+      "path": "/tasks/flow-neutral-monetary-gain/",
+      "title": "Gain excluding external deposits",
+      "category": "Portfolio & performance",
+      "engineId": "performance-drawdown",
+      "mode": "performance",
+      "question": "What nominal gain or loss remains after removing deposits and withdrawals?",
+      "requiredInputs": [
+        "snapshots",
+        "dates",
+        "externalFlow",
+        "currencyLabel"
+      ],
+      "output": "Monetary gain/loss excluding external flows",
+      "assumptions": "Flows occur at each interval end; missing valuation boundaries cannot be reconstructed.",
+      "status": "extracted",
+      "focusLabel": "Monetary gain/loss excluding external flows"
+    },
+    {
+      "id": "best-observed-period",
+      "path": "/tasks/best-observed-period/",
+      "title": "Best observed portfolio period",
+      "category": "Portfolio & performance",
+      "engineId": "performance-drawdown",
+      "mode": "performance",
+      "question": "Which entered interval had the highest flow-adjusted return?",
+      "requiredInputs": [
+        "snapshots",
+        "dates",
+        "externalFlow",
+        "currencyLabel"
+      ],
+      "output": "Highest observed period return",
+      "assumptions": "Flows occur at each interval end; missing valuation boundaries cannot be reconstructed.",
+      "status": "extracted",
+      "focusLabel": "Highest observed period return"
+    },
+    {
+      "id": "worst-observed-period",
+      "path": "/tasks/worst-observed-period/",
+      "title": "Worst observed portfolio period",
+      "category": "Portfolio & performance",
+      "engineId": "performance-drawdown",
+      "mode": "performance",
+      "question": "Which entered interval had the lowest flow-adjusted return?",
+      "requiredInputs": [
+        "snapshots",
+        "dates",
+        "externalFlow",
+        "currencyLabel"
+      ],
+      "output": "Lowest observed period return",
+      "assumptions": "Flows occur at each interval end; missing valuation boundaries cannot be reconstructed.",
+      "status": "extracted",
+      "focusLabel": "Lowest observed period return"
+    },
+    {
+      "id": "current-portfolio-drawdown",
+      "path": "/tasks/current-portfolio-drawdown/",
+      "title": "Current flow-neutral drawdown",
+      "category": "Portfolio & performance",
+      "engineId": "performance-drawdown",
+      "mode": "drawdown",
+      "question": "How far below its previous modeled peak is the series now?",
+      "requiredInputs": [
+        "snapshots",
+        "dates",
+        "externalFlow",
+        "currencyLabel"
+      ],
+      "output": "Current drawdown",
+      "assumptions": "Uses manual dated snapshots, not raw balances or a risk forecast.",
+      "status": "extracted",
+      "focusLabel": "Current drawdown"
+    },
+    {
+      "id": "flow-neutral-index",
+      "path": "/tasks/flow-neutral-index/",
+      "title": "Flow-neutral closing index",
+      "category": "Portfolio & performance",
+      "engineId": "performance-drawdown",
+      "mode": "drawdown",
+      "question": "What normalized closing index follows after removing external flows?",
+      "requiredInputs": [
+        "snapshots",
+        "dates",
+        "externalFlow",
+        "currencyLabel"
+      ],
+      "output": "Flow-neutral closing index",
+      "assumptions": "Uses manual dated snapshots, not raw balances or a risk forecast.",
+      "status": "extracted",
+      "focusLabel": "Flow-neutral closing index (opening = 1)"
+    },
+    {
+      "id": "gross-staking-rewards",
+      "path": "/tasks/gross-staking-rewards/",
+      "title": "Gross rewards from stated staking APR",
+      "category": "Staking & vesting",
+      "engineId": "staking-rewards",
+      "mode": "projection",
+      "question": "What token rewards accrue before validator commission?",
+      "requiredInputs": [
+        "stake",
+        "grossAprBps",
+        "elapsedDays",
+        "commissionBps",
+        "decimals"
+      ],
+      "output": "Gross modeled token rewards",
+      "assumptions": "ACT/365 simple accrual; an assumed APR is not live protocol yield.",
+      "status": "extracted",
+      "focusLabel": "Gross modeled rewards"
+    },
+    {
+      "id": "validator-commission",
+      "path": "/tasks/validator-commission/",
+      "title": "Validator commission on rewards",
+      "category": "Staking & vesting",
+      "engineId": "staking-rewards",
+      "mode": "projection",
+      "question": "What part of modeled gross rewards goes to a stated validator commission?",
+      "requiredInputs": [
+        "stake",
+        "grossAprBps",
+        "elapsedDays",
+        "commissionBps",
+        "decimals"
+      ],
+      "output": "Validator commission in reward-token units",
+      "assumptions": "ACT/365 simple accrual; an assumed APR is not live protocol yield.",
+      "status": "extracted",
+      "focusLabel": "Validator commission"
+    },
+    {
+      "id": "claim-reward-threshold",
+      "path": "/tasks/claim-reward-threshold/",
+      "title": "Reward balance needed to cover claim cost",
+      "category": "Staking & vesting",
+      "engineId": "staking-rewards",
+      "mode": "claim",
+      "question": "What gross reward balance covers known claim cost and commission?",
+      "requiredInputs": [
+        "grossReward",
+        "commissionCoverage",
+        "claimFee",
+        "feeDenomination",
+        "decimals"
+      ],
+      "output": "Minimum gross reward threshold",
+      "assumptions": "Unconverted native fees make coverage incomplete; no on-chain claimability is checked.",
+      "status": "extracted",
+      "focusLabel": "Minimum gross to cover known cost"
+    },
+    {
+      "id": "claim-wait-days",
+      "path": "/tasks/claim-wait-days/",
+      "title": "Modeled days to cover claim cost",
+      "category": "Staking & vesting",
+      "engineId": "staking-rewards",
+      "mode": "claim",
+      "question": "How many whole days of stated constant accrual cover known claim cost?",
+      "requiredInputs": [
+        "grossReward",
+        "commissionCoverage",
+        "claimFee",
+        "feeDenomination",
+        "decimals"
+      ],
+      "output": "Whole-day break-even wait",
+      "assumptions": "Unconverted native fees make coverage incomplete; no on-chain claimability is checked.",
+      "status": "extracted",
+      "focusLabel": "Whole days to cover known cost"
+    },
+    {
+      "id": "slash-adjusted-principal",
+      "path": "/tasks/slash-adjusted-principal/",
+      "title": "Principal after a hypothetical slash",
+      "category": "Staking & vesting",
+      "engineId": "staking-rewards",
+      "mode": "restake",
+      "question": "How much original principal remains after a manual slash percentage?",
+      "requiredInputs": [
+        "stake",
+        "grossAprBps",
+        "periodsPerYear",
+        "commissionBps",
+        "slashBps"
+      ],
+      "output": "Principal after slash",
+      "assumptions": "Same-asset assumption must be explicit; slashing and returns are hypothetical.",
+      "status": "extracted",
+      "focusLabel": "Principal after slash"
+    },
+    {
+      "id": "restaked-net-growth",
+      "path": "/tasks/restaked-net-growth/",
+      "title": "Growth after restaking costs",
+      "category": "Staking & vesting",
+      "engineId": "staking-rewards",
+      "mode": "restake",
+      "question": "What same-asset restaking growth remains after known periodic costs?",
+      "requiredInputs": [
+        "stake",
+        "grossAprBps",
+        "periodsPerYear",
+        "commissionBps",
+        "slashBps"
+      ],
+      "output": "Restaked growth after costs",
+      "assumptions": "Same-asset assumption must be explicit; slashing and returns are hypothetical.",
+      "status": "extracted",
+      "focusLabel": "Restaked growth after costs"
+    },
+    {
+      "id": "vested-unreceived",
+      "path": "/tasks/vested-unreceived/",
+      "title": "Vested but not yet received tokens",
+      "category": "Staking & vesting",
+      "engineId": "vesting-unlocks",
+      "mode": "linear",
+      "question": "How much modeled vested allocation remains after a manual received amount?",
+      "requiredInputs": [
+        "totalAllocation",
+        "startDate",
+        "endDate",
+        "cliffDate",
+        "observationDate",
+        "decimals"
+      ],
+      "output": "Vested but not yet received token amount",
+      "assumptions": "Cliff releases accrued amount; no contract or actual claim status is read.",
+      "status": "extracted",
+      "focusLabel": "Vested but not yet received under manual inputs"
+    },
+    {
+      "id": "initial-unlock-share",
+      "path": "/tasks/initial-unlock-share/",
+      "title": "Initial token unlock amount",
+      "category": "Staking & vesting",
+      "engineId": "vesting-unlocks",
+      "mode": "initial-linear",
+      "question": "How many tokens unlock at the stated vesting start?",
+      "requiredInputs": [
+        "totalAllocation",
+        "initialUnlockBps",
+        "startDate",
+        "endDate",
+        "observationDate"
+      ],
+      "output": "Initial unlock scheduled at start",
+      "assumptions": "Initial share is counted once; UTC schedule and token identity are manual.",
+      "status": "extracted",
+      "focusLabel": "Initial unlock scheduled at start"
+    },
+    {
+      "id": "collateral-equity",
+      "path": "/tasks/collateral-equity/",
+      "title": "Collateral equity after debt",
+      "category": "Lending & debt",
+      "engineId": "collateral-health",
+      "mode": "health",
+      "question": "What manual collateral value remains after subtracting debt?",
+      "requiredInputs": [
+        "collateralValue",
+        "debtValue",
+        "maxLtvBps",
+        "liquidationThresholdBps",
+        "targetHealthFactor"
+      ],
+      "output": "Collateral equity",
+      "assumptions": "Single collateral and debt in one manual quote currency; no protocol rules checked.",
+      "status": "extracted",
+      "focusLabel": "Collateral equity"
+    },
+    {
+      "id": "collateral-gross-leverage",
+      "path": "/tasks/collateral-gross-leverage/",
+      "title": "Gross collateral exposure over equity",
+      "category": "Lending & debt",
+      "engineId": "collateral-health",
+      "mode": "health",
+      "question": "What simple gross-exposure leverage follows from valued collateral and equity?",
+      "requiredInputs": [
+        "collateralValue",
+        "debtValue",
+        "maxLtvBps",
+        "liquidationThresholdBps",
+        "targetHealthFactor"
+      ],
+      "output": "Gross exposure divided by equity",
+      "assumptions": "Single collateral and debt in one manual quote currency; no protocol rules checked.",
+      "status": "extracted",
+      "focusLabel": "Gross exposure / equity"
+    },
+    {
+      "id": "minimum-debt-repayment",
+      "path": "/tasks/minimum-debt-repayment/",
+      "title": "Minimum debt repayment for target health",
+      "category": "Lending & debt",
+      "engineId": "collateral-health",
+      "mode": "adjust",
+      "question": "What conservative debt repayment reaches the selected health target?",
+      "requiredInputs": [
+        "collateralValue",
+        "debtValue",
+        "maxLtvBps",
+        "liquidationThresholdBps",
+        "targetHealthFactor"
+      ],
+      "output": "Minimum debt repayment",
+      "assumptions": "These are quote values, not executable token quantities or guaranteed safety.",
+      "status": "extracted",
+      "focusLabel": "Minimum debt repayment"
+    },
+    {
+      "id": "minimum-collateral-addition",
+      "path": "/tasks/minimum-collateral-addition/",
+      "title": "Minimum collateral value to add",
+      "category": "Lending & debt",
+      "engineId": "collateral-health",
+      "mode": "adjust",
+      "question": "What conservative collateral-value addition reaches the selected constraints?",
+      "requiredInputs": [
+        "collateralValue",
+        "debtValue",
+        "maxLtvBps",
+        "liquidationThresholdBps",
+        "targetHealthFactor"
+      ],
+      "output": "Minimum collateral-value addition",
+      "assumptions": "These are quote values, not executable token quantities or guaranteed safety.",
+      "status": "extracted",
+      "focusLabel": "Minimum collateral value addition"
+    },
+    {
+      "id": "maximum-collateral-withdrawal",
+      "path": "/tasks/maximum-collateral-withdrawal/",
+      "title": "Maximum modeled collateral withdrawal",
+      "category": "Lending & debt",
+      "engineId": "collateral-health",
+      "mode": "adjust",
+      "question": "What largest collateral value may be withdrawn within both manual limits?",
+      "requiredInputs": [
+        "collateralValue",
+        "debtValue",
+        "maxLtvBps",
+        "liquidationThresholdBps",
+        "targetHealthFactor"
+      ],
+      "output": "Conservative safe withdrawal value",
+      "assumptions": "These are quote values, not executable token quantities or guaranteed safety.",
+      "status": "extracted",
+      "focusLabel": "Maximum safe collateral-value withdrawal"
+    },
+    {
+      "id": "collateral-critical-drop",
+      "path": "/tasks/collateral-critical-drop/",
+      "title": "Collateral drop to health factor one",
+      "category": "Lending & debt",
+      "engineId": "collateral-health",
+      "mode": "shock",
+      "question": "What fixed-debt collateral-value decline reaches modeled health factor one?",
+      "requiredInputs": [
+        "collateralValue",
+        "debtValue",
+        "collateralShockBps",
+        "liquidationThresholdBps"
+      ],
+      "output": "Collateral-value drop to HF = 1",
+      "assumptions": "Debt value and protocol thresholds are held constant.",
+      "status": "extracted",
+      "focusLabel": "Current collateral-value drop to HF = 1"
+    },
+    {
+      "id": "simple-borrow-interest",
+      "path": "/tasks/simple-borrow-interest/",
+      "title": "Simple borrowing interest",
+      "category": "Lending & debt",
+      "engineId": "borrowing-cost",
+      "mode": "growth",
+      "question": "What interest accrues over stated whole days at a nominal borrow APR?",
+      "requiredInputs": [
+        "principal",
+        "borrowAprBps",
+        "elapsedDays",
+        "elapsedPeriods",
+        "periodsPerYear"
+      ],
+      "output": "ACT/365 simple interest",
+      "assumptions": "Fixed nominal APR; entered horizons must describe the intended comparison.",
+      "status": "extracted",
+      "focusLabel": "Simple interest, ACT/365"
+    },
+    {
+      "id": "compounded-final-debt",
+      "path": "/tasks/compounded-final-debt/",
+      "title": "Debt after scheduled compounding",
+      "category": "Lending & debt",
+      "engineId": "borrowing-cost",
+      "mode": "growth",
+      "question": "What debt follows from whole periods of nominal-rate compounding?",
+      "requiredInputs": [
+        "principal",
+        "borrowAprBps",
+        "elapsedDays",
+        "elapsedPeriods",
+        "periodsPerYear"
+      ],
+      "output": "Final compounded debt",
+      "assumptions": "Fixed nominal APR; entered horizons must describe the intended comparison.",
+      "status": "extracted",
+      "focusLabel": "Debt after scheduled compounding"
+    },
+    {
+      "id": "repayment-total-interest",
+      "path": "/tasks/repayment-total-interest/",
+      "title": "Interest paid through a modeled schedule",
+      "category": "Lending & debt",
+      "engineId": "borrowing-cost",
+      "mode": "repayment",
+      "question": "How much interest accrues over the entered fixed-payment horizon?",
+      "requiredInputs": [
+        "principal",
+        "borrowAprBps",
+        "fixedPayment",
+        "periodsPerYear",
+        "horizonPeriods"
+      ],
+      "output": "Cumulative modeled interest",
+      "assumptions": "Fixed rate and end-of-period payments; no variable-rate forecast.",
+      "status": "extracted",
+      "focusLabel": "Cumulative modeled interest"
+    },
+    {
+      "id": "carry-break-even-yield",
+      "path": "/tasks/carry-break-even-yield/",
+      "title": "Yield needed to cover borrowing cost",
+      "category": "Lending & debt",
+      "engineId": "borrowing-cost",
+      "mode": "carry",
+      "question": "What minimum simple yield covers known borrowing and separate costs?",
+      "requiredInputs": [
+        "principal",
+        "borrowAprBps",
+        "investmentYieldBps",
+        "elapsedDays",
+        "costCoverage"
+      ],
+      "output": "Minimum break-even yield in whole bps",
+      "assumptions": "One manual currency; unknown expenses withhold a net-profit conclusion.",
+      "status": "extracted",
+      "focusLabel": "Minimum whole-bps simple yield to cover known costs"
+    },
+    {
+      "id": "amm-manual-composition",
+      "path": "/tasks/amm-manual-composition/",
+      "title": "Pool composition at a manual price",
+      "category": "Liquidity mathematics",
+      "engineId": "amm-pool-math",
+      "mode": "reserves",
+      "question": "What token0 share follows from a separately stated common-value reference?",
+      "requiredInputs": [
+        "reserve0",
+        "reserve1",
+        "decimals0",
+        "decimals1"
+      ],
+      "output": "Token0 share at manual reference price",
+      "assumptions": "Constant-product illustration, not live liquidity or a swap quote.",
+      "status": "extracted",
+      "focusLabel": "Token0 share at manual reference price"
+    },
+    {
+      "id": "amm-reserve-impact",
+      "path": "/tasks/amm-reserve-impact/",
+      "title": "Fee-free AMM reserve impact",
+      "category": "Liquidity mathematics",
+      "engineId": "amm-pool-math",
+      "mode": "swap",
+      "question": "How much does pool depth alone move the swap price before fees?",
+      "requiredInputs": [
+        "reserve0",
+        "reserve1",
+        "amountIn",
+        "direction",
+        "feeBps"
+      ],
+      "output": "Fee-free reserve impact versus marginal spot",
+      "assumptions": "Pool fee differs from PIT fee; no gas, MEV or executable quote.",
+      "status": "extracted",
+      "focusLabel": "Fee-free reserve impact versus spot"
+    },
+    {
+      "id": "amm-post-swap-price",
+      "path": "/tasks/amm-post-swap-price/",
+      "title": "AMM price after a modeled swap",
+      "category": "Liquidity mathematics",
+      "engineId": "amm-pool-math",
+      "mode": "swap",
+      "question": "What marginal pool price follows the rounded hypothetical swap?",
+      "requiredInputs": [
+        "reserve0",
+        "reserve1",
+        "amountIn",
+        "direction",
+        "feeBps"
+      ],
+      "output": "Post-swap marginal price",
+      "assumptions": "Pool fee differs from PIT fee; no gas, MEV or executable quote.",
+      "status": "extracted",
+      "focusLabel": "Post-swap marginal price"
+    },
+    {
+      "id": "amm-new-lp-share",
+      "path": "/tasks/amm-new-lp-share/",
+      "title": "New LP share of a proportional pool",
+      "category": "Liquidity mathematics",
+      "engineId": "amm-pool-math",
+      "mode": "liquidity",
+      "question": "What illustrative pool share follows from a proportional deposit?",
+      "requiredInputs": [
+        "reserve0",
+        "reserve1",
+        "deposit0",
+        "available1",
+        "withdrawBps"
+      ],
+      "output": "New-provider pool ownership share",
+      "assumptions": "Fee-free illustrative ownership, not protocol LP minting.",
+      "status": "extracted",
+      "focusLabel": "Illustrative new LP share"
+    },
+    {
+      "id": "cl-unused-token-budget",
+      "path": "/tasks/cl-unused-token-budget/",
+      "title": "Unspent token budget in a price range",
+      "category": "Liquidity mathematics",
+      "engineId": "concentrated-liquidity",
+      "mode": "composition",
+      "question": "How much of the supplied token1 budget remains outside the modeled position?",
+      "requiredInputs": [
+        "price",
+        "lowerPrice",
+        "upperPrice",
+        "budget0",
+        "budget1"
+      ],
+      "output": "Unused token1 budget",
+      "assumptions": "Continuous fee-free range model, not Uniswap v3 contract-equivalent.",
+      "status": "extracted",
+      "focusLabel": "Unused token1"
+    },
+    {
+      "id": "cl-fees-including-costs",
+      "path": "/tasks/cl-fees-including-costs/",
+      "title": "LP fees needed after known costs",
+      "category": "Liquidity mathematics",
+      "engineId": "concentrated-liquidity",
+      "mode": "fees",
+      "question": "What accrued fees would cover divergence plus stated management cost?",
+      "requiredInputs": [
+        "initialPrice",
+        "futurePrice",
+        "accruedFee0",
+        "accruedFee1",
+        "costCoverage"
+      ],
+      "output": "Break-even fees including known costs",
+      "assumptions": "Unknown costs prevent definitive profit assessment; no volume forecast.",
+      "status": "extracted",
+      "focusLabel": "Break-even fees including costs"
+    }
+  ]
+}

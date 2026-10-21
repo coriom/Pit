@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { expect, test, type Page } from "@playwright/test";
 import { LOCAL_PAGES, validateLocalHost } from "../../scripts/release/local-toolbox-host.mjs";
+import { AVAILABLE_LOCAL_TASKS } from "../../src/lib/local-task-registry";
 
 let server: Server;
 let origin: string;
@@ -71,7 +72,7 @@ async function assertNoSideEffects(page: Page, report: Awaited<ReturnType<typeof
   expect(await page.evaluate(() => (window as any).__localForbidden)).toEqual([]);
 }
 
-test("all 24 emitted pages load under strict headers; excluded routes stay absent", async ({ page, browserName }) => {
+test("all allowlisted emitted pages load under strict headers; excluded routes stay absent", async ({ page, browserName }) => {
   test.setTimeout(180_000);
   const report = await guard(page);
   for (const file of LOCAL_PAGES) {
@@ -97,7 +98,7 @@ test("all 24 emitted pages load under strict headers; excluded routes stay absen
   });
   expect(await page.evaluate(() => (window as any).__arInjected)).toBeUndefined();
   await assertNoSideEffects(page, report);
-  console.log(`AR_LOCAL_ARTIFACT ${browserName}: 24 pages, 5 excluded routes, CSP and privacy PASS`);
+  console.log(`AR_LOCAL_ARTIFACT ${browserName}: ${LOCAL_PAGES.length} pages, 5 excluded routes, CSP and privacy PASS`);
 });
 
 test("private notice pages, metadata and keyboard navigation remain usable on mobile", async ({ page }) => {
@@ -128,15 +129,55 @@ test("search and task filters keep the twenty tools reachable by keyboard on mob
   await expect(page.locator("[data-tool]:visible")).toHaveCount(20);
   await page.getByLabel("Search tools by name or purpose").fill("vesting");
   await expect(page.locator("[data-tool]:visible")).toHaveCount(1);
-  await expect(page.locator("#tool-match-count")).toHaveText("1 tool shown");
+  await expect(page.locator("#tool-match-count")).toContainText("entries shown");
   await page.getByLabel("Search tools by name or purpose").fill("");
   await page.getByRole("button", { name: "Data inspection" }).focus();
   await page.keyboard.press("Enter");
   await expect(page.locator("[data-tool]:visible")).toHaveCount(2);
+  await expect(page.locator("[data-task]:visible")).not.toHaveCount(0);
   await expect(page.getByRole("button", { name: "Data inspection" })).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("link", { name: /EVM Data Inspector/ }).click();
   await expect(page.getByRole("heading", { name: "EVM Data Inspector" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2)).toBe(true);
+  await assertNoSideEffects(page, report);
+});
+
+test("each focused task opens its reviewed mode and calculates without side effects", async ({ page }) => {
+  test.setTimeout(180_000);
+  const report = await guard(page);
+  for (const task of AVAILABLE_LOCAL_TASKS) {
+    const response = await page.goto(`${origin}${task.path}`);
+    expect(response?.status(), task.id).toBe(200);
+    await expect(page.getByRole("heading", { name: task.title, exact: true })).toBeVisible();
+    await expect(page.locator('[data-task-shell] select[name="mode"]')).toHaveValue(task.mode);
+    const panel = page.locator(`[data-task-shell] [data-mode-panel="${task.mode}"], [data-task-shell] [data-panel="${task.mode}"]`);
+    if (await panel.count()) await expect(panel).toBeVisible();
+    if (task.id === "tranche-unlocks") await page.getByRole("button", { name: "Load illustrative example" }).click();
+    if (task.engineId === "crypto-data-workshop") {
+      await page.getByRole("button", { name: "Load fictional CSV example" }).click();
+      if (task.mode !== "inspect") {
+        await page.locator('[data-task-shell] select[name="mode"]').selectOption("inspect");
+        await page.locator('[data-task-shell] form button.primary[type="submit"]').click();
+        await expect(page.locator('[data-task-shell] [data-result]')).toBeVisible();
+        await page.locator('[data-task-shell] select[name="mode"]').selectOption(task.mode);
+        await page.locator('[data-task-shell] input[name="confirm"]').check();
+      }
+    }
+    await page.locator('[data-task-shell] form button.primary[type="submit"]').click();
+    await expect(page.locator('[data-task-shell] [data-result], [data-task-shell] [data-report]'), task.id).toBeVisible();
+    if (task.focusLabel) {
+      await expect(page.locator('[data-task-focused]'), task.id).toBeVisible();
+      await expect(page.locator('[data-task-focused-value]'), task.id).not.toContainText('Unavailable under the current assumptions');
+    }
+    expect(await page.evaluate(() => (window as any).__localForbidden), task.id).toEqual([]);
+  }
+  await page.goto(`${origin}/tools/`);
+  await page.getByRole("button", { name: "Focused tasks" }).click();
+  await expect(page.locator("[data-task]:visible")).toHaveCount(89);
+  await page.getByLabel("Search tools by name or purpose").fill("Convert nominal APR to APY");
+  await expect(page.locator("[data-task]:visible")).toHaveCount(1);
+  await page.getByRole("link", { name: /Convert nominal APR to APY/ }).click();
+  await expect(page.locator('[data-task-shell] select[name="mode"]')).toHaveValue("apr-to-apy");
   await assertNoSideEffects(page, report);
 });
 

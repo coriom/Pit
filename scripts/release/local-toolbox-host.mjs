@@ -16,7 +16,37 @@ export const LOCAL_IDS = [
   "concentrated-liquidity", "impermanent-loss", "evm-data-inspector",
   "crypto-data-workshop",
 ];
-export const LOCAL_PAGES = ["index.html", "tools/index.html", "privacy/index.html", "legal/index.html", ...LOCAL_IDS.map((id) => `tools/${id}/index.html`)].sort();
+export const LOCAL_TASK_IDS = [
+  "eth-wei-gwei", "erc20-base-units", "rate-units", "stated-fee",
+  "apr-to-apy", "apy-to-apr", "annualize-periodic-return", "simple-interest",
+  "compound-growth", "recurring-contributions", "income-principal", "loss-recovery",
+  "average-entry", "stop-risk-size", "risk-reward", "bid-ask-spread",
+  "slippage-bounds", "gas-budget", "target-rebalance", "contribution-rebalance",
+  "portfolio-shock", "flow-adjusted-performance", "flow-adjusted-drawdown",
+  "staking-reward-projection", "claim-economics", "restaking-scenario",
+  "linear-vesting", "initial-unlock-vesting", "tranche-unlocks",
+  "collateral-health-factor", "collateral-adjustment", "collateral-shock",
+  "debt-growth", "repayment-schedule", "borrowed-capital-carry",
+  "amm-reserve-price", "amm-swap-output", "amm-proportional-liquidity",
+  "cl-position-composition", "cl-price-scenario", "cl-fee-break-even",
+  "evm-address-checksum", "evm-signature-hash", "abi-calldata-decode",
+  "csv-structure-inspect", "csv-normalize-preview", "csv-deduplicate-export",
+  "purchase-acquisition-cost", "fee-aware-break-even", "planned-stop-distance",
+  "modeled-stop-loss", "net-target-payoff", "bid-ask-midpoint",
+  "execution-reference-deviation", "maximum-input-bound", "maximum-gas-price",
+  "rebalance-turnover", "rebalance-fee-drag", "minimum-contribution",
+  "shock-concentration", "flow-neutral-monetary-gain", "best-observed-period",
+  "worst-observed-period", "current-portfolio-drawdown", "flow-neutral-index",
+  "gross-staking-rewards", "validator-commission", "claim-reward-threshold",
+  "claim-wait-days", "slash-adjusted-principal", "restaked-net-growth",
+  "vested-unreceived", "initial-unlock-share", "collateral-equity",
+  "collateral-gross-leverage", "minimum-debt-repayment", "minimum-collateral-addition",
+  "maximum-collateral-withdrawal", "collateral-critical-drop", "simple-borrow-interest",
+  "compounded-final-debt", "repayment-total-interest", "carry-break-even-yield",
+  "amm-manual-composition", "amm-reserve-impact", "amm-post-swap-price",
+  "amm-new-lp-share", "cl-unused-token-budget", "cl-fees-including-costs",
+];
+export const LOCAL_PAGES = ["index.html", "tools/index.html", "privacy/index.html", "legal/index.html", ...LOCAL_IDS.map((id) => `tools/${id}/index.html`), ...LOCAL_TASK_IDS.map((id) => `tasks/${id}/index.html`)].sort();
 const CONTENT_POLICY = [
   "default-src 'none'", "connect-src 'none'", "font-src 'self'", "img-src 'self'",
   "object-src 'none'", "base-uri 'self'", "form-action 'self'",
@@ -108,7 +138,7 @@ async function candidateInventory(root, publicOrigin = null) {
     throw Error("Local toolbox file or route inventory differs from explicit allowlist");
   if (await readFile(join(root, "robots.txt"), "utf8") !== (publicOrigin ? publicRobots(publicOrigin) : "User-agent: *\nDisallow: /\n"))
     throw Error("Local toolbox robots policy changed");
-  if (publicOrigin && await readFile(join(root, "sitemap.xml"), "utf8") !== publicSitemap(publicOrigin, LOCAL_IDS))
+  if (publicOrigin && await readFile(join(root, "sitemap.xml"), "utf8") !== publicSitemap(publicOrigin, LOCAL_IDS, LOCAL_TASK_IDS))
     throw Error("Local toolbox sitemap differs from approved routes");
   const css = await readFile(join(root, assets[0]), "utf8");
   if (/@import\s+(?:url\()?\s*["']?https?:\/\/|url\(\s*["']?https?:\/\//i.test(css))
@@ -119,7 +149,7 @@ async function candidateInventory(root, publicOrigin = null) {
 export async function prepareLocalCandidate(root = CANDIDATE_ROOT, { publicOrigin = null } = {}) {
   if (publicOrigin) {
     await writeFile(join(root, "robots.txt"), publicRobots(publicOrigin));
-    await writeFile(join(root, "sitemap.xml"), publicSitemap(publicOrigin, LOCAL_IDS));
+    await writeFile(join(root, "sitemap.xml"), publicSitemap(publicOrigin, LOCAL_IDS, LOCAL_TASK_IDS));
   }
   const { files, assets } = await candidateInventory(root, publicOrigin);
   const htmlByPage = await Promise.all(LOCAL_PAGES.map(async (page) => [page, await readFile(join(root, page), "utf8")]));
@@ -129,7 +159,7 @@ export async function prepareLocalCandidate(root = CANDIDATE_ROOT, { publicOrigi
     for (const body of scripts(html, page)) scriptHashes.add(cspHash(body));
     for (const body of styles(html, page)) styleHashes.add(cspHash(body));
   }
-  if (scriptHashes.size !== 19 || styleHashes.size === 0) throw Error("Unexpected local toolbox executable/style count");
+  if (scriptHashes.size !== 20 || styleHashes.size === 0) throw Error("Unexpected local toolbox executable/style count");
   const policy = [
     ...CONTENT_POLICY,
     `script-src ${[...scriptHashes].sort().join(" ")}`,
