@@ -3,9 +3,9 @@
   "baselineMain": "a681796699ea504168ebe389f4dea56a98068f14",
   "deployment": "NOT_AUTHORIZED",
   "publicRelease": "NO_GO",
-  "completedTaskCount": 165,
+  "completedTaskCount": 173,
   "newOffChainCapabilities": 32,
-  "newOnChainCapabilities": 14,
+  "newOnChainCapabilities": 22,
   "batches": {
     "BJ": {
       "status": "validated-local",
@@ -104,10 +104,18 @@
       "evidence": ["14 targeted BN+BO Vitest tests passed", "Chromium route/privacy smoke passed across all 14 routes", "Live Chromium returned expected fields for six BO reads; one Base timeout occurred and targeted retry passed", "Fixed Multicall3 bytecode present on Ethereum and Base", "pnpm explorer:check: 16 HTML pages and 20 package files"],
       "deferred": ["Firefox and consolidated release acceptance reserved for BS", "Provider availability and commercial terms before publication"]
     },
-    "BP": { "status": "pending" },
+    "BP": {
+      "status": "validated-local",
+      "package": "dist-read-only-explorer-host",
+      "ids": ["proxy-storage", "bytecode-compare", "ownership-role", "erc20-contract", "permit-signals", "erc165-interface", "timelock-standard", "safe-multisig"],
+      "blockedExternal": ["Global token mint/burn event search: eth_getLogs paid-tier/timeout; no duplicate per-receipt page"],
+      "scopeChanges": ["ERC-165 interface claim inspection substituted as a distinct capability", "Permit method responses are labeled candidate signals, not verified signature acceptance", "Safe owners/threshold exclude modules and guards"],
+      "evidence": ["20 focused BN-BP Vitest tests passed", "Chromium: all eight BP routes loaded without background RPC and all eight returned expected fields using public live contracts", "pnpm explorer:check: 24 HTML pages and 28 package files"],
+      "deferred": ["Firefox and consolidated release acceptance reserved for BS", "Provider commercial terms and long-term availability before publication"]
+    },
     "BQ": { "status": "pending" },
     "BR": { "status": "pending" },
     "BS": { "status": "pending" }
   },
-  "nextAction": "Continue BP with narrowly defined contract inspections backed by verified static interfaces and read-only public RPC. Do not label unverified ownership, safety or protocol support as proven."
+  "nextAction": "Continue BQ with chain-scoped DeFi protocol inspections only where official addresses, fixed ABIs, public RPC reads and browser behavior can be verified. Mark unsupported protocol-specific views BLOCKED_EXTERNAL rather than publishing placeholders."
 }

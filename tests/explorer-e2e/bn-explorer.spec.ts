@@ -4,7 +4,7 @@ test("reviewed routes are usable and no request occurs before explicit action", 
   const network: string[] = [];
   page.on("request", (request) => { if (request.url().startsWith("https://")) network.push(request.url()); });
   await page.goto("/");
-  await expect(page.locator(".card")).toHaveCount(14);
+  await expect(page.locator(".card")).toHaveCount(22);
   for (const href of await page.locator(".card").evaluateAll((cards) => cards.map((card) => card.getAttribute("href")!))) {
     const response = await page.goto(href);
     expect(response?.status()).toBe(200);
