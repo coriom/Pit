@@ -3,9 +3,9 @@
   "baselineMain": "a681796699ea504168ebe389f4dea56a98068f14",
   "deployment": "NOT_AUTHORIZED",
   "publicRelease": "NO_GO",
-  "completedTaskCount": 173,
+  "completedTaskCount": 178,
   "newOffChainCapabilities": 32,
-  "newOnChainCapabilities": 22,
+  "newOnChainCapabilities": 27,
   "batches": {
     "BJ": {
       "status": "validated-local",
@@ -113,9 +113,19 @@
       "evidence": ["20 focused BN-BP Vitest tests passed", "Chromium: all eight BP routes loaded without background RPC and all eight returned expected fields using public live contracts", "pnpm explorer:check: 24 HTML pages and 28 package files"],
       "deferred": ["Firefox and consolidated release acceptance reserved for BS", "Provider commercial terms and long-term availability before publication"]
     },
-    "BQ": { "status": "pending" },
+    "BQ": {
+      "status": "validated-local",
+      "package": "dist-read-only-explorer-host",
+      "ids": ["uniswap-v3-pool", "uniswap-v3-position", "aave-reserve-index", "erc4626-vault-state", "chainlink-feed"],
+      "packageSha256": "07bc1b29a89f1591201db3d87f2fd5be9a9c94c6a0d3969f7a7d3203f57ae208",
+      "packageFiles": 33,
+      "packageBytes": 221455,
+      "blockedExternal": ["DAO proposal inspection: no reviewed protocol address, ABI and live example", "Staking rewards inspection: no reviewed protocol-specific accounting ABI and live example", "Oracle versus AMM comparator: cross-source denomination and freshness policy not sufficiently reviewed"],
+      "evidence": ["27 targeted BN-BQ Vitest tests passed", "Chromium: five BQ routes had no background requests; five live public reads returned expected fields", "pnpm check: 347 files, zero errors", "pnpm explorer:check: 29 HTML pages and 33 package files", "Offline Toolbox and historical six-tool beta hashes unchanged"],
+      "deferred": ["Firefox and consolidated release acceptance reserved for BS", "Provider terms and long-term availability before Explorer publication"]
+    },
     "BR": { "status": "pending" },
     "BS": { "status": "pending" }
   },
-  "nextAction": "Continue BQ with chain-scoped DeFi protocol inspections only where official addresses, fixed ABIs, public RPC reads and browser behavior can be verified. Mark unsupported protocol-specific views BLOCKED_EXTERNAL rather than publishing placeholders."
+  "nextAction": "Proceed to BR catalogue and architecture integration, then BS consolidated acceptance. Keep the offline Toolbox and read-only Explorer as separate static packages; do not deploy."
 }
