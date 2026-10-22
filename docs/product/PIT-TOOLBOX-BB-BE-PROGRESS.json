@@ -1,7 +1,7 @@
 {
   "version": 1,
   "baselineCommit": "691dc6c5b05009073c2062486e6ef3d2d37cd016",
-  "completedBatches": ["BB"],
+  "completedBatches": ["BB", "BC"],
   "completedNewCapabilities": [
     "perpetual-pnl",
     "perpetual-funding",
@@ -10,9 +10,17 @@
     "european-option-payoff",
     "black-scholes-greeks",
     "implied-volatility",
-    "trade-expectancy"
+    "trade-expectancy",
+    "dca-vs-lump-sum",
+    "money-weighted-return",
+    "sharpe-sortino",
+    "historical-var-es",
+    "correlation-beta",
+    "realized-volatility",
+    "portfolio-covariance-risk",
+    "lot-constrained-allocation"
   ],
-  "pendingBatches": ["BC", "BD", "BE"],
+  "pendingBatches": ["BD", "BE"],
   "notes": [
     "The eight BB routes have independent inputs and calculations; none are aliases for prior spot PnL, gas or liquidation tasks.",
     "Black-Scholes and IV use bounded deterministic IEEE-754 transcendental approximation; decimal cash-flow arithmetic uses scaled BigInt.",

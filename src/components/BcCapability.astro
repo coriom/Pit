@@ -1,0 +1,14 @@
+---
+import {bcInlineScript} from "../../scripts/build-bc-inline.mjs";
+import {BC_SPEC_BY_ID} from "../lib/bc-tool-specs";
+import type {BcId} from "../lib/bc-statistics";
+import "../styles/ah-tools.css";
+const spec=BC_SPEC_BY_ID.get(Astro.props.id as BcId);if(!spec)throw Error("Unreviewed statistics task");
+const script=bcInlineScript();
+---
+<section class="panel ah-tool" data-bc-tool={spec.id}>
+  <p class="notice">Illustrative browser-local analysis · manual data only</p><p>{spec.question}</p>
+  <form novalidate>{spec.fields.map(field=><label>{field.label}{field.kind==="textarea"?<textarea name={field.name} rows="4" autocomplete="off">{field.example}</textarea>:field.kind==="select"?<select name={field.name}>{field.options?.map(option=><option value={option} selected={option===field.example}>{option}</option>)}</select>:<input type="text" name={field.name} value={field.example} inputmode="decimal" autocomplete="off"/>}</label>)}<button type="button" data-bc-example>Load illustrative example</button><button class="primary" type="submit">Calculate local scenario</button></form>
+  <p role="alert" data-bc-error hidden></p><section role="status" aria-live="polite" data-bc-output hidden><h2>Modeled result</h2><p class="result-value" data-bc-primary></p><dl data-bc-fields></dl><button type="button" data-bc-download>Download local JSON</button></section>
+  <div class="rule"><h2>Assumptions and limits</h2><p>{spec.assumptions} Historical analysis does not predict future outcomes or provide financial advice.</p></div>
+</section><script is:inline set:html={script}></script>

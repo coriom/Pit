@@ -155,6 +155,12 @@ test("each focused task opens its reviewed mode and calculates without side effe
       expect(await page.evaluate(() => (window as any).__localForbidden), task.id).toEqual([]);
       continue;
     }
+    if (task.engineId === "bc-statistics") {
+      await page.locator('[data-task-shell] form button.primary[type="submit"]').click();
+      await expect(page.locator('[data-bc-output]'), task.id).toBeVisible();
+      expect(await page.evaluate(() => (window as any).__localForbidden), task.id).toEqual([]);
+      continue;
+    }
     await expect(page.locator('[data-task-shell] select[name="mode"]')).toHaveValue(task.mode);
     const panel = page.locator(`[data-task-shell] [data-mode-panel="${task.mode}"], [data-task-shell] [data-panel="${task.mode}"]`);
     if (await panel.count()) await expect(panel).toBeVisible();
@@ -179,11 +185,35 @@ test("each focused task opens its reviewed mode and calculates without side effe
   }
   await page.goto(`${origin}/tools/`);
   await page.getByRole("button", { name: "Focused tasks" }).click();
-  await expect(page.locator("[data-task]:visible")).toHaveCount(97);
+  await expect(page.locator("[data-task]:visible")).toHaveCount(105);
   await page.getByLabel("Search tools by name or purpose").fill("Convert nominal APR to APY");
   await expect(page.locator("[data-task]:visible")).toHaveCount(1);
   await page.getByRole("link", { name: /Convert nominal APR to APY/ }).click();
   await expect(page.locator('[data-task-shell] select[name="mode"]')).toHaveValue("apr-to-apy");
+  await assertNoSideEffects(page, report);
+});
+
+test("new derivative and statistics pages validate inputs and export local reports", async ({ page }) => {
+  const report = await guard(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${origin}/tasks/black-scholes-greeks/`);
+  await page.getByRole("button", { name: "Calculate local scenario" }).click();
+  await expect(page.locator("[data-bb-primary]")).toContainText("10.4505");
+  const [derivative] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download local JSON" }).click()]);
+  const derivativeJson = JSON.parse(await readFile(await derivative.path()!, "utf8"));
+  expect(derivativeJson).toMatchObject({ tool: "black-scholes-greeks", version: 1, capability: "local-pure" });
+  await page.getByLabel("Annual volatility, %").fill("1e3");
+  await page.getByRole("button", { name: "Calculate local scenario" }).click();
+  await expect(page.locator("[data-bb-error]")).toBeVisible();
+  await page.goto(`${origin}/tasks/money-weighted-return/`);
+  await page.getByRole("button", { name: "Calculate local scenario" }).click();
+  await expect(page.locator("[data-bc-primary]")).toHaveText("10.00000000");
+  const [statistics] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download local JSON" }).click()]);
+  const statisticsJson = JSON.parse(await readFile(await statistics.path()!, "utf8"));
+  expect(statisticsJson).toMatchObject({ tool: "money-weighted-return", version: 1, capability: "local-pure" });
+  await page.getByLabel(/UTC date, signed flow/).fill("2025-02-30,-100\n2026-01-01,110");
+  await page.getByRole("button", { name: "Calculate local scenario" }).click();
+  await expect(page.locator("[data-bc-error]")).toContainText("Invalid calendar date");
   await assertNoSideEffects(page, report);
 });
 

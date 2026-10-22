@@ -2,10 +2,10 @@
   "version": 1,
   "definition": "A distinct manual user question with a stable direct URL; multi-mode workspaces are not double-counted.",
   "counts": {
-    "complete": 103,
+    "complete": 111,
     "existingSinglePage": 6,
     "extractedDirectTask": 89,
-    "genuinelyNewEngine": 8,
+    "genuinelyNewEngine": 16,
     "pending": 0
   },
   "tasks": [
@@ -1947,6 +1947,136 @@
       ],
       "output": "Expected payoff and breakeven win rate",
       "assumptions": "Simple two-outcome model; no tail risk, fees or recommendation.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "dca-vs-lump-sum",
+      "path": "/tasks/dca-vs-lump-sum/",
+      "title": "DCA vs Lump Sum",
+      "category": "Portfolio & performance",
+      "engineId": "bc-statistics",
+      "mode": "dca-vs-lump-sum",
+      "question": "How would equal installments compare with investing the same total at the first listed price?",
+      "requiredInputs": [
+        "prices",
+        "installment"
+      ],
+      "output": "Difference in terminal value, including unspent rounding dust",
+      "assumptions": "Manual ordered historical prices, equal contributions, no fees or future prediction.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "money-weighted-return",
+      "path": "/tasks/money-weighted-return/",
+      "title": "Money-Weighted Return (XIRR)",
+      "category": "Portfolio & performance",
+      "engineId": "bc-statistics",
+      "mode": "money-weighted-return",
+      "question": "What annual rate discounts manually dated investments and proceeds to zero?",
+      "requiredInputs": [
+        "flows"
+      ],
+      "output": "Bounded annual money-weighted return or an explicit root limitation",
+      "assumptions": "UTC dates, ACT/365. Negative flows invest capital; final positive flow includes closing value.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "sharpe-sortino",
+      "path": "/tasks/sharpe-sortino/",
+      "title": "Sharpe & Sortino Ratios",
+      "category": "Portfolio & performance",
+      "engineId": "bc-statistics",
+      "mode": "sharpe-sortino",
+      "question": "How does an observed return series compare with an explicit per-period hurdle?",
+      "requiredInputs": [
+        "returns",
+        "riskFreePct",
+        "periodsPerYear"
+      ],
+      "output": "Annualized Sharpe and Sortino under stated conventions",
+      "assumptions": "Returns are manually entered percentages. Requires nonzero total and downside dispersion.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "historical-var-es",
+      "path": "/tasks/historical-var-es/",
+      "title": "Historical VaR & Expected Shortfall",
+      "category": "Portfolio & performance",
+      "engineId": "bc-statistics",
+      "mode": "historical-var-es",
+      "question": "What empirical loss threshold and average worst loss appear in a manual return sample?",
+      "requiredInputs": [
+        "returns",
+        "confidencePct"
+      ],
+      "output": "Nearest-rank historical VaR and worst-tail average",
+      "assumptions": "Sample only; not a forecast or maximum loss. Small samples trigger a warning.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "correlation-beta",
+      "path": "/tasks/correlation-beta/",
+      "title": "Correlation & Beta",
+      "category": "Portfolio & performance",
+      "engineId": "bc-statistics",
+      "mode": "correlation-beta",
+      "question": "How closely did two aligned manual return series move together?",
+      "requiredInputs": [
+        "assetReturns",
+        "benchmarkReturns"
+      ],
+      "output": "Pearson correlation and beta versus benchmark",
+      "assumptions": "Series must be synchronized and share frequency; no automatic dates or causal claim.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "realized-volatility",
+      "path": "/tasks/realized-volatility/",
+      "title": "Realized Volatility",
+      "category": "Portfolio & performance",
+      "engineId": "bc-statistics",
+      "mode": "realized-volatility",
+      "question": "What observed sample dispersion annualizes under a stated period frequency?",
+      "requiredInputs": [
+        "returns",
+        "periodsPerYear",
+        "method"
+      ],
+      "output": "Period and square-root-of-time annualized volatility",
+      "assumptions": "Historical return sample, simple or transformed log returns; not a loss limit.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "portfolio-covariance-risk",
+      "path": "/tasks/portfolio-covariance-risk/",
+      "title": "Portfolio Covariance Risk",
+      "category": "Portfolio & performance",
+      "engineId": "bc-statistics",
+      "mode": "portfolio-covariance-risk",
+      "question": "What portfolio volatility follows from manual weights and a covariance matrix?",
+      "requiredInputs": [
+        "weights",
+        "covariance",
+        "periodsPerYear"
+      ],
+      "output": "Period and annualized modeled portfolio volatility",
+      "assumptions": "Synchronized return covariance in squared percentage points; symmetric positive-semidefinite input required.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "lot-constrained-allocation",
+      "path": "/tasks/lot-constrained-allocation/",
+      "title": "Lot-Constrained Allocation",
+      "category": "Portfolio & performance",
+      "engineId": "bc-statistics",
+      "mode": "lot-constrained-allocation",
+      "question": "How many whole lots fit each target cash budget at manual prices?",
+      "requiredInputs": [
+        "cash",
+        "assets"
+      ],
+      "output": "Whole-lot counts, spending and unspent cash",
+      "assumptions": "No residual redistribution, execution fees or trade orders; labels are unverified.",
       "status": "genuinely-new"
     }
   ]
