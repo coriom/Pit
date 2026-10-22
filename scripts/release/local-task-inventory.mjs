@@ -20,7 +20,7 @@ const result = {
     complete: LOCAL_TASK_INVENTORY.length - PENDING_LOCAL_TASKS.length,
     existingSinglePage: LOCAL_TASK_INVENTORY.filter((entry) => entry.status === "existing").length,
     extractedDirectTask: LOCAL_TASK_INVENTORY.filter((entry) => entry.status === "extracted").length,
-    genuinelyNewEngine: LOCAL_TASK_INVENTORY.filter((entry) => entry.status === "genuinely-new").length,
+    genuinelyNewCapability: LOCAL_TASK_INVENTORY.filter((entry) => entry.status === "genuinely-new").length,
     pending: PENDING_LOCAL_TASKS.length,
   },
   tasks: LOCAL_TASK_INVENTORY,

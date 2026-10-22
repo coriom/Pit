@@ -30,7 +30,7 @@ describe("new derivative mathematics", () => {
     const input={kind:"call",spot:"100",strike:"100",ratePct:"5",volPct:"20",years:"1"};
     const price=Number(runBb("black-scholes-greeks",input).primary);
     // Independent textbook benchmark: 10.450583572185565, computed with a high-precision normal CDF.
-    expect(Math.abs(price-10.45058357)).toBeLessThan(0.00003);
+    expect(Math.abs(price-10.45058357)).toBeLessThan(0.00000002);
     const iv=Number(runBb("implied-volatility",{kind:"call",spot:"100",strike:"100",ratePct:"5",years:"1",optionPrice:"10.45058357"}).primary);
     expect(Math.abs(iv-20)).toBeLessThan(0.0001);
   });

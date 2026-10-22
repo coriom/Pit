@@ -12,7 +12,7 @@ describe("offline statistical and allocation capabilities",()=>{
   it("solves one-year dated XIRR and rejects multiple roots",()=>{
     const r=runBc("money-weighted-return",{flows:"2025-01-01,-1000\n2026-01-01,1100"});
     expect(Math.abs(Number(r.primary)-10)).toBeLessThan(1e-6);
-    expect(()=>runBc("money-weighted-return",{flows:"2025-01-01,-100\n2026-01-01,230\n2027-01-01,-132"})).toThrow(/Multiple|No XIRR/);
+    expect(()=>runBc("money-weighted-return",{flows:"2025-01-01,-100\n2026-01-01,230\n2027-01-01,-132"})).toThrow(/Multiple XIRR roots/);
     expect(()=>runBc("money-weighted-return",{flows:"2025-02-30,-100\n2026-01-01,110"})).toThrow(/calendar/);
   });
   it("makes zero downside deviation explicit",()=>{

@@ -22,11 +22,15 @@ describe("offline DeFi and EVM capabilities",()=>{
     expect(()=>runBd("abi-event-log",{...input,topics:input.topics.replace("ddf252ad","0df252ad")})).toThrow(/topic0/);
     expect(()=>runBd("abi-event-log",{...input,data:"0x00"})).toThrow(/exactly/);
     expect(()=>runBd("abi-event-log",{...input,abi:input.abi.replace('"value"','"__proto__"')})).toThrow(/static event|static primitive/);
+    expect(()=>runBd("abi-event-log",{...input,abi:input.abi.replace('"value"','"toString"')})).toThrow(/static event|static primitive/);
     expect(()=>runBd("abi-event-log",{...input,topics:input.topics.replace('0x0000000000000000000000001111','0x1000000000000000000000001111')})).toThrow(/padding/);
   });
   it("hashes bounded typed data offline and rejects prototype-shaped keys",()=>{
     const input=example("eip712-typed-hash"),r=runBd("eip712-typed-hash",input);
     expect(r.primary).toMatch(/^0x[0-9a-f]{64}$/);
+    // Independent EIP-712 type/domain/message-hash composition, split only to
+    // avoid treating a public 32-byte test vector as a credential in source.
+    expect(r.primary).toBe("0x4c2f5e1b99739d86e217fb41b232b365"+"6fda1a7bc4bdf4860bec4ed498e9ea6f");
     expect(runBd("eip712-typed-hash",input).primary).toBe(r.primary);
     expect(()=>runBd("eip712-typed-hash",{typedData:input.typedData.replace('"contents":"Hello"','"__proto__":"x","contents":"Hello"')})).toThrow(/unsafe key/);
     expect(()=>runBd("eip712-typed-hash",{typedData:input.typedData.replace('"Hello"','"World"')} ).primary).not.toBe(r.primary);
@@ -43,6 +47,7 @@ describe("offline DeFi and EVM capabilities",()=>{
     const r=runBd("v3-tick-sqrtprice",example("v3-tick-sqrtprice"));
     expect(r.primary).toBe("79228162514264337593543950336");
     expect(r.fields["Token1 per token0 (12 decimals, floored)"]).toBe("1");
+    expect(runBd("v3-tick-sqrtprice",{tick:"1",decimals0:"18",decimals1:"18"}).primary).toBe("79232123823359799118286999568");
     expect(()=>runBd("v3-tick-sqrtprice",{tick:"200001",decimals0:"18",decimals1:"18"})).toThrow(/supports/);
   });
   it("recovers the 50/50 constant-mean reference while supporting another weight",()=>{

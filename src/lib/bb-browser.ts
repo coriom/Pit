@@ -35,7 +35,7 @@ for (const root of document.querySelectorAll<HTMLElement>("[data-bb-tool]")) {
   root.querySelector("[data-bb-download]")?.addEventListener("click", () => {
     if (!last) return;
     const input=Object.fromEntries([...new FormData(form).entries()].map(([key,value]) => [key,String(value)]));
-    const blob=new Blob([JSON.stringify({tool:id,version:1,capability:"local-pure",input,result:last,assumptions:spec.assumptions},null,2)],{type:"application/json"});
+    const blob=new Blob([JSON.stringify({tool:id,version:1,capability:"browser-local",input,result:last,assumptions:spec.assumptions},null,2)],{type:"application/json"});
     const url=URL.createObjectURL(blob), link=document.createElement("a"); link.href=url; link.download=`pit-${id}-illustration.json`; link.click(); setTimeout(() => URL.revokeObjectURL(url),1000);
   });
 }

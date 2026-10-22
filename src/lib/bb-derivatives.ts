@@ -27,11 +27,17 @@ function num(text: string, name: string, min: number, max: number): number {
   return value;
 }
 function normalCdf(x: number): number {
-  // Abramowitz-Stegun 7.1.26, absolute error < 7.5e-8.
-  const t = 1 / (1 + 0.2316419 * Math.abs(x));
-  const density = Math.exp(-x*x/2) / Math.sqrt(2*Math.PI);
-  const tail = density*t*(0.319381530+t*(-0.356563782+t*(1.781477937+t*(-1.821255978+t*1.330274429))));
-  return x >= 0 ? 1-tail : tail;
+  const abs=Math.abs(x);
+  // The omitted normal tail beyond 8 standard deviations is < 7e-16.
+  if(abs>=8)return x>=0?1:0;
+  // Fixed 2,048-panel Simpson integration of the standard-normal density.
+  // Bounded input and fixed work make the approximation deterministic.
+  const panels=2048,step=abs/panels;
+  const density=(t:number)=>Math.exp(-t*t/2)/Math.sqrt(2*Math.PI);
+  let sum=density(0)+density(abs);
+  for(let j=1;j<panels;j++)sum+=(j%2?4:2)*density(j*step);
+  const integral=sum*step/3;
+  return x>=0?0.5+integral:0.5-integral;
 }
 function bs(spot: number, strike: number, rate: number, vol: number, years: number, kind: "call"|"put") {
   const root = Math.sqrt(years), d1 = (Math.log(spot/strike)+(rate+vol*vol/2)*years)/(vol*root), d2=d1-vol*root;
@@ -87,7 +93,7 @@ export function runBb(id: BbId, input: Record<string, string>): BbResult {
       const spot=n("spot",0.00000001,1e8), strike=n("strike",0.00000001,1e8), rate=n("ratePct",0,100)/100, vol=n("volPct",0.000001,1000)/100, years=n("years",0.000001,100);
       const kind=input.kind === "call" ? "call" : input.kind === "put" ? "put" : null; if(!kind) throw Error("Choose call or put.");
       const v=bs(spot,strike,rate,vol,years,kind);
-      return result(fixed(v.price),{"Model price":fixed(v.price),"Delta":fixed(v.delta),"Gamma":fixed(v.gamma),"Vega per 1.00 volatility":fixed(v.vega),"Theta per year":fixed(v.theta),"Rho per 1.00 rate":fixed(v.rho)},["European vanilla, constant volatility and risk-free rate, no dividends; CDF approximation error < 7.5e-8. Price/Greeks are numerical illustrations, not executable quotes."]);
+      return result(fixed(v.price),{"Model price":fixed(v.price),"Delta":fixed(v.delta),"Gamma":fixed(v.gamma),"Vega per 1.00 volatility":fixed(v.vega),"Theta per year":fixed(v.theta),"Rho per 1.00 rate":fixed(v.rho)},["European vanilla, constant volatility and risk-free rate, no dividends; bounded 2,048-panel normal-CDF quadrature. Price/Greeks are numerical illustrations, not executable quotes."]);
     }
     case "implied-volatility": {
       const spot=n("spot",0.00000001,1e8), strike=n("strike",0.00000001,1e8), rate=n("ratePct",0,100)/100, years=n("years",0.000001,100), market=n("optionPrice",0,1e8);
@@ -98,7 +104,7 @@ export function runBb(id: BbId, input: Record<string, string>): BbResult {
       if(bs(spot,strike,rate,high,years,kind).price<market) throw Error("Implied volatility exceeds the supported 1000% bound.");
       for(let i=0;i<80;i++){const mid=(low+high)/2;if(bs(spot,strike,rate,mid,years,kind).price<market)low=mid;else high=mid;}
       const vol=(low+high)/2, residual=bs(spot,strike,rate,vol,years,kind).price-market;
-      return result(fixed(vol*100),{"Implied volatility (%)":fixed(vol*100),"Repricing residual":fixed(residual),"Lower price bound":fixed(lower),"Upper price bound":fixed(upper)},["Bounded 80-step bisection; same no-dividend European model and CDF approximation as pricing. Multiple models can imply different volatilities."]);
+      return result(fixed(vol*100),{"Implied volatility (%)":fixed(vol*100),"Repricing residual":fixed(residual),"Lower price bound":fixed(lower),"Upper price bound":fixed(upper)},["Bounded 80-step bisection; same no-dividend European model and quadrature as pricing. Multiple models can imply different volatilities."]);
     }
     case "trade-expectancy": {
       const win=d("winBps"), gain=nonneg(d("gain"),"Gain"), loss=nonneg(d("loss"),"Loss");

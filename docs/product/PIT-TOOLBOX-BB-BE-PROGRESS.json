@@ -28,10 +28,12 @@
     "weighted-amm-il",
     "amm-fee-revenue"
   ],
-  "pendingBatches": ["BE"],
+  "pendingBatches": [],
+  "finalAcceptanceCommand": "CI=1 pnpm release:check on a clean committed source tree",
   "notes": [
     "The eight BB routes have independent inputs and calculations; none are aliases for prior spot PnL, gas or liquidation tasks.",
-    "Black-Scholes and IV use bounded deterministic IEEE-754 transcendental approximation; decimal cash-flow arithmetic uses scaled BigInt.",
+    "Black-Scholes and IV use bounded deterministic normal-CDF quadrature and numerical root solving; decimal derivative cash-flow arithmetic uses scaled BigInt.",
+    "The 24 new browser-local tasks are not registered in the existing closed workflow-executable pure-tool allowlist.",
     "No deployment or public release is part of this campaign."
   ]
 }

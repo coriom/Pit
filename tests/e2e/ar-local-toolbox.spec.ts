@@ -207,7 +207,7 @@ test("new derivative and statistics pages validate inputs and export local repor
   await expect(page.locator("[data-bb-primary]")).toContainText("10.4505");
   const [derivative] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download local JSON" }).click()]);
   const derivativeJson = JSON.parse(await readFile(await derivative.path()!, "utf8"));
-  expect(derivativeJson).toMatchObject({ tool: "black-scholes-greeks", version: 1, capability: "local-pure" });
+  expect(derivativeJson).toMatchObject({ tool: "black-scholes-greeks", version: 1, capability: "browser-local" });
   await page.getByLabel("Annual volatility, %").fill("1e3");
   await page.getByRole("button", { name: "Calculate local scenario" }).click();
   await expect(page.locator("[data-bb-error]")).toBeVisible();
@@ -216,7 +216,7 @@ test("new derivative and statistics pages validate inputs and export local repor
   await expect(page.locator("[data-bc-primary]")).toHaveText("10.00000000");
   const [statistics] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download local JSON" }).click()]);
   const statisticsJson = JSON.parse(await readFile(await statistics.path()!, "utf8"));
-  expect(statisticsJson).toMatchObject({ tool: "money-weighted-return", version: 1, capability: "local-pure" });
+  expect(statisticsJson).toMatchObject({ tool: "money-weighted-return", version: 1, capability: "browser-local" });
   await page.getByLabel(/UTC date, signed flow/).fill("2025-02-30,-100\n2026-01-01,110");
   await page.getByRole("button", { name: "Calculate local scenario" }).click();
   await expect(page.locator("[data-bc-error]")).toContainText("Invalid calendar date");
@@ -231,7 +231,7 @@ test("new offline EVM pages inspect data and export without wallet or RPC", asyn
   await expect(page.locator("[data-bd-fields]")).toContainText("100");
   const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download local JSON" }).click()]);
   const reportJson = JSON.parse(await readFile(await download.path()!, "utf8"));
-  expect(reportJson).toMatchObject({ tool: "abi-event-log", version: 1, capability: "local-pure" });
+  expect(reportJson).toMatchObject({ tool: "abi-event-log", version: 1, capability: "browser-local" });
   await page.getByLabel("Static non-indexed ABI words").fill("0x00");
   await page.getByRole("button", { name: "Inspect locally" }).click();
   await expect(page.locator("[data-bd-error]")).toContainText("exactly one 32-byte word");
@@ -239,6 +239,29 @@ test("new offline EVM pages inspect data and export without wallet or RPC", asyn
   await page.getByRole("button", { name: "Inspect locally" }).click();
   await expect(page.locator("[data-bd-primary]")).toHaveText(/^0x[0-9a-f]{64}$/);
   await assertNoSideEffects(page, report);
+});
+
+test("bounded tick conversion stays responsive at the supported edge on a throttled mobile browser", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "CPU throttling measurement uses Chromium CDP");
+  const report = await guard(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+  try {
+    await page.goto(`${origin}/tasks/v3-tick-sqrtprice/`);
+    await page.getByLabel(/Signed integer tick/).fill("200000");
+    const elapsedMs = await page.evaluate(() => {
+      const start = performance.now();
+      document.querySelector<HTMLFormElement>("[data-bd-tool] form")?.requestSubmit();
+      return performance.now() - start;
+    });
+    await expect(page.locator("[data-bd-output]")).toBeVisible();
+    console.log(`BE_TICK_PERFORMANCE ${JSON.stringify({ browserName, cpuThrottle: 4, viewport: "390x844", tick: 200000, elapsedMs: Math.round(elapsedMs) })}`);
+    expect(elapsedMs).toBeLessThan(3000);
+    await assertNoSideEffects(page, report);
+  } finally {
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+  }
 });
 
 test("flagship models, incomplete coverage and local portfolio JSON work", async ({ page }) => {
@@ -258,6 +281,7 @@ test("flagship models, incomplete coverage and local portfolio JSON work", async
   await page.getByLabel("Choose local portfolio CSV").setInputFiles({ name: "fictional.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
   await expect(page.locator("[data-import-status]")).toContainText("1 rows previewed");
   await page.getByRole("button", { name: "Accept valid preview" }).click();
+  await expect(page.locator("[data-row-count]")).toHaveText("4 positions");
   await page.getByRole("button", { name: "Analyze current positions" }).click();
   await expect(page.locator("[data-report]")).toContainText("INCOMPLETE");
   const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download local JSON report" }).click()]);
