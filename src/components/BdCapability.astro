@@ -1,0 +1,14 @@
+---
+import {bdInlineScript} from "../../scripts/build-bd-inline.mjs";
+import {BD_SPEC_BY_ID} from "../lib/bd-tool-specs";
+import type {BdId} from "../lib/bd-defi-evm";
+import "../styles/ah-tools.css";
+const spec=BD_SPEC_BY_ID.get(Astro.props.id as BdId);if(!spec)throw Error("Unreviewed DeFi/EVM task");
+const script=bdInlineScript();
+---
+<section class="panel ah-tool" data-bd-tool={spec.id}>
+  <p class="notice">Offline inspection and manual models · no wallet, RPC or transaction</p><p>{spec.question}</p>
+  <form novalidate>{spec.fields.map(field=><label>{field.label}{field.kind==="textarea"?<textarea name={field.name} rows="5" autocomplete="off">{field.example}</textarea>:field.kind==="select"?<select name={field.name}>{field.options?.map(option=><option value={option} selected={option===field.example}>{option}</option>)}</select>:<input type="text" name={field.name} value={field.example} inputmode="decimal" autocomplete="off"/>}</label>)}<button type="button" data-bd-example>Load illustrative example</button><button class="primary" type="submit">Inspect locally</button></form>
+  <p role="alert" data-bd-error hidden></p><section role="status" aria-live="polite" data-bd-output hidden><h2>Modeled result</h2><p class="result-value" data-bd-primary></p><dl data-bd-fields></dl><button type="button" data-bd-download>Download local JSON</button></section>
+  <div class="rule"><h2>Assumptions and limits</h2><p>{spec.assumptions} No financial advice, signing or execution.</p></div>
+</section><script is:inline set:html={script}></script>

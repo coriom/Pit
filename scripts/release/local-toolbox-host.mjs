@@ -49,6 +49,8 @@ export const LOCAL_TASK_IDS = [
   "european-option-payoff", "black-scholes-greeks", "implied-volatility", "trade-expectancy",
   "dca-vs-lump-sum", "money-weighted-return", "sharpe-sortino", "historical-var-es",
   "correlation-beta", "realized-volatility", "portfolio-covariance-risk", "lot-constrained-allocation",
+  "eip1559-fee-cap", "calldata-gas", "abi-event-log", "eip712-typed-hash",
+  "erc4626-shares", "v3-tick-sqrtprice", "weighted-amm-il", "amm-fee-revenue",
 ];
 export const LOCAL_PAGES = ["index.html", "tools/index.html", "privacy/index.html", "legal/index.html", ...LOCAL_IDS.map((id) => `tools/${id}/index.html`), ...LOCAL_TASK_IDS.map((id) => `tasks/${id}/index.html`)].sort();
 const CONTENT_POLICY = [
@@ -163,7 +165,7 @@ export async function prepareLocalCandidate(root = CANDIDATE_ROOT, { publicOrigi
     for (const body of scripts(html, page)) scriptHashes.add(cspHash(body));
     for (const body of styles(html, page)) styleHashes.add(cspHash(body));
   }
-  if (scriptHashes.size !== 22 || styleHashes.size === 0) throw Error("Unexpected local toolbox executable/style count");
+  if (scriptHashes.size !== 23 || styleHashes.size === 0) throw Error("Unexpected local toolbox executable/style count");
   const policy = [
     ...CONTENT_POLICY,
     `script-src ${[...scriptHashes].sort().join(" ")}`,

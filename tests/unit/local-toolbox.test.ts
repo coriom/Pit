@@ -10,7 +10,7 @@ describe("isolated local toolbox boundary", () => {
   it("publishes exactly the twenty reviewed local and wallet-free IDs", () => {
     expect(LOCAL_TOOL_IDS).toHaveLength(20);
     expect(LOCAL_IDS).toEqual(LOCAL_TOOL_IDS);
-    expect(LOCAL_PAGES).toHaveLength(129);
+    expect(LOCAL_PAGES).toHaveLength(137);
     expect(new Set(LOCAL_TOOL_IDS).size).toBe(20);
     expect(LOCAL_TOOLS.map((tool) => tool.id)).toEqual(LOCAL_TOOL_IDS);
     expect(LOCAL_TOOLS.every((tool) => tool.executionMode === "local" && tool.walletRequirement === "none" && tool.networkRequirement === "none")).toBe(true);
@@ -28,25 +28,25 @@ describe("isolated local toolbox boundary", () => {
 
   it("limits a future sitemap to approved local workspaces and focused tasks", () => {
     const routes = publicRoutes(LOCAL_IDS, LOCAL_TASK_IDS);
-    expect(routes).toHaveLength(127);
+    expect(routes).toHaveLength(135);
     expect(routes).toEqual(["/", "/tools/", ...LOCAL_TOOL_IDS.map((id) => `/tools/${id}/`), ...LOCAL_TASK_IDS.map((id) => `/tasks/${id}/`)]);
     const sitemap = publicSitemap("https://example.org", LOCAL_IDS, LOCAL_TASK_IDS);
-    expect([...sitemap.matchAll(/<loc>/g)]).toHaveLength(127);
+    expect([...sitemap.matchAll(/<loc>/g)]).toHaveLength(135);
     expect(sitemap).toContain("<loc>https://example.org/tools/portfolio-exposure/</loc>");
     expect(sitemap).not.toMatch(/\/tools\/(?:swap|perps|wallet|taxlot-export)\/|\/privacy\/|\/legal\//);
     expect(publicRobots("https://example.org")).toBe("User-agent: *\nAllow: /\nSitemap: https://example.org/sitemap.xml\n");
   });
 
   it("reviews specific mode and focused-result tasks against existing local engines", () => {
-    expect(AVAILABLE_LOCAL_TASKS).toHaveLength(105);
-    expect(LOCAL_TASK_INVENTORY).toHaveLength(111);
-    expect(COMPLETED_LOCAL_TASKS).toHaveLength(111);
+    expect(AVAILABLE_LOCAL_TASKS).toHaveLength(113);
+    expect(LOCAL_TASK_INVENTORY).toHaveLength(119);
+    expect(COMPLETED_LOCAL_TASKS).toHaveLength(119);
     expect(PENDING_LOCAL_TASKS).toHaveLength(0);
     expect(LOCAL_TASK_INVENTORY.filter((task) => task.status === "existing")).toHaveLength(6);
     expect(AVAILABLE_LOCAL_TASKS.map((task) => task.id)).toEqual(LOCAL_TASK_IDS);
-    expect(AVAILABLE_LOCAL_TASKS.filter((task) => !task.focusLabel)).toHaveLength(63);
+    expect(AVAILABLE_LOCAL_TASKS.filter((task) => !task.focusLabel)).toHaveLength(71);
     expect(AVAILABLE_LOCAL_TASKS.filter((task) => task.focusLabel)).toHaveLength(42);
-    expect(new Set(AVAILABLE_LOCAL_TASKS.filter((task) => !task.focusLabel).map((task) => `${task.engineId}:${task.mode}`)).size).toBe(63);
+    expect(new Set(AVAILABLE_LOCAL_TASKS.filter((task) => !task.focusLabel).map((task) => `${task.engineId}:${task.mode}`)).size).toBe(71);
     expect(new Set(AVAILABLE_LOCAL_TASKS.filter((task) => task.focusLabel).map((task) => `${task.engineId}:${task.mode}:${task.focusLabel}`)).size).toBe(42);
     for (const task of AVAILABLE_LOCAL_TASKS) {
       if (task.status !== "genuinely-new") expect(LOCAL_IDS).toContain(task.engineId);

@@ -2,10 +2,10 @@
   "version": 1,
   "definition": "A distinct manual user question with a stable direct URL; multi-mode workspaces are not double-counted.",
   "counts": {
-    "complete": 111,
+    "complete": 119,
     "existingSinglePage": 6,
     "extractedDirectTask": 89,
-    "genuinelyNewEngine": 16,
+    "genuinelyNewEngine": 24,
     "pending": 0
   },
   "tasks": [
@@ -2077,6 +2077,142 @@
       ],
       "output": "Whole-lot counts, spending and unspent cash",
       "assumptions": "No residual redistribution, execution fees or trade orders; labels are unverified.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "eip1559-fee-cap",
+      "path": "/tasks/eip1559-fee-cap/",
+      "title": "EIP-1559 Fee Cap",
+      "category": "Costs & conversions",
+      "engineId": "bd-defi-evm",
+      "mode": "eip1559-fee-cap",
+      "question": "What effective gas price follows from a manual base fee, tip and max fee?",
+      "requiredInputs": [
+        "baseGwei",
+        "priorityGwei",
+        "maxGwei",
+        "gasUnits"
+      ],
+      "output": "Effective price, priority fee, modeled and capped wei cost",
+      "assumptions": "Manual EIP-1559 inputs, no live gas or transaction submission.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "calldata-gas",
+      "path": "/tasks/calldata-gas/",
+      "title": "EVM Calldata Byte Gas",
+      "category": "Costs & conversions",
+      "engineId": "bd-defi-evm",
+      "mode": "calldata-gas",
+      "question": "How much EIP-2028 data gas follows from the zero and nonzero bytes in pasted calldata?",
+      "requiredInputs": [
+        "calldata"
+      ],
+      "output": "Calldata byte gas only, with byte counts",
+      "assumptions": "Excludes transaction base gas, EVM execution, L2 data fees and other protocol costs.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "abi-event-log",
+      "path": "/tasks/abi-event-log/",
+      "title": "ABI Event Log Decoder",
+      "category": "Data inspection",
+      "engineId": "bd-defi-evm",
+      "mode": "abi-event-log",
+      "question": "What static event values are encoded in manually pasted topics and data?",
+      "requiredInputs": [
+        "abi",
+        "topics",
+        "data"
+      ],
+      "output": "Validated event name and decoded static primitive fields",
+      "assumptions": "User ABI and log provenance are unverified. No chain lookup.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "eip712-typed-hash",
+      "path": "/tasks/eip712-typed-hash/",
+      "title": "EIP-712 Typed Data Hash",
+      "category": "Data inspection",
+      "engineId": "bd-defi-evm",
+      "mode": "eip712-typed-hash",
+      "question": "What offline digest follows from bounded manually supplied typed data?",
+      "requiredInputs": [
+        "typedData"
+      ],
+      "output": "EIP-712 digest, without signing or transmission",
+      "assumptions": "One flat primary struct. Hashing does not establish domain trust or permission to sign.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "erc4626-shares",
+      "path": "/tasks/erc4626-shares/",
+      "title": "ERC-4626 Share Conversion",
+      "category": "Yield & growth",
+      "engineId": "bd-defi-evm",
+      "mode": "erc4626-shares",
+      "question": "How many modeled vault shares or assets follow from manual accounting totals?",
+      "requiredInputs": [
+        "direction",
+        "totalAssets",
+        "totalShares",
+        "amount",
+        "assetDecimals",
+        "shareDecimals"
+      ],
+      "output": "Conservatively rounded share/asset conversion",
+      "assumptions": "Manual ERC-4626 accounting ratio; not a live preview, fee-aware quote or identity check.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "v3-tick-sqrtprice",
+      "path": "/tasks/v3-tick-sqrtprice/",
+      "title": "Uniswap v3 Tick & sqrtPriceX96",
+      "category": "Liquidity mathematics",
+      "engineId": "bd-defi-evm",
+      "mode": "v3-tick-sqrtprice",
+      "question": "What bounded mathematical Q64.96 square-root ratio follows from a tick?",
+      "requiredInputs": [
+        "tick",
+        "decimals0",
+        "decimals1"
+      ],
+      "output": "Raw sqrtPriceX96 and token1/token0 price with explicit decimals",
+      "assumptions": "Mathematical conversion, not byte-for-byte protocol TickMath or a live pool price.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "weighted-amm-il",
+      "path": "/tasks/weighted-amm-il/",
+      "title": "Weighted AMM Divergence",
+      "category": "Liquidity mathematics",
+      "engineId": "bd-defi-evm",
+      "mode": "weighted-amm-il",
+      "question": "How does a fee-free two-token weighted pool compare with holding after a price-ratio change?",
+      "requiredInputs": [
+        "token0WeightPct",
+        "priceRatio"
+      ],
+      "output": "Modeled LP-versus-HODL percentage difference",
+      "assumptions": "Constant-mean two-token continuous model; no fees, execution or future price prediction.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "amm-fee-revenue",
+      "path": "/tasks/amm-fee-revenue/",
+      "title": "AMM Liquidity Fee Revenue",
+      "category": "Liquidity mathematics",
+      "engineId": "bd-defi-evm",
+      "mode": "amm-fee-revenue",
+      "question": "What hypothetical fee share follows from manual volume, pool fee and LP share?",
+      "requiredInputs": [
+        "volume",
+        "poolFeeBps",
+        "shareBps",
+        "knownCosts"
+      ],
+      "output": "Gross fee allocation and coverage-aware net scenario",
+      "assumptions": "No live volume, actual LP fee accrual or future revenue forecast.",
       "status": "genuinely-new"
     }
   ]

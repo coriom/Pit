@@ -1,7 +1,7 @@
 {
   "version": 1,
   "baselineCommit": "691dc6c5b05009073c2062486e6ef3d2d37cd016",
-  "completedBatches": ["BB", "BC"],
+  "completedBatches": ["BB", "BC", "BD"],
   "completedNewCapabilities": [
     "perpetual-pnl",
     "perpetual-funding",
@@ -18,9 +18,17 @@
     "correlation-beta",
     "realized-volatility",
     "portfolio-covariance-risk",
-    "lot-constrained-allocation"
+    "lot-constrained-allocation",
+    "eip1559-fee-cap",
+    "calldata-gas",
+    "abi-event-log",
+    "eip712-typed-hash",
+    "erc4626-shares",
+    "v3-tick-sqrtprice",
+    "weighted-amm-il",
+    "amm-fee-revenue"
   ],
-  "pendingBatches": ["BD", "BE"],
+  "pendingBatches": ["BE"],
   "notes": [
     "The eight BB routes have independent inputs and calculations; none are aliases for prior spot PnL, gas or liquidation tasks.",
     "Black-Scholes and IV use bounded deterministic IEEE-754 transcendental approximation; decimal cash-flow arithmetic uses scaled BigInt.",
