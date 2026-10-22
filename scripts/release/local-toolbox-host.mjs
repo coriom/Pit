@@ -53,6 +53,9 @@ export const LOCAL_TASK_IDS = [
   "erc4626-shares", "v3-tick-sqrtprice", "weighted-amm-il", "amm-fee-revenue",
   "options-strategy", "portfolio-greeks", "volatility-smile", "delta-hedge",
   "futures-hedge", "funding-history", "trading-journal", "order-book-depth",
+  "monte-carlo-portfolio", "risk-parity-weights", "minimum-variance-weights",
+  "correlation-matrix", "performance-attribution", "underwater-ulcer",
+  "fx-exposure-stress", "inflation-adjusted-return",
 ];
 export const LOCAL_PAGES = ["index.html", "tools/index.html", "privacy/index.html", "legal/index.html", ...LOCAL_IDS.map((id) => `tools/${id}/index.html`), ...LOCAL_TASK_IDS.map((id) => `tasks/${id}/index.html`)].sort();
 const CONTENT_POLICY = [

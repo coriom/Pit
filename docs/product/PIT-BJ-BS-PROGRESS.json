@@ -3,8 +3,8 @@
   "baselineMain": "a681796699ea504168ebe389f4dea56a98068f14",
   "deployment": "NOT_AUTHORIZED",
   "publicRelease": "NO_GO",
-  "completedTaskCount": 127,
-  "newOffChainCapabilities": 8,
+  "completedTaskCount": 135,
+  "newOffChainCapabilities": 16,
   "newOnChainCapabilities": 0,
   "batches": {
     "BJ": {
@@ -28,7 +28,26 @@
         "pnpm beta:check: historical six-tool package SHA-256 f2907ac694594531e16ab5501e3be7d066edf98f528553f2bf2164dde725a425"
       ]
     },
-    "BK": { "status": "pending" },
+    "BK": {
+      "status": "validated-local",
+      "ids": [
+        "monte-carlo-portfolio",
+        "risk-parity-weights",
+        "minimum-variance-weights",
+        "correlation-matrix",
+        "performance-attribution",
+        "underwater-ulcer",
+        "fx-exposure-stress",
+        "inflation-adjusted-return"
+      ],
+      "evidence": [
+        "21 targeted Vitest tests pass, including seven BK reference tests",
+        "pnpm check: 321 files, zero errors",
+        "pnpm toolbox:check: 153 content pages, 157 Vercel package files, 23 exact inline script hashes",
+        "Cloudflare package validator: 135 tasks, 153 content pages, 157 package files",
+        "Chromium focused BK browser smoke: one pass covering eight routes"
+      ]
+    },
     "BL": { "status": "pending" },
     "BM": { "status": "pending" },
     "BN": { "status": "pending" },
@@ -38,5 +57,5 @@
     "BR": { "status": "pending" },
     "BS": { "status": "pending" }
   },
-  "nextAction": "Implement BK quantitative portfolio tools using bounded local inputs, then run targeted checks and commit the next checkpoint."
+  "nextAction": "Implement BL DeFi financial models using bounded local inputs, then run targeted checks and commit the next checkpoint."
 }

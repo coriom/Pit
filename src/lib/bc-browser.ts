@@ -1,12 +1,14 @@
 import {runBc,type BcId} from "./bc-statistics";
 import {BC_SPEC_BY_ID} from "./bc-tool-specs";
+import {runBk,type BkId} from "./bk-portfolio";
+import {BK_SPEC_BY_ID} from "./bk-tool-specs";
 for(const root of document.querySelectorAll<HTMLElement>("[data-bc-tool]")){
-  const id=root.dataset.bcTool as BcId,spec=BC_SPEC_BY_ID.get(id),form=root.querySelector<HTMLFormElement>("form"),output=root.querySelector<HTMLElement>("[data-bc-output]"),error=root.querySelector<HTMLElement>("[data-bc-error]"),fields=root.querySelector<HTMLElement>("[data-bc-fields]");
+  const id=root.dataset.bcTool as BcId,bkSpec=BK_SPEC_BY_ID.get(id as BkId),spec=BC_SPEC_BY_ID.get(id)??bkSpec,form=root.querySelector<HTMLFormElement>("form"),output=root.querySelector<HTMLElement>("[data-bc-output]"),error=root.querySelector<HTMLElement>("[data-bc-error]"),fields=root.querySelector<HTMLElement>("[data-bc-fields]");
   let last:ReturnType<typeof runBc>|null=null;
   if(!spec||!form||!output||!error||!fields)continue;
   form.addEventListener("submit",e=>{e.preventDefault();error.hidden=true;output.hidden=true;last=null;
     const input=Object.fromEntries([...new FormData(form).entries()].map(([k,v])=>[k,String(v)]));
-    try{last=runBc(id,input);const primary=output.querySelector<HTMLElement>("[data-bc-primary]");if(primary)primary.textContent=last.primary;fields.replaceChildren();for(const [k,v] of Object.entries(last.fields)){const dt=document.createElement("dt"),dd=document.createElement("dd");dt.textContent=k;dd.textContent=v;fields.append(dt,dd);}output.hidden=false;}
+    try{last=bkSpec?runBk(id as BkId,input):runBc(id,input);const primary=output.querySelector<HTMLElement>("[data-bc-primary]");if(primary)primary.textContent=last.primary;fields.replaceChildren();for(const [k,v] of Object.entries(last.fields)){const dt=document.createElement("dt"),dd=document.createElement("dd");dt.textContent=k;dd.textContent=v;fields.append(dt,dd);}output.hidden=false;}
     catch(cause){error.textContent=cause instanceof Error?cause.message:"Calculation unavailable.";error.hidden=false;}
   });
   root.querySelector("[data-bc-example]")?.addEventListener("click",()=>{for(const field of spec.fields){const control=form.elements.namedItem(field.name);if(control instanceof HTMLInputElement||control instanceof HTMLSelectElement||control instanceof HTMLTextAreaElement)control.value=field.example;}output.hidden=true;error.hidden=true;last=null;});

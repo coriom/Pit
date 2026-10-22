@@ -1,9 +1,9 @@
 ---
 import {bcInlineScript} from "../../scripts/build-bc-inline.mjs";
 import {BC_SPEC_BY_ID} from "../lib/bc-tool-specs";
-import type {BcId} from "../lib/bc-statistics";
+import {BK_SPEC_BY_ID} from "../lib/bk-tool-specs";
 import "../styles/ah-tools.css";
-const spec=BC_SPEC_BY_ID.get(Astro.props.id as BcId);if(!spec)throw Error("Unreviewed statistics task");
+const spec=BC_SPEC_BY_ID.get(Astro.props.id as any) ?? BK_SPEC_BY_ID.get(Astro.props.id as any);if(!spec)throw Error("Unreviewed statistics task");
 const script=bcInlineScript();
 ---
 <section class="panel ah-tool" data-bc-tool={spec.id}>

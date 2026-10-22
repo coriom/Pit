@@ -2,10 +2,10 @@
   "version": 1,
   "definition": "A distinct manual user question with a stable direct URL; multi-mode workspaces are not double-counted.",
   "counts": {
-    "complete": 127,
+    "complete": 135,
     "existingSinglePage": 6,
     "extractedDirectTask": 89,
-    "genuinelyNewCapability": 32,
+    "genuinelyNewCapability": 40,
     "pending": 0
   },
   "tasks": [
@@ -2344,6 +2344,135 @@
       ],
       "output": "Filled quantity, VWAP, quote cost and depth shortfall",
       "assumptions": "A static manually entered book, not live or executable; queue priority and hidden liquidity excluded.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "monte-carlo-portfolio",
+      "path": "/tasks/monte-carlo-portfolio/",
+      "title": "Seeded Portfolio Scenario Simulator",
+      "category": "Portfolio & performance",
+      "engineId": "bc-statistics",
+      "mode": "monte-carlo-portfolio",
+      "question": "What distribution follows from a seeded lognormal return assumption?",
+      "requiredInputs": [
+        "initialValue",
+        "annualMeanPct",
+        "annualVolPct",
+        "years",
+        "paths",
+        "seed"
+      ],
+      "output": "Reproducible terminal-value median and tails",
+      "assumptions": "Fixed normal-log-return model and explicit seed; simulated paths are not forecasts.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "risk-parity-weights",
+      "path": "/tasks/risk-parity-weights/",
+      "title": "Risk Parity Weight Solver",
+      "category": "Portfolio & performance",
+      "engineId": "bc-statistics",
+      "mode": "risk-parity-weights",
+      "question": "Which long-only weights equalize modeled variance contributions?",
+      "requiredInputs": [
+        "covariance"
+      ],
+      "output": "Weights and numerical convergence evidence",
+      "assumptions": "Manual symmetric PSD covariance of synchronized percent returns; positive contributions required.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "minimum-variance-weights",
+      "path": "/tasks/minimum-variance-weights/",
+      "title": "Minimum Variance Weight Solver",
+      "category": "Portfolio & performance",
+      "engineId": "bc-statistics",
+      "mode": "minimum-variance-weights",
+      "question": "Which long-only weights minimize variance under a supplied covariance matrix?",
+      "requiredInputs": [
+        "covariance"
+      ],
+      "output": "Constrained weights, variance and convergence status",
+      "assumptions": "Numerical projected-gradient solution from manual synchronized covariance; no expected returns.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "correlation-matrix",
+      "path": "/tasks/correlation-matrix/",
+      "title": "Multi-Asset Correlation Matrix",
+      "category": "Portfolio & performance",
+      "engineId": "bc-statistics",
+      "mode": "correlation-matrix",
+      "question": "How do several synchronized return series correlate pairwise?",
+      "requiredInputs": [
+        "observations"
+      ],
+      "output": "Full Pearson correlation matrix for up to eight series",
+      "assumptions": "One row per shared observation time, manual percentage returns, nonzero variation.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "performance-attribution",
+      "path": "/tasks/performance-attribution/",
+      "title": "Portfolio Return Contribution",
+      "category": "Portfolio & performance",
+      "engineId": "bc-statistics",
+      "mode": "performance-attribution",
+      "question": "Which starting allocation buckets contributed to a single-period return?",
+      "requiredInputs": [
+        "assets",
+        "benchmarkPct"
+      ],
+      "output": "Weighted bucket contributions and benchmark-relative result",
+      "assumptions": "Start weights sum to 10000 bps; synchronized manual bucket returns and one benchmark.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "underwater-ulcer",
+      "path": "/tasks/underwater-ulcer/",
+      "title": "Underwater Duration & Ulcer Index",
+      "category": "Portfolio & performance",
+      "engineId": "bc-statistics",
+      "mode": "underwater-ulcer",
+      "question": "How long was a manual return series below its peak, and how deep on average?",
+      "requiredInputs": [
+        "returns"
+      ],
+      "output": "Observed underwater days and root-mean-square drawdown",
+      "assumptions": "Dated ordered returns with no missing-period reconstruction; distinct from maximum drawdown.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "fx-exposure-stress",
+      "path": "/tasks/fx-exposure-stress/",
+      "title": "FX Exposure Stress Tester",
+      "category": "Portfolio & performance",
+      "engineId": "bc-statistics",
+      "mode": "fx-exposure-stress",
+      "question": "How would separate manual currency shocks affect a base-valued portfolio?",
+      "requiredInputs": [
+        "exposures"
+      ],
+      "output": "Per-currency and total hypothetical base-value change",
+      "assumptions": "Every starting value is already manually expressed in one common base currency; no live FX conversion.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "inflation-adjusted-return",
+      "path": "/tasks/inflation-adjusted-return/",
+      "title": "Inflation-Adjusted Return",
+      "category": "Portfolio & performance",
+      "engineId": "bc-statistics",
+      "mode": "inflation-adjusted-return",
+      "question": "What future manual value remains in starting purchasing power after stated inflation?",
+      "requiredInputs": [
+        "principal",
+        "nominalPct",
+        "inflationPct",
+        "years"
+      ],
+      "output": "Nominal and inflation-adjusted value plus exact-ratio annual real return",
+      "assumptions": "Constant manually assumed annual nominal and inflation rates; not a forecast.",
       "status": "genuinely-new"
     }
   ]
