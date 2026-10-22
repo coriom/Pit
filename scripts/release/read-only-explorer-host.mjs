@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = "dist-read-only-explorer";
 const HOST = "dist-read-only-explorer-host";
-const IDS = ["native-balance", "selected-erc20-balances", "selected-erc20-allowances", "nft-approval", "ens-resolver", "nft-ownership", "account-code", "wallet-nonce"];
+const IDS = ["native-balance", "selected-erc20-balances", "selected-erc20-allowances", "nft-approval", "ens-resolver", "nft-ownership", "account-code", "wallet-nonce", "transaction-detail", "network-gas", "blob-activity", "tx-transfer-events", "base-transaction-cost", "multicall-static-reads"];
 const PAGES = ["index.html", "404.html", ...IDS.map((id) => `inspect/${id}/index.html`)].sort();
 const HEADERS = {
   "Strict-Transport-Security": "max-age=86400",

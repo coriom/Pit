@@ -3,9 +3,9 @@
   "baselineMain": "a681796699ea504168ebe389f4dea56a98068f14",
   "deployment": "NOT_AUTHORIZED",
   "publicRelease": "NO_GO",
-  "completedTaskCount": 159,
+  "completedTaskCount": 165,
   "newOffChainCapabilities": 32,
-  "newOnChainCapabilities": 8,
+  "newOnChainCapabilities": 14,
   "batches": {
     "BJ": {
       "status": "validated-local",
@@ -95,11 +95,19 @@
       "evidence": ["7 focused Vitest tests passed", "Chromium: one mocked and three live read-only Playwright tests passed, including eight-route public-example probe", "pnpm check: 337 files, zero errors", "pnpm explorer:check: ten HTML pages and 14 package files; strict fixed RPC CSP and noindex", "Offline Toolbox package hash unchanged a25e0b9a1cd1fac7319e082b1878636c5559200dfa9ffe9b2baf96b5a14a7a77", "Historical six-tool package hash unchanged f2907ac694594531e16ab5501e3be7d066edf98f528553f2bf2164dde725a425"],
       "deferred": ["Firefox installed executable version mismatch", "Commercial provider terms and long-term availability before any publication"]
     },
-    "BO": { "status": "pending" },
+    "BO": {
+      "status": "validated-local",
+      "package": "dist-read-only-explorer-host",
+      "ids": ["transaction-detail", "network-gas", "blob-activity", "tx-transfer-events", "base-transaction-cost", "multicall-static-reads"],
+      "blockedExternal": ["Full historical ERC-20 transfer search: eth_getLogs documented paid-tier and public request timed out", "Definitive revert-reason inspector: trace methods documented paid-tier and availability inconsistent", "ERC-4337 UserOperation lookup: public endpoint returned method unavailable"],
+      "scopeChanges": ["Blob fee replaced by observable blob activity because eth_blobBaseFee returned paid-plan error", "Transfer search replaced by bounded Transfer-signature logs in one specified receipt", "Base fee view reports known subtotal, not complete payment"],
+      "evidence": ["14 targeted BN+BO Vitest tests passed", "Chromium route/privacy smoke passed across all 14 routes", "Live Chromium returned expected fields for six BO reads; one Base timeout occurred and targeted retry passed", "Fixed Multicall3 bytecode present on Ethereum and Base", "pnpm explorer:check: 16 HTML pages and 20 package files"],
+      "deferred": ["Firefox and consolidated release acceptance reserved for BS", "Provider availability and commercial terms before publication"]
+    },
     "BP": { "status": "pending" },
     "BQ": { "status": "pending" },
     "BR": { "status": "pending" },
     "BS": { "status": "pending" }
   },
-  "nextAction": "Continue BO with bounded transaction/network reads only where fixed public RPC endpoints actually support the required methods. Keep Explorer separate from the offline Toolbox and mark tracing, indexing or bundler-only features BLOCKED_EXTERNAL when unavailable."
+  "nextAction": "Continue BP with narrowly defined contract inspections backed by verified static interfaces and read-only public RPC. Do not label unverified ownership, safety or protocol support as proven."
 }

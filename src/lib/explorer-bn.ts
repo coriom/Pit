@@ -22,7 +22,7 @@ export const BN_IDS = BN_TOOLS.map((tool) => tool.id);
 
 export type ExplorerResult = { chain: string; chainId: number; provider: string; block: string; rows: { label: string; value: string }[]; limitation: string };
 export type RpcFetch = typeof fetch;
-const METHODS = new Set(["eth_chainId", "eth_blockNumber", "eth_getBalance", "eth_call", "eth_getCode", "eth_getStorageAt", "eth_getTransactionCount"]);
+const METHODS = new Set(["eth_chainId", "eth_blockNumber", "eth_getBalance", "eth_call", "eth_getCode", "eth_getStorageAt", "eth_getTransactionCount", "eth_getTransactionByHash", "eth_getTransactionReceipt", "eth_getBlockByNumber", "eth_gasPrice", "eth_maxPriorityFeePerGas"]);
 const MAX_RESPONSE_BYTES = 65536;
 const ENS_REGISTRY = "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e";
 const IMPLEMENTATION_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
@@ -89,7 +89,7 @@ export class ExplorerRpc {
     const response = await fetcher(EXPLORER_CHAINS[this.chain].rpc, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ jsonrpc: "2.0", id, method, params }),
-      signal: AbortSignal.timeout(7000),
+      signal: AbortSignal.timeout(10000),
     });
     if (!response.ok) throw Error(`RPC HTTP ${response.status}; retry later without changing provider.`);
     const payload = JSON.parse(await readBounded(response));
@@ -105,7 +105,7 @@ export class ExplorerRpc {
     return decodeFunctionResult({ abi, functionName, data: hex as `0x${string}` } as any) as T;
   }
 }
-function quantity(hex: unknown): bigint {
+export function quantity(hex: unknown): bigint {
   if (typeof hex !== "string" || !/^0x[0-9a-f]+$/i.test(hex) || hex.length > 66) throw Error("RPC returned an invalid quantity.");
   return BigInt(hex);
 }

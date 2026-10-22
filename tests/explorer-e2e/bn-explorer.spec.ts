@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
 const ZERO = "0x0000000000000000000000000000000000000000";
-test("eight reviewed routes are usable and no request occurs before explicit action", async ({ page }) => {
+test("reviewed routes are usable and no request occurs before explicit action", async ({ page }) => {
   const network: string[] = [];
   page.on("request", (request) => { if (request.url().startsWith("https://")) network.push(request.url()); });
   await page.goto("/");
-  await expect(page.locator(".card")).toHaveCount(8);
+  await expect(page.locator(".card")).toHaveCount(14);
   for (const href of await page.locator(".card").evaluateAll((cards) => cards.map((card) => card.getAttribute("href")!))) {
     const response = await page.goto(href);
     expect(response?.status()).toBe(200);

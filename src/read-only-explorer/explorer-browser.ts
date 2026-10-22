@@ -1,4 +1,5 @@
-import { runBnTool, type ExplorerChain } from "../lib/explorer-bn";
+import { type ExplorerChain } from "../lib/explorer-bn";
+import { runExplorerTool } from "../lib/explorer-registry";
 
 const form = document.querySelector<HTMLFormElement>("#explorer-form");
 const output = document.querySelector<HTMLOutputElement>("#explorer-output");
@@ -11,7 +12,7 @@ form?.addEventListener("submit", async (event) => {
   output.textContent = "Reading the selected public chain…";
   if (button) button.disabled = true;
   try {
-    const results = await runBnTool(form.dataset.tool ?? "", values, values.chain as ExplorerChain);
+    const results = await runExplorerTool(form.dataset.tool ?? "", values, values.chain as ExplorerChain);
     const fragment = document.createDocumentFragment();
     for (const result of results) {
       const panel = document.createElement("div"); panel.className = "panel";
