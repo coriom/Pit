@@ -3,6 +3,19 @@ type Field=Readonly<{name:string;label:string;example:string;kind?:"textarea"|"s
 export type BmSpec=Readonly<{id:BmId;title:string;category:"Data inspection"|"Yield & growth"|"Portfolio & performance";question:string;output:string;assumptions:string;fields:readonly Field[]}>;
 const f=(name:string,label:string,example:string,kind?:Field["kind"],options?:readonly string[]):Field=>({name,label,example,...(kind?{kind}:{}),...(options?{options}:{})});
 const h=(byte:string)=>`0x${byte.repeat(64)}`;
+// Public illustrative legacy RLP fields; r/s are dummy bytes, not private material.
+const dummySignedTransaction = [
+  "0xdf", // list payload length 31 bytes
+  "01", // nonce
+  "01", // gas price
+  "825208", // gas limit: 21000
+  `94${"00".repeat(19)}01`, // recipient
+  "01", // value
+  "80", // empty calldata
+  "25", // v
+  "01", // r
+  "02", // s
+].join("");
 export const BM_SPECS:readonly BmSpec[]=[
   {id:"token-supply-schedule",title:"Token Supply Schedule",category:"Yield & growth",question:"How would manually listed mints and burns change total token supply?",output:"Year-end supply path and cumulative issuance/burns",assumptions:"No live contract supply or verified emission schedule.",fields:[f("initialSupply","Starting token supply, human units","1000000"),f("schedule","CSV year,minted,burned","year,minted,burned\n2026,100000,10000\n2027,50000,5000","textarea")]},
   {id:"token-dilution-fdv",title:"Token Dilution & FDV",category:"Portfolio & performance",question:"How would manual issuance affect existing-token ownership and constant-price FDV?",output:"Current value, FDV and existing ownership fraction",assumptions:"All supply and price inputs are manual; no verified cap or price forecast.",fields:[f("circulating","Current circulating token supply","1000000"),f("maxSupply","Manually assumed maximum supply","2000000"),f("newIssuance","Scenario new issuance","100000"),f("manualPrice","Manual quote price per token","2")]},
@@ -10,7 +23,7 @@ export const BM_SPECS:readonly BmSpec[]=[
   {id:"dao-treasury-runway",title:"DAO Treasury Runway",category:"Portfolio & performance",question:"How many whole months can a manually valued liquid treasury fund net spending?",output:"Available balance, net burn and whole funded months",assumptions:"One manual quote currency, fixed monthly burn/revenue, no token-price change.",fields:[f("treasury","Liquid treasury in common quote units","1200"),f("oneTimeObligations","Known one-time obligations","200"),f("monthlyBurn","Recurring monthly spend","100"),f("monthlyRevenue","Recurring monthly inflow","20")]},
   {id:"bonding-curve",title:"Linear Bonding Curve Scenario",category:"Yield & growth",question:"What integral quote amount follows from buying or selling along a manual linear price curve?",output:"Gross curve payment/receipt and marginal prices",assumptions:"Continuous linear p(q), no contract reserve, fees, slippage or executable route.",fields:[f("side","Hypothetical direction","buy","select",["buy","sell"]),f("basePrice","Price at zero supply","1"),f("slopePerToken","Marginal price rise per supply token","0.1"),f("currentSupply","Current modeled token supply","10"),f("amount","Buy or sell token amount","2")]},
   {id:"abi-calldata-encode",title:"ABI Calldata Encoder",category:"Data inspection",question:"What hexadecimal calldata encodes a bounded static function call?",output:"Function selector and encoded bytes",assumptions:"Only reviewed static primitive types; encoded bytes are never submitted.",fields:[f("signature","Canonical function signature","transfer(address,uint256)"),f("values","Comma-separated argument values","0x0000000000000000000000000000000000000001,100","textarea")]},
-  {id:"signed-transaction-decode",title:"Raw Signed Transaction Decoder",category:"Data inspection",question:"Which header fields can be inspected in manually pasted signed EVM transaction bytes?",output:"Transaction type, chain, recipient, value, gas and selector",assumptions:"Syntactic decode only; illustrative payload has dummy signature fields. No signature verification, execution or broadcast.",fields:[f("rawTransaction","Signed-shaped serialized transaction hex","0xdf01018252089400000000000000000000000000000000000000010180250102","textarea")]},
+  {id:"signed-transaction-decode",title:"Raw Signed Transaction Decoder",category:"Data inspection",question:"Which header fields can be inspected in manually pasted signed EVM transaction bytes?",output:"Transaction type, chain, recipient, value, gas and selector",assumptions:"Syntactic decode only; illustrative payload has dummy signature fields. No signature verification, execution or broadcast.",fields:[f("rawTransaction","Signed-shaped serialized transaction hex",dummySignedTransaction,"textarea")]},
   {id:"merkle-proof-verify",title:"Merkle Proof Verifier",category:"Data inspection",question:"Does a local sorted-pair Keccak proof reproduce the supplied root?",output:"Computed root and match status",assumptions:"Prehashed leaf, supplied root and sorted-pair convention; a match does not authenticate the tree.",fields:[f("leaf","Prehashed leaf (32-byte hex)",h("1")),f("root","Expected 32-byte root",h("1")),f("proof","Sibling hashes, one 32-byte hex value per line (blank for single leaf)","","textarea")]},
 ];
 export const BM_SPEC_BY_ID=new Map(BM_SPECS.map(s=>[s.id,s]));
