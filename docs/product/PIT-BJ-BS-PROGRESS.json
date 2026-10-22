@@ -3,9 +3,9 @@
   "baselineMain": "a681796699ea504168ebe389f4dea56a98068f14",
   "deployment": "NOT_AUTHORIZED",
   "publicRelease": "NO_GO",
-  "completedTaskCount": 151,
+  "completedTaskCount": 159,
   "newOffChainCapabilities": 32,
-  "newOnChainCapabilities": 0,
+  "newOnChainCapabilities": 8,
   "batches": {
     "BJ": {
       "status": "validated-local",
@@ -87,12 +87,19 @@
         "Chromium focused BM browser smoke: one pass covering eight routes, after fixing long encoded-hex mobile overflow"
       ]
     },
-    "BN": { "status": "pending" },
+    "BN": {
+      "status": "validated-local",
+      "package": "dist-read-only-explorer-host",
+      "ids": ["native-balance", "selected-erc20-balances", "selected-erc20-allowances", "nft-approval", "ens-resolver", "nft-ownership", "account-code", "wallet-nonce"],
+      "scopeChanges": ["ERC-20 holdings and allowances require explicit contract/spender inputs; no universal scan", "Account code and EIP-1967 slot are observable but do not establish smart-account compatibility"],
+      "evidence": ["7 focused Vitest tests passed", "Chromium: one mocked and three live read-only Playwright tests passed, including eight-route public-example probe", "pnpm check: 337 files, zero errors", "pnpm explorer:check: ten HTML pages and 14 package files; strict fixed RPC CSP and noindex", "Offline Toolbox package hash unchanged a25e0b9a1cd1fac7319e082b1878636c5559200dfa9ffe9b2baf96b5a14a7a77", "Historical six-tool package hash unchanged f2907ac694594531e16ab5501e3be7d066edf98f528553f2bf2164dde725a425"],
+      "deferred": ["Firefox installed executable version mismatch", "Commercial provider terms and long-term availability before any publication"]
+    },
     "BO": { "status": "pending" },
     "BP": { "status": "pending" },
     "BQ": { "status": "pending" },
     "BR": { "status": "pending" },
     "BS": { "status": "pending" }
   },
-  "nextAction": "Before BN, establish a separate read-only Explorer entry tree with verified free public RPC/CORS endpoints. Never import RPC clients into the offline toolbox. Implement only provider-verified tools; mark unavailable ones BLOCKED_EXTERNAL."
+  "nextAction": "Continue BO with bounded transaction/network reads only where fixed public RPC endpoints actually support the required methods. Keep Explorer separate from the offline Toolbox and mark tracing, indexing or bundler-only features BLOCKED_EXTERNAL when unavailable."
 }

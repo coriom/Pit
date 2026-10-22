@@ -8,6 +8,8 @@ dist-local-toolbox-public/
 dist-local-toolbox-public-host/
 dist-local-toolbox-cloudflare/
 dist-local-toolbox-cloudflare-public/
+dist-read-only-explorer/
+dist-read-only-explorer-host/
 .astro/
 .env*
 !.env.example
