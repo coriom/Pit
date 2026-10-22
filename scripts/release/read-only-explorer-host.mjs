@@ -33,7 +33,7 @@ async function packageHash(root, files) {
   return digest.digest("hex");
 }
 function extract(html, tag) { return [...html.matchAll(new RegExp(`<${tag}\\b([^>]*)>([\\s\\S]*?)<\\/${tag}>`, "gi"))]; }
-function policy(htmlByPage, jsAsset) {
+function policy(htmlByPage, jsAssets) {
   const styleHashes = new Set();
   for (const [page, html] of htmlByPage) {
     if (!html.includes('<meta name="robots" content="noindex,nofollow"')) throw Error(`Explorer indexing gate missing: ${page}`);
@@ -41,7 +41,7 @@ function policy(htmlByPage, jsAsset) {
     for (const [, attrs, body] of extract(html, "script")) {
       if (body.trim()) throw Error(`Unexpected Explorer inline script: ${page}`);
       const src = attrs.match(/\bsrc="([^"]+)"/i)?.[1];
-      if (!src || src !== `/${jsAsset}`) throw Error(`Unreviewed Explorer script: ${page}`);
+      if (!src || !jsAssets.some((asset) => src === `/${asset}`)) throw Error(`Unreviewed Explorer script: ${page}`);
     }
     for (const [, , body] of extract(html, "style")) styleHashes.add(cspHash(body));
     for (const [, href] of html.matchAll(/\bhref="([^"]+)"/g)) {
@@ -59,15 +59,15 @@ function policy(htmlByPage, jsAsset) {
 export async function prepareExplorerHost(root = ROOT, host = HOST) {
   const files = await walk(root);
   const assets = files.filter((file) => file.startsWith("_astro/"));
-  if (assets.length !== 1 || !/^_astro\/[\w.-]+\.js$/.test(assets[0]) || JSON.stringify(files) !== JSON.stringify([...PAGES, "robots.txt", ...assets].sort()))
+  if (assets.length !== 2 || assets.some((asset) => !/^_astro\/[\w.-]+\.js$/.test(asset)) || JSON.stringify(files) !== JSON.stringify([...PAGES, "robots.txt", ...assets].sort()))
     throw Error("Explorer emitted files differ from explicit read-only allowlist");
   if (await readFile(join(root, "robots.txt"), "utf8") !== "User-agent: *\nDisallow: /\n") throw Error("Explorer robots policy changed");
-  const js = await readFile(join(root, assets[0]), "utf8");
+  const js = (await Promise.all(assets.map((asset) => readFile(join(root, asset), "utf8")))).join("\n");
   if (/eth_send(?:Raw)?Transaction|eth_requestAccounts|personal_sign|eth_signTypedData|walletClient|window\.ethereum|indexedDB|localStorage|sessionStorage|WebSocket|XMLHttpRequest|sendBeacon|cowprotocol|hyperliquid|taxlot/i.test(js))
     throw Error("Execution, wallet, accounting or storage code in Explorer bundle");
   if (!js.includes("https://eth.drpc.org/") || !js.includes("https://base.drpc.org/") || js.includes("eval(")) throw Error("Unexpected Explorer endpoint or executable code");
   const htmlByPage = await Promise.all(PAGES.map(async (page) => [page, await readFile(join(root, page), "utf8")]));
-  const csp = policy(htmlByPage, assets[0]);
+  const csp = policy(htmlByPage, assets);
   const meta = /<meta\s+http-equiv="content-security-policy"\s+content="[^"]+"\s*\/?\s*>/i;
   for (const [page, html] of htmlByPage) {
     if (!meta.test(html)) throw Error(`Missing CSP meta: ${page}`);

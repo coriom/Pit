@@ -124,8 +124,16 @@
       "evidence": ["27 targeted BN-BQ Vitest tests passed", "Chromium: five BQ routes had no background requests; five live public reads returned expected fields", "pnpm check: 347 files, zero errors", "pnpm explorer:check: 29 HTML pages and 33 package files", "Offline Toolbox and historical six-tool beta hashes unchanged"],
       "deferred": ["Firefox and consolidated release acceptance reserved for BS", "Provider terms and long-term availability before Explorer publication"]
     },
-    "BR": { "status": "pending" },
+    "BR": {
+      "status": "validated-local",
+      "newTaskCount": 0,
+      "aggregateInventory": "docs/product/PIT-BJ-BS-SURFACES.json",
+      "explorerPackageSha256": "a3387c9d912989253ffcb3bae28ac4de625846a0d33b5d777d7c0aa24873f04b",
+      "explorerPackageFiles": 34,
+      "explorerPackageBytes": 236275,
+      "evidence": ["29 focused Explorer Vitest tests passed", "Chromium: all 27 routes, catalogue search/category filters and zero background RPC passed", "pnpm check: 349 files, zero errors", "pnpm explorer:check: 29 HTML pages, 34 package files, two reviewed first-party JS assets", "Offline Toolbox package hash a25e0b9a1cd1fac7319e082b1878636c5559200dfa9ffe9b2baf96b5a14a7a77 unchanged", "Historical six-tool beta package hash f2907ac694594531e16ab5501e3be7d066edf98f528553f2bf2164dde725a425 unchanged"]
+    },
     "BS": { "status": "pending" }
   },
-  "nextAction": "Proceed to BR catalogue and architecture integration, then BS consolidated acceptance. Keep the offline Toolbox and read-only Explorer as separate static packages; do not deploy."
+  "nextAction": "Proceed to BS consolidated release gate, cross-browser Explorer acceptance, static package/security checks and final audit. Do not deploy."
 }

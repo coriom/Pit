@@ -3,6 +3,22 @@ import { runExplorerTool } from "../lib/explorer-registry";
 
 const form = document.querySelector<HTMLFormElement>("#explorer-form");
 const output = document.querySelector<HTMLOutputElement>("#explorer-output");
+const search = document.querySelector<HTMLInputElement>("#explorer-search");
+const category = document.querySelector<HTMLSelectElement>("#explorer-category");
+const count = document.querySelector<HTMLElement>("#explorer-count");
+const cards = [...document.querySelectorAll<HTMLAnchorElement>("#explorer-catalogue .card")];
+function filterCatalogue() {
+  const query = search?.value.trim().toLocaleLowerCase() ?? "";
+  const selected = category?.value ?? "all";
+  let shown = 0;
+  for (const card of cards) {
+    card.hidden = !(selected === "all" || card.dataset.category === selected) || !(card.dataset.search ?? "").includes(query);
+    if (!card.hidden) shown++;
+  }
+  if (count) count.textContent = `${shown} inspection${shown === 1 ? "" : "s"} shown`;
+}
+search?.addEventListener("input", filterCatalogue);
+category?.addEventListener("change", filterCatalogue);
 form?.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!output || !form) return;

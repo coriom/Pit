@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "publicRelease": "NO_GO",
+  "deployment": "NOT_AUTHORIZED",
+  "totalTaskExperiences": 178,
+  "offlineToolbox": {
+    "canonicalInventory": "docs/product/PIT-TOOLBOX-V1-TASKS.json",
+    "registry": "src/lib/local-task-registry.ts",
+    "taskCount": 151,
+    "directRoutes": "/tools/*/ and /tasks/*/",
+    "package": "dist-local-toolbox-host/",
+    "networkPolicy": "connect-src 'none'",
+    "capability": "browser-local pure calculation or inspection"
+  },
+  "readOnlyExplorer": {
+    "registry": "src/lib/explorer-registry.ts",
+    "progressInventory": "docs/product/PIT-BJ-BS-PROGRESS.json",
+    "taskCount": 27,
+    "directRoutes": "/inspect/*/",
+    "package": "dist-read-only-explorer-host/",
+    "networkPolicy": "Only fixed Ethereum and Base HTTPS public RPC endpoints, after explicit user action",
+    "capability": "read-only public-chain inspection",
+    "categories": {
+      "Assets & accounts": 8,
+      "Transactions & network": 6,
+      "Contracts & standards": 8,
+      "DeFi protocol state": 5
+    },
+    "unsupportedCandidateCount": 5
+  },
+  "excludedFromBoth": ["wallet connection", "transaction signing", "transaction broadcasting", "trading execution", "Taxlot storage", "telemetry"]
+}
