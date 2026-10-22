@@ -1,4 +1,4 @@
-import { decodeFunctionResult, encodeFunctionData, getAddress, namehash, parseAbi } from "viem";
+import { decodeFunctionResult, encodeFunctionData, getAddress, keccak256, namehash, parseAbi, toBytes } from "viem";
 
 export const EXPLORER_CHAINS = {
   ethereum: { id: 1, label: "Ethereum mainnet", rpc: "https://eth.drpc.org/" },
@@ -25,7 +25,11 @@ export type RpcFetch = typeof fetch;
 const METHODS = new Set(["eth_chainId", "eth_blockNumber", "eth_getBalance", "eth_call", "eth_getCode", "eth_getStorageAt", "eth_getTransactionCount", "eth_getTransactionByHash", "eth_getTransactionReceipt", "eth_getBlockByNumber", "eth_gasPrice", "eth_maxPriorityFeePerGas"]);
 const MAX_RESPONSE_BYTES = 65536;
 const ENS_REGISTRY = "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e";
-const IMPLEMENTATION_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
+function eip1967Slot(name: string): `0x${string}` {
+  return `0x${(BigInt(keccak256(toBytes(`eip1967.proxy.${name}`))) - 1n).toString(16).padStart(64, "0")}`;
+}
+export const EIP1967_SLOTS = { implementation: eip1967Slot("implementation"), admin: eip1967Slot("admin"), beacon: eip1967Slot("beacon") } as const;
+const IMPLEMENTATION_SLOT = EIP1967_SLOTS.implementation;
 const ERC20 = parseAbi(["function balanceOf(address) view returns (uint256)", "function decimals() view returns (uint8)", "function symbol() view returns (string)", "function allowance(address,address) view returns (uint256)"]);
 const ERC721 = parseAbi(["function getApproved(uint256) view returns (address)", "function isApprovedForAll(address,address) view returns (bool)", "function ownerOf(uint256) view returns (address)"]);
 const ERC1155 = parseAbi(["function balanceOf(address,uint256) view returns (uint256)"]);

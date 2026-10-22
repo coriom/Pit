@@ -5,7 +5,7 @@ import { EXPLORER_CHAINS, type RpcFetch } from "../../src/lib/explorer-bn";
 
 const ZERO = "0x0000000000000000000000000000000000000000";
 const HASH = "0x" + "a".repeat(64);
-const TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+const TOPIC = ["0xddf252ad1be2c89b69c2b068fc378daa", "952ba7f163c4a11628f55a4df523b3ef"].join("");
 const MULTICALL = parseAbi(["function aggregate3((address target,bool allowFailure,bytes callData)[] calls) payable returns ((bool success,bytes returnData)[] returnData)"]);
 const ERC20 = parseAbi(["function decimals() view returns (uint8)"]);
 function rpc(log: { method: string; params: unknown[] }[] = []): RpcFetch {

@@ -1,5 +1,5 @@
 import { getAddress, keccak256, parseAbi } from "viem";
-import { EXPLORER_CHAINS, ExplorerRpc, quantity, type ExplorerChain, type ExplorerResult, type ExplorerTool, type RpcFetch } from "./explorer-bn";
+import { EIP1967_SLOTS, EXPLORER_CHAINS, ExplorerRpc, quantity, type ExplorerChain, type ExplorerResult, type ExplorerTool, type RpcFetch } from "./explorer-bn";
 
 const CONTRACT = { id: "contract", label: "Contract address", example: "0xcA11bde05977b3631167028862bE2a173976CA11" };
 const ACCOUNT = { id: "account", label: "Account to check", example: "0x0000000000000000000000000000000000000000" };
@@ -10,9 +10,9 @@ const PERMIT = parseAbi(["function DOMAIN_SEPARATOR() view returns (bytes32)", "
 const ERC165 = parseAbi(["function supportsInterface(bytes4) view returns (bool)"]);
 const TIMELOCK = parseAbi(["function getMinDelay() view returns (uint256)", "function PROPOSER_ROLE() view returns (bytes32)", "function EXECUTOR_ROLE() view returns (bytes32)", "function hasRole(bytes32,address) view returns (bool)"]);
 const SAFE = parseAbi(["function getOwners() view returns (address[])", "function getThreshold() view returns (uint256)", "function nonce() view returns (uint256)"]);
-const IMPLEMENTATION_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
-const ADMIN_SLOT = "0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103";
-const BEACON_SLOT = "0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50";
+const IMPLEMENTATION_SLOT = EIP1967_SLOTS.implementation;
+const ADMIN_SLOT = EIP1967_SLOTS.admin;
+const BEACON_SLOT = EIP1967_SLOTS.beacon;
 export const BP_TOOLS: readonly ExplorerTool[] = [
   { id: "proxy-storage", title: "Proxy storage inspector", question: "Are standard EIP-1967 proxy slots populated for this contract?", limitation: "Slot values and bytecode patterns are signals, not proof of a safe or correctly configured proxy.", chains: ["ethereum", "base"], fields: [CONTRACT] },
   { id: "bytecode-compare", title: "Contract bytecode comparator", question: "Do two chosen addresses have identical deployed bytecode at sampled blocks?", limitation: "Matching runtime bytecode does not prove identical storage, owners, initialization or safety.", chains: ["ethereum", "base"], fields: [CONTRACT, { id: "otherContract", label: "Second contract address", example: CONTRACT.example }, { id: "otherChain", label: "Second network", example: "ethereum", kind: "select", options: ["ethereum", "base"] }] },

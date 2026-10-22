@@ -1,10 +1,10 @@
-import { decodeFunctionResult, encodeFunctionData, getAddress, parseAbi } from "viem";
+import { decodeFunctionResult, encodeFunctionData, getAddress, keccak256, parseAbi, toBytes } from "viem";
 import { EXPLORER_CHAINS, ExplorerRpc, quantity, type ExplorerChain, type ExplorerResult, type ExplorerTool, type RpcFetch } from "./explorer-bn";
 
 const MULTICALL3 = "0xcA11bde05977b3631167028862bE2a173976CA11";
 const MULTICALL = parseAbi(["function aggregate3((address target,bool allowFailure,bytes callData)[] calls) payable returns ((bool success,bytes returnData)[] returnData)"]);
 const ERC20_META = parseAbi(["function totalSupply() view returns (uint256)", "function decimals() view returns (uint8)", "function symbol() view returns (string)"]);
-const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+const TRANSFER_TOPIC = keccak256(toBytes("Transfer(address,address,uint256)"));
 const hashField = { id: "hash", label: "Transaction hash", example: "0x" + "0".repeat(64) };
 export const BO_TOOLS: readonly ExplorerTool[] = [
   { id: "transaction-detail", title: "Transaction hash decoder", question: "What transaction fields and receipt status were recorded for a supplied hash?", limitation: "Decodes basic public fields only. Calldata meaning, contract intent and security are not inferred.", chains: ["ethereum", "base"], fields: [hashField] },

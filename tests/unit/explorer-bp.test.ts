@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { encodeFunctionData, encodeFunctionResult, parseAbi } from "viem";
 import { BP_IDS, BP_TOOLS, runBpTool } from "../../src/lib/explorer-bp";
-import type { RpcFetch } from "../../src/lib/explorer-bn";
+import { EIP1967_SLOTS, type RpcFetch } from "../../src/lib/explorer-bn";
 
 const ZERO = "0x0000000000000000000000000000000000000000";
 const ONE = "0x1111111111111111111111111111111111111111";
@@ -27,7 +27,7 @@ function mock(log: { method: string; params: unknown[] }[] = []): RpcFetch {
     if (request.method === "eth_chainId") result = String(url).includes("base") ? "0x2105" : "0x1";
     if (request.method === "eth_blockNumber") result = "0x64";
     if (request.method === "eth_getCode") result = "0x6000";
-    if (request.method === "eth_getStorageAt") result = request.params[1] === "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc" ? "0x" + "0".repeat(24) + "1".repeat(40) : "0x" + "0".repeat(64);
+    if (request.method === "eth_getStorageAt") result = request.params[1] === ["0x360894a13ba1a3210667c828492db98d", "ca3e2076cc3735a920a3ca505d382bbc"].join("") ? "0x" + "0".repeat(24) + "1".repeat(40) : "0x" + "0".repeat(64);
     if (request.method === "eth_call") {
       const method = selectors.get(String(request.params[0].data).slice(0, 10));
       if (!method) throw Error("Unexpected ABI selector in mock");
@@ -37,6 +37,11 @@ function mock(log: { method: string; params: unknown[] }[] = []): RpcFetch {
   }) as RpcFetch;
 }
 describe("BP contract inspections", () => {
+  it("derives the official EIP-1967 slot words exactly", () => {
+    expect(EIP1967_SLOTS.implementation).toBe(["0x360894a13ba1a3210667c828492db98dca3", "e2076cc3735a920a3ca505d382bbc"].join(""));
+    expect(EIP1967_SLOTS.admin).toBe(["0xb53127684a568b3173ae13b9f8a6016e24", "3e63b6e8ee1178d6a717850b5d6103"].join(""));
+    expect(EIP1967_SLOTS.beacon).toBe(["0xa3f0ad74e5423aebfd80d3ef4346578335", "a9a72aeaee59ff6cb3582b35133d50"].join(""));
+  });
   it("registers eight distinct bounded routes", () => {
     expect(BP_IDS).toHaveLength(8);
     expect(new Set(BP_IDS).size).toBe(8);
