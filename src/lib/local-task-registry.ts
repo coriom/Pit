@@ -5,6 +5,7 @@ import { BD_SPECS } from "./bd-tool-specs";
 import { BJ_SPECS } from "./bj-tool-specs";
 import { BK_SPECS } from "./bk-tool-specs";
 import { BL_SPECS } from "./bl-tool-specs";
+import { BM_SPECS } from "./bm-tool-specs";
 
 export type LocalTask = Readonly<{
   id: string;
@@ -182,7 +183,13 @@ const BL_TASKS: readonly LocalTask[] = BL_SPECS.map((spec) => ({
   question: spec.question, requiredInputs: spec.fields.map(field => field.name),
   output: spec.output, assumptions: spec.assumptions, status: "genuinely-new",
 }));
-export const LOCAL_TASK_INVENTORY: readonly LocalTask[] = [...EXISTING_STANDALONE_TASKS, ...MODE_TASKS, ...FOCUSED_TASKS, ...BB_TASKS, ...BC_TASKS, ...BD_TASKS, ...BJ_TASKS, ...BK_TASKS, ...BL_TASKS];
+const BM_TASKS: readonly LocalTask[] = BM_SPECS.map((spec) => ({
+  id: spec.id, path: `/tasks/${spec.id}/`, title: spec.title,
+  category: spec.category, engineId: "bd-defi-evm", mode: spec.id,
+  question: spec.question, requiredInputs: spec.fields.map(field => field.name),
+  output: spec.output, assumptions: spec.assumptions, status: "genuinely-new",
+}));
+export const LOCAL_TASK_INVENTORY: readonly LocalTask[] = [...EXISTING_STANDALONE_TASKS, ...MODE_TASKS, ...FOCUSED_TASKS, ...BB_TASKS, ...BC_TASKS, ...BD_TASKS, ...BJ_TASKS, ...BK_TASKS, ...BL_TASKS, ...BM_TASKS];
 export const AVAILABLE_LOCAL_TASKS = LOCAL_TASK_INVENTORY.filter((entry) => entry.status === "extracted" || entry.status === "genuinely-new");
 export const COMPLETED_LOCAL_TASKS = LOCAL_TASK_INVENTORY.filter((entry) => entry.status !== "extraction-needed");
 export const PENDING_LOCAL_TASKS = LOCAL_TASK_INVENTORY.filter((entry) => entry.status === "extraction-needed");

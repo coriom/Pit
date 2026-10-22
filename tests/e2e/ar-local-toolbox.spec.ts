@@ -130,6 +130,23 @@ test("BL DeFi model tasks remain offline and disclose incomplete assumptions", a
   await assertNoSideEffects(page,report);
 });
 
+test("BM tokenomics and EVM tasks remain local with safe validation", async ({ page }) => {
+  const report=await guard(page);await page.setViewportSize({width:390,height:844});
+  for(const id of ["token-supply-schedule","token-dilution-fdv","dao-voting-quorum","dao-treasury-runway","bonding-curve","abi-calldata-encode","signed-transaction-decode","merkle-proof-verify"]){
+    expect((await page.goto(`${origin}/tasks/${id}/`))?.status(),id).toBe(200);
+    await page.locator('[data-bd-tool] button.primary[type="submit"]').click();
+    await expect(page.locator("[data-bd-output]"),id).toBeVisible();
+    await expect(page.locator("[data-bd-error]"),id).toBeHidden();
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),id).toBe(true);
+  }
+  const download=page.waitForEvent("download");await page.locator("[data-bd-download]").click();
+  expect((await download).suggestedFilename()).toBe("pit-merkle-proof-verify-illustration.json");
+  await page.locator('[data-bd-tool] input[name="root"]').fill("0x1234");
+  await page.locator('[data-bd-tool] button.primary[type="submit"]').click();
+  await expect(page.locator("[data-bd-error]")).toBeVisible();
+  await assertNoSideEffects(page,report);
+});
+
 test("all allowlisted emitted pages load under strict headers; excluded routes stay absent", async ({ page, browserName }) => {
   test.setTimeout(180_000);
   const report = await guard(page);

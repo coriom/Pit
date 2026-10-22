@@ -2,10 +2,10 @@
   "version": 1,
   "definition": "A distinct manual user question with a stable direct URL; multi-mode workspaces are not double-counted.",
   "counts": {
-    "complete": 143,
+    "complete": 151,
     "existingSinglePage": 6,
     "extractedDirectTask": 89,
-    "genuinelyNewCapability": 48,
+    "genuinelyNewCapability": 56,
     "pending": 0
   },
   "tasks": [
@@ -2619,6 +2619,145 @@
       ],
       "output": "Covered claims, remaining reserve and explicit shortfall",
       "assumptions": "Deterministic manually ordered scenarios; no claim probability, replenishment or coverage guarantee.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "token-supply-schedule",
+      "path": "/tasks/token-supply-schedule/",
+      "title": "Token Supply Schedule",
+      "category": "Yield & growth",
+      "engineId": "bd-defi-evm",
+      "mode": "token-supply-schedule",
+      "question": "How would manually listed mints and burns change total token supply?",
+      "requiredInputs": [
+        "initialSupply",
+        "schedule"
+      ],
+      "output": "Year-end supply path and cumulative issuance/burns",
+      "assumptions": "No live contract supply or verified emission schedule.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "token-dilution-fdv",
+      "path": "/tasks/token-dilution-fdv/",
+      "title": "Token Dilution & FDV",
+      "category": "Portfolio & performance",
+      "engineId": "bd-defi-evm",
+      "mode": "token-dilution-fdv",
+      "question": "How would manual issuance affect existing-token ownership and constant-price FDV?",
+      "requiredInputs": [
+        "circulating",
+        "maxSupply",
+        "newIssuance",
+        "manualPrice"
+      ],
+      "output": "Current value, FDV and existing ownership fraction",
+      "assumptions": "All supply and price inputs are manual; no verified cap or price forecast.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "dao-voting-quorum",
+      "path": "/tasks/dao-voting-quorum/",
+      "title": "DAO Voting & Quorum Scenario",
+      "category": "Portfolio & performance",
+      "engineId": "bd-defi-evm",
+      "mode": "dao-voting-quorum",
+      "question": "Would stated for, against and abstain votes meet a chosen quorum and pass rule?",
+      "requiredInputs": [
+        "eligibleVotes",
+        "forVotes",
+        "againstVotes",
+        "abstainVotes",
+        "quorumBps",
+        "passBps"
+      ],
+      "output": "Modeled quorum, decisive-vote share and pass status",
+      "assumptions": "Abstentions count for quorum, not for decisive vote share; no real proposal lookup.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "dao-treasury-runway",
+      "path": "/tasks/dao-treasury-runway/",
+      "title": "DAO Treasury Runway",
+      "category": "Portfolio & performance",
+      "engineId": "bd-defi-evm",
+      "mode": "dao-treasury-runway",
+      "question": "How many whole months can a manually valued liquid treasury fund net spending?",
+      "requiredInputs": [
+        "treasury",
+        "oneTimeObligations",
+        "monthlyBurn",
+        "monthlyRevenue"
+      ],
+      "output": "Available balance, net burn and whole funded months",
+      "assumptions": "One manual quote currency, fixed monthly burn/revenue, no token-price change.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "bonding-curve",
+      "path": "/tasks/bonding-curve/",
+      "title": "Linear Bonding Curve Scenario",
+      "category": "Yield & growth",
+      "engineId": "bd-defi-evm",
+      "mode": "bonding-curve",
+      "question": "What integral quote amount follows from buying or selling along a manual linear price curve?",
+      "requiredInputs": [
+        "side",
+        "basePrice",
+        "slopePerToken",
+        "currentSupply",
+        "amount"
+      ],
+      "output": "Gross curve payment/receipt and marginal prices",
+      "assumptions": "Continuous linear p(q), no contract reserve, fees, slippage or executable route.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "abi-calldata-encode",
+      "path": "/tasks/abi-calldata-encode/",
+      "title": "ABI Calldata Encoder",
+      "category": "Data inspection",
+      "engineId": "bd-defi-evm",
+      "mode": "abi-calldata-encode",
+      "question": "What hexadecimal calldata encodes a bounded static function call?",
+      "requiredInputs": [
+        "signature",
+        "values"
+      ],
+      "output": "Function selector and encoded bytes",
+      "assumptions": "Only reviewed static primitive types; encoded bytes are never submitted.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "signed-transaction-decode",
+      "path": "/tasks/signed-transaction-decode/",
+      "title": "Raw Signed Transaction Decoder",
+      "category": "Data inspection",
+      "engineId": "bd-defi-evm",
+      "mode": "signed-transaction-decode",
+      "question": "Which header fields can be inspected in manually pasted signed EVM transaction bytes?",
+      "requiredInputs": [
+        "rawTransaction"
+      ],
+      "output": "Transaction type, chain, recipient, value, gas and selector",
+      "assumptions": "Syntactic decode only; illustrative payload has dummy signature fields. No signature verification, execution or broadcast.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "merkle-proof-verify",
+      "path": "/tasks/merkle-proof-verify/",
+      "title": "Merkle Proof Verifier",
+      "category": "Data inspection",
+      "engineId": "bd-defi-evm",
+      "mode": "merkle-proof-verify",
+      "question": "Does a local sorted-pair Keccak proof reproduce the supplied root?",
+      "requiredInputs": [
+        "leaf",
+        "root",
+        "proof"
+      ],
+      "output": "Computed root and match status",
+      "assumptions": "Prehashed leaf, supplied root and sorted-pair convention; a match does not authenticate the tree.",
       "status": "genuinely-new"
     }
   ]

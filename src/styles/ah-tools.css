@@ -47,3 +47,7 @@
   overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
 }
+.ah-tool .result-value {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}

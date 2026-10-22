@@ -3,8 +3,8 @@
   "baselineMain": "a681796699ea504168ebe389f4dea56a98068f14",
   "deployment": "NOT_AUTHORIZED",
   "publicRelease": "NO_GO",
-  "completedTaskCount": 143,
-  "newOffChainCapabilities": 24,
+  "completedTaskCount": 151,
+  "newOffChainCapabilities": 32,
   "newOnChainCapabilities": 0,
   "batches": {
     "BJ": {
@@ -68,7 +68,25 @@
         "pnpm beta:check: historical six-tool package SHA-256 f2907ac694594531e16ab5501e3be7d066edf98f528553f2bf2164dde725a425"
       ]
     },
-    "BM": { "status": "pending" },
+    "BM": {
+      "status": "validated-local",
+      "ids": [
+        "token-supply-schedule",
+        "token-dilution-fdv",
+        "dao-voting-quorum",
+        "dao-treasury-runway",
+        "bonding-curve",
+        "abi-calldata-encode",
+        "signed-transaction-decode",
+        "merkle-proof-verify"
+      ],
+      "evidence": [
+        "28 targeted Vitest tests pass, including seven BM reference tests",
+        "pnpm check: 327 files, zero errors",
+        "pnpm toolbox:check: 169 content pages, 173 Vercel package files, 23 exact inline script hashes",
+        "Chromium focused BM browser smoke: one pass covering eight routes, after fixing long encoded-hex mobile overflow"
+      ]
+    },
     "BN": { "status": "pending" },
     "BO": { "status": "pending" },
     "BP": { "status": "pending" },
@@ -76,5 +94,5 @@
     "BR": { "status": "pending" },
     "BS": { "status": "pending" }
   },
-  "nextAction": "Implement BM local tokenomics and EVM utilities using strict bounded inputs, then run targeted checks and commit the next checkpoint."
+  "nextAction": "Before BN, establish a separate read-only Explorer entry tree with verified free public RPC/CORS endpoints. Never import RPC clients into the offline toolbox. Implement only provider-verified tools; mark unavailable ones BLOCKED_EXTERNAL."
 }
