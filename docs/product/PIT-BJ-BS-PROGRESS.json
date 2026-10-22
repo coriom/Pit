@@ -133,7 +133,13 @@
       "explorerPackageBytes": 236275,
       "evidence": ["29 focused Explorer Vitest tests passed", "Chromium: all 27 routes, catalogue search/category filters and zero background RPC passed", "pnpm check: 349 files, zero errors", "pnpm explorer:check: 29 HTML pages, 34 package files, two reviewed first-party JS assets", "Offline Toolbox package hash a25e0b9a1cd1fac7319e082b1878636c5559200dfa9ffe9b2baf96b5a14a7a77 unchanged", "Historical six-tool beta package hash f2907ac694594531e16ab5501e3be7d066edf98f528553f2bf2164dde725a425 unchanged"]
     },
-    "BS": { "status": "pending" }
+    "BS": {
+      "status": "audit-committed-final-release-recheck-pending",
+      "newTaskCount": 0,
+      "audit": "docs/audit/phase-bs/CONSOLIDATED-ACCEPTANCE.md",
+      "evidence": ["Release gate on clean e616ed4 checkpoint: 539 Vitest, 349 typechecked files, 101 Chromium E2E and all existing artifact guards PASS", "Explorer Chromium live suite: 11 PASS; throttled catalogue measurement 2.6 ms", "Offline Toolbox Firefox: 14 PASS, one Chromium-only test skipped", "Explorer Firefox: 10 live/smoke PASS, one Base HTTP 429 followed by one targeted PASS", "Explorer package: 29 HTML pages, 34 files, SHA-256 642da70ad3f0e7e865a8c3188299b4fefc5479cb15959f8b00bb13212a4a9111", "Historical six-tool beta package SHA-256 unchanged f2907ac694594531e16ab5501e3be7d066edf98f528553f2bf2164dde725a425"],
+      "remaining": ["Run the complete release gate on the final committed audit source", "No deployment or public launch is authorized"]
+    }
   },
-  "nextAction": "Proceed to BS consolidated release gate, cross-browser Explorer acceptance, static package/security checks and final audit. Do not deploy."
+  "nextAction": "Run CI=1 pnpm release:check on the final clean committed audit source, then push main and verify remote equality. Do not deploy."
 }
