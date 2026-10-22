@@ -112,6 +112,24 @@ test("BK portfolio tasks calculate from manual data without side effects", async
   await assertNoSideEffects(page,report);
 });
 
+test("BL DeFi model tasks remain offline and disclose incomplete assumptions", async ({ page }) => {
+  const report=await guard(page);
+  await page.setViewportSize({width:390,height:844});
+  for(const id of ["stableswap-two-coin","weighted-amm-swap","multi-hop-amm","lp-fee-compounding","lending-rate-curve","multi-collateral-stress","vault-fee-impact","insurance-fund-stress"]){
+    expect((await page.goto(`${origin}/tasks/${id}/`))?.status(),id).toBe(200);
+    await page.locator('[data-bd-tool] button.primary[type="submit"]').click();
+    await expect(page.locator("[data-bd-output]"),id).toBeVisible();
+    await expect(page.locator("[data-bd-error]"),id).toBeHidden();
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),id).toBe(true);
+  }
+  const download=page.waitForEvent("download");await page.locator("[data-bd-download]").click();
+  expect((await download).suggestedFilename()).toBe("pit-insurance-fund-stress-illustration.json");
+  await page.locator('[data-bd-tool] input[name="fundReserve"]').fill("1e3");
+  await page.locator('[data-bd-tool] button.primary[type="submit"]').click();
+  await expect(page.locator("[data-bd-error]")).toBeVisible();
+  await assertNoSideEffects(page,report);
+});
+
 test("all allowlisted emitted pages load under strict headers; excluded routes stay absent", async ({ page, browserName }) => {
   test.setTimeout(180_000);
   const report = await guard(page);

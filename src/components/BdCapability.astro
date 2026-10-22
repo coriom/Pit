@@ -1,9 +1,9 @@
 ---
 import {bdInlineScript} from "../../scripts/build-bd-inline.mjs";
 import {BD_SPEC_BY_ID} from "../lib/bd-tool-specs";
-import type {BdId} from "../lib/bd-defi-evm";
+import {BL_SPEC_BY_ID} from "../lib/bl-tool-specs";
 import "../styles/ah-tools.css";
-const spec=BD_SPEC_BY_ID.get(Astro.props.id as BdId);if(!spec)throw Error("Unreviewed DeFi/EVM task");
+const spec=BD_SPEC_BY_ID.get(Astro.props.id as any) ?? BL_SPEC_BY_ID.get(Astro.props.id as any);if(!spec)throw Error("Unreviewed DeFi/EVM task");
 const script=bdInlineScript();
 ---
 <section class="panel ah-tool" data-bd-tool={spec.id}>

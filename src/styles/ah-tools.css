@@ -19,11 +19,17 @@
 .ah-tool label {
   display: block;
   max-width: 100%;
+  overflow-wrap: anywhere;
 }
 .ah-tool input,
-.ah-tool select {
+.ah-tool select,
+.ah-tool textarea {
   box-sizing: border-box;
   max-width: 100%;
+  min-width: 0;
+}
+.ah-tool textarea {
+  width: 100%;
 }
 .ah-tool dl > div {
   display: flex;

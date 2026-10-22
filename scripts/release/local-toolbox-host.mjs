@@ -56,6 +56,8 @@ export const LOCAL_TASK_IDS = [
   "monte-carlo-portfolio", "risk-parity-weights", "minimum-variance-weights",
   "correlation-matrix", "performance-attribution", "underwater-ulcer",
   "fx-exposure-stress", "inflation-adjusted-return",
+  "stableswap-two-coin", "weighted-amm-swap", "multi-hop-amm", "lp-fee-compounding",
+  "lending-rate-curve", "multi-collateral-stress", "vault-fee-impact", "insurance-fund-stress",
 ];
 export const LOCAL_PAGES = ["index.html", "tools/index.html", "privacy/index.html", "legal/index.html", ...LOCAL_IDS.map((id) => `tools/${id}/index.html`), ...LOCAL_TASK_IDS.map((id) => `tasks/${id}/index.html`)].sort();
 const CONTENT_POLICY = [

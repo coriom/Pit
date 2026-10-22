@@ -3,8 +3,8 @@
   "baselineMain": "a681796699ea504168ebe389f4dea56a98068f14",
   "deployment": "NOT_AUTHORIZED",
   "publicRelease": "NO_GO",
-  "completedTaskCount": 135,
-  "newOffChainCapabilities": 16,
+  "completedTaskCount": 143,
+  "newOffChainCapabilities": 24,
   "newOnChainCapabilities": 0,
   "batches": {
     "BJ": {
@@ -48,7 +48,26 @@
         "Chromium focused BK browser smoke: one pass covering eight routes"
       ]
     },
-    "BL": { "status": "pending" },
+    "BL": {
+      "status": "validated-local",
+      "ids": [
+        "stableswap-two-coin",
+        "weighted-amm-swap",
+        "multi-hop-amm",
+        "lp-fee-compounding",
+        "lending-rate-curve",
+        "multi-collateral-stress",
+        "vault-fee-impact",
+        "insurance-fund-stress"
+      ],
+      "evidence": [
+        "21 targeted Vitest tests pass, including seven BL reference tests",
+        "pnpm check: 324 files, zero errors",
+        "pnpm toolbox:check: 161 content pages, 165 Vercel package files, 23 exact inline script hashes",
+        "Chromium focused BL browser smoke: one pass covering eight routes, after fixing a mobile CSV textarea overflow",
+        "pnpm beta:check: historical six-tool package SHA-256 f2907ac694594531e16ab5501e3be7d066edf98f528553f2bf2164dde725a425"
+      ]
+    },
     "BM": { "status": "pending" },
     "BN": { "status": "pending" },
     "BO": { "status": "pending" },
@@ -57,5 +76,5 @@
     "BR": { "status": "pending" },
     "BS": { "status": "pending" }
   },
-  "nextAction": "Implement BL DeFi financial models using bounded local inputs, then run targeted checks and commit the next checkpoint."
+  "nextAction": "Implement BM local tokenomics and EVM utilities using strict bounded inputs, then run targeted checks and commit the next checkpoint."
 }

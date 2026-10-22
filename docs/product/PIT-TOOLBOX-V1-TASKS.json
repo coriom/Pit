@@ -2,10 +2,10 @@
   "version": 1,
   "definition": "A distinct manual user question with a stable direct URL; multi-mode workspaces are not double-counted.",
   "counts": {
-    "complete": 135,
+    "complete": 143,
     "existingSinglePage": 6,
     "extractedDirectTask": 89,
-    "genuinelyNewCapability": 40,
+    "genuinelyNewCapability": 48,
     "pending": 0
   },
   "tasks": [
@@ -2473,6 +2473,152 @@
       ],
       "output": "Nominal and inflation-adjusted value plus exact-ratio annual real return",
       "assumptions": "Constant manually assumed annual nominal and inflation rates; not a forecast.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "stableswap-two-coin",
+      "path": "/tasks/stableswap-two-coin/",
+      "title": "Two-Coin StableSwap Illustration",
+      "category": "Liquidity mathematics",
+      "engineId": "bd-defi-evm",
+      "mode": "stableswap-two-coin",
+      "question": "What output follows from a manual same-peg two-coin amplified invariant?",
+      "requiredInputs": [
+        "reserve0",
+        "reserve1",
+        "decimals0",
+        "decimals1",
+        "amountIn",
+        "amplification",
+        "feeBps"
+      ],
+      "output": "Integer-rounded illustrative output and normalized invariant",
+      "assumptions": "Common 1:1 peg and whole amplification A; not Curve contract-exact or a quote.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "weighted-amm-swap",
+      "path": "/tasks/weighted-amm-swap/",
+      "title": "Weighted AMM Swap Illustration",
+      "category": "Liquidity mathematics",
+      "engineId": "bd-defi-evm",
+      "mode": "weighted-amm-swap",
+      "question": "What continuous constant-mean output follows from manual reserves and weights?",
+      "requiredInputs": [
+        "reserveIn",
+        "reserveOut",
+        "amountIn",
+        "inputWeightBps",
+        "feeBps",
+        "outputDecimals"
+      ],
+      "output": "Fee-adjusted and conservatively rounded output",
+      "assumptions": "Two-asset mathematical model using bounded floating-point exponentiation; not contract-exact.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "multi-hop-amm",
+      "path": "/tasks/multi-hop-amm/",
+      "title": "Multi-Hop AMM Route Simulator",
+      "category": "Liquidity mathematics",
+      "engineId": "bd-defi-evm",
+      "mode": "multi-hop-amm",
+      "question": "What rounded output passes through manually defined constant-product pools?",
+      "requiredInputs": [
+        "amountIn",
+        "hops"
+      ],
+      "output": "Per-hop and final modeled outputs",
+      "assumptions": "Two to four manually linked pools; matching labels are not verified asset identity.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "lp-fee-compounding",
+      "path": "/tasks/lp-fee-compounding/",
+      "title": "LP Fee Reinvestment Scenario",
+      "category": "Yield & growth",
+      "engineId": "bd-defi-evm",
+      "mode": "lp-fee-compounding",
+      "question": "Does reinvesting manually assumed LP fees change modeled capital after known costs?",
+      "requiredInputs": [
+        "principal",
+        "grossFeeBps",
+        "protocolCutBps",
+        "reinvestCost",
+        "periods"
+      ],
+      "output": "Compounded versus cash-out fee scenario",
+      "assumptions": "Same-asset quote value and fixed fee opportunity each period; excludes IL and market movement.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "lending-rate-curve",
+      "path": "/tasks/lending-rate-curve/",
+      "title": "Lending Utilization Rate Curve",
+      "category": "Lending & debt",
+      "engineId": "bd-defi-evm",
+      "mode": "lending-rate-curve",
+      "question": "What nominal borrow rate follows from a manual kinked utilization curve?",
+      "requiredInputs": [
+        "utilizationBps",
+        "kinkBps",
+        "baseAprBps",
+        "slope1Bps",
+        "slope2Bps"
+      ],
+      "output": "Borrow APR and gross supply-side rate",
+      "assumptions": "Two-slope generic curve, manual parameters and utilization; no live protocol rate.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "multi-collateral-stress",
+      "path": "/tasks/multi-collateral-stress/",
+      "title": "Multi-Collateral Stress Illustration",
+      "category": "Lending & debt",
+      "engineId": "bd-defi-evm",
+      "mode": "multi-collateral-stress",
+      "question": "How would manual shocks alter weighted collateral coverage of fixed quote debt?",
+      "requiredInputs": [
+        "debtQuote",
+        "collateral"
+      ],
+      "output": "Before and after hypothetical health factors",
+      "assumptions": "One manual quote currency; independent value shocks and thresholds; not protocol eMode or oracle state.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "vault-fee-impact",
+      "path": "/tasks/vault-fee-impact/",
+      "title": "Vault Management & Performance Fee Impact",
+      "category": "Yield & growth",
+      "engineId": "bd-defi-evm",
+      "mode": "vault-fee-impact",
+      "question": "How do manual management and performance fees change a modeled vault result?",
+      "requiredInputs": [
+        "principal",
+        "grossReturnBps",
+        "managementBps",
+        "performanceBps",
+        "days"
+      ],
+      "output": "Gross assets, each fee, net assets and net return",
+      "assumptions": "One period; ACT/365 management fee on gross ending assets, then performance fee on positive gain.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "insurance-fund-stress",
+      "path": "/tasks/insurance-fund-stress/",
+      "title": "Insurance Fund Claim Stress",
+      "category": "Lending & debt",
+      "engineId": "bd-defi-evm",
+      "mode": "insurance-fund-stress",
+      "question": "Which sequential manual claims exceed a stated fund reserve?",
+      "requiredInputs": [
+        "fundReserve",
+        "claims"
+      ],
+      "output": "Covered claims, remaining reserve and explicit shortfall",
+      "assumptions": "Deterministic manually ordered scenarios; no claim probability, replenishment or coverage guarantee.",
       "status": "genuinely-new"
     }
   ]
