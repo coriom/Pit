@@ -71,7 +71,7 @@ export async function validateCloudflarePackage({
   const expected = [...source.files, "404.html", "_headers"].sort();
   if (JSON.stringify(files) !== JSON.stringify(expected)) throw Error("Cloudflare package differs from the static allowlist");
   if (files.length > FREE_FILE_LIMIT) throw Error("Cloudflare Free file limit exceeded");
-  if (LOCAL_PAGES.length !== 137 || LOCAL_TASK_IDS.length !== 113 || source.scriptHashes.length !== 23)
+  if (LOCAL_PAGES.length !== 145 || LOCAL_TASK_IDS.length !== 121 || source.scriptHashes.length !== 23)
     throw Error("Local toolbox inventory changed");
   let bytes = 0;
   for (const file of source.files) {

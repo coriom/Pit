@@ -72,6 +72,27 @@ async function assertNoSideEffects(page: Page, report: Awaited<ReturnType<typeof
   expect(await page.evaluate(() => (window as any).__localForbidden)).toEqual([]);
 }
 
+test("BJ derivative and trading task pages calculate locally with safe downloads", async ({ page }) => {
+  const report = await guard(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const id of ["options-strategy", "portfolio-greeks", "volatility-smile", "delta-hedge", "futures-hedge", "funding-history", "trading-journal", "order-book-depth"]) {
+    const response = await page.goto(`${origin}/tasks/${id}/`);
+    expect(response?.status(), id).toBe(200);
+    await page.locator('[data-bb-tool] button.primary[type="submit"]').click();
+    await expect(page.locator("[data-bb-output]"), id).toBeVisible();
+    await expect(page.locator("[data-bb-error]"), id).toBeHidden();
+    if (id === "volatility-smile") await expect(page.locator("[data-bb-plot-wrap]")).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2), id).toBe(true);
+  }
+  const download = page.waitForEvent("download");
+  await page.locator("[data-bb-download]").click();
+  expect((await download).suggestedFilename()).toBe("pit-order-book-depth-illustration.json");
+  await page.locator('[data-bb-tool] input[name="quantity"]').fill("1e3");
+  await page.locator('[data-bb-tool] button.primary[type="submit"]').click();
+  await expect(page.locator("[data-bb-error]")).toBeVisible();
+  await assertNoSideEffects(page, report);
+});
+
 test("all allowlisted emitted pages load under strict headers; excluded routes stay absent", async ({ page, browserName }) => {
   test.setTimeout(180_000);
   const report = await guard(page);

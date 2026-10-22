@@ -1,9 +1,9 @@
 ---
 import { bbInlineScript } from "../../scripts/build-bb-inline.mjs";
 import { BB_SPEC_BY_ID } from "../lib/bb-tool-specs";
-import type { BbId } from "../lib/bb-derivatives";
+import { BJ_SPEC_BY_ID } from "../lib/bj-tool-specs";
 import "../styles/ah-tools.css";
-const spec = BB_SPEC_BY_ID.get(Astro.props.id as BbId);
+const spec = BB_SPEC_BY_ID.get(Astro.props.id as any) ?? BJ_SPEC_BY_ID.get(Astro.props.id as any);
 if (!spec) throw Error("Unreviewed derivative task");
 const script = bbInlineScript();
 ---
@@ -11,12 +11,12 @@ const script = bbInlineScript();
   <p class="notice">Illustrative browser-local mathematics · no wallet, market feed or order</p>
   <p>{spec.question}</p>
   <form novalidate>
-    {spec.fields.map((field) => <label>{field.label}{field.options ? <select name={field.name}>{field.options.map((option) => <option value={option} selected={option===field.example}>{option}</option>)}</select> : <input type="text" name={field.name} value={field.example} inputmode="decimal" autocomplete="off" />}</label>)}
+    {spec.fields.map((field) => <label>{field.label}{"kind" in field && field.kind === "textarea" ? <textarea name={field.name} rows="5" autocomplete="off">{field.example}</textarea> : field.options ? <select name={field.name}>{field.options.map((option) => <option value={option} selected={option===field.example}>{option}</option>)}</select> : <input type="text" name={field.name} value={field.example} inputmode="decimal" autocomplete="off" />}</label>)}
     <button type="button" data-bb-example>Load illustrative example</button>
     <button class="primary" type="submit">Calculate local scenario</button>
   </form>
   <p role="alert" data-bb-error hidden></p>
-  <section role="status" aria-live="polite" data-bb-output hidden><h2>Modeled result</h2><p class="result-value" data-bb-primary></p><dl data-bb-fields></dl><button type="button" data-bb-download>Download local JSON</button></section>
+  <section role="status" aria-live="polite" data-bb-output hidden><h2>Modeled result</h2><p class="result-value" data-bb-primary></p><dl data-bb-fields></dl><div data-bb-plot-wrap hidden><svg data-bb-plot role="img" aria-label="Manual strike and implied volatility observations" viewBox="0 0 420 180"></svg></div><button type="button" data-bb-download>Download local JSON</button></section>
   <div class="rule"><h2>Assumptions and limits</h2><p>{spec.assumptions} No financial advice or guaranteed execution.</p></div>
 </section>
 <script is:inline set:html={script}></script>

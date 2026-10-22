@@ -51,6 +51,8 @@ export const LOCAL_TASK_IDS = [
   "correlation-beta", "realized-volatility", "portfolio-covariance-risk", "lot-constrained-allocation",
   "eip1559-fee-cap", "calldata-gas", "abi-event-log", "eip712-typed-hash",
   "erc4626-shares", "v3-tick-sqrtprice", "weighted-amm-il", "amm-fee-revenue",
+  "options-strategy", "portfolio-greeks", "volatility-smile", "delta-hedge",
+  "futures-hedge", "funding-history", "trading-journal", "order-book-depth",
 ];
 export const LOCAL_PAGES = ["index.html", "tools/index.html", "privacy/index.html", "legal/index.html", ...LOCAL_IDS.map((id) => `tools/${id}/index.html`), ...LOCAL_TASK_IDS.map((id) => `tasks/${id}/index.html`)].sort();
 const CONTENT_POLICY = [

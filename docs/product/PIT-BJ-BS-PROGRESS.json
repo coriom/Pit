@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "baselineMain": "a681796699ea504168ebe389f4dea56a98068f14",
+  "deployment": "NOT_AUTHORIZED",
+  "publicRelease": "NO_GO",
+  "completedTaskCount": 127,
+  "newOffChainCapabilities": 8,
+  "newOnChainCapabilities": 0,
+  "batches": {
+    "BJ": {
+      "status": "validated-local",
+      "ids": [
+        "options-strategy",
+        "portfolio-greeks",
+        "volatility-smile",
+        "delta-hedge",
+        "futures-hedge",
+        "funding-history",
+        "trading-journal",
+        "order-book-depth"
+      ],
+      "evidence": [
+        "23 targeted Vitest tests pass, including 9 BJ tests",
+        "pnpm check: 318 files, zero errors",
+        "pnpm toolbox:check: 145 content pages, 149 Vercel package files, 23 exact inline script hashes",
+        "Cloudflare package validator: 127 tasks, 145 content pages, 149 package files",
+        "Chromium focused BJ browser smoke: 1 pass covering eight routes",
+        "pnpm beta:check: historical six-tool package SHA-256 f2907ac694594531e16ab5501e3be7d066edf98f528553f2bf2164dde725a425"
+      ]
+    },
+    "BK": { "status": "pending" },
+    "BL": { "status": "pending" },
+    "BM": { "status": "pending" },
+    "BN": { "status": "pending" },
+    "BO": { "status": "pending" },
+    "BP": { "status": "pending" },
+    "BQ": { "status": "pending" },
+    "BR": { "status": "pending" },
+    "BS": { "status": "pending" }
+  },
+  "nextAction": "Implement BK quantitative portfolio tools using bounded local inputs, then run targeted checks and commit the next checkpoint."
+}

@@ -2,10 +2,10 @@
   "version": 1,
   "definition": "A distinct manual user question with a stable direct URL; multi-mode workspaces are not double-counted.",
   "counts": {
-    "complete": 119,
+    "complete": 127,
     "existingSinglePage": 6,
     "extractedDirectTask": 89,
-    "genuinelyNewCapability": 24,
+    "genuinelyNewCapability": 32,
     "pending": 0
   },
   "tasks": [
@@ -2213,6 +2213,137 @@
       ],
       "output": "Gross fee allocation and coverage-aware net scenario",
       "assumptions": "No live volume, actual LP fee accrual or future revenue forecast.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "options-strategy",
+      "path": "/tasks/options-strategy/",
+      "title": "Options Strategy Builder",
+      "category": "Trade & execution",
+      "engineId": "bb-derivatives",
+      "mode": "options-strategy",
+      "question": "What is the combined expiry payoff and breakeven of manually entered option legs?",
+      "requiredInputs": [
+        "legs",
+        "terminal"
+      ],
+      "output": "Net premium, combined expiry payoff and breakeven prices",
+      "assumptions": "European expiry payoff in one quote unit; no exercise, assignment or fees.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "portfolio-greeks",
+      "path": "/tasks/portfolio-greeks/",
+      "title": "Portfolio Greeks Aggregator",
+      "category": "Trade & execution",
+      "engineId": "bb-derivatives",
+      "mode": "portfolio-greeks",
+      "question": "What aggregate sensitivities follow from option positions sharing one underlying and unit convention?",
+      "requiredInputs": [
+        "legs"
+      ],
+      "output": "Signed delta, gamma, vega, theta and rho totals",
+      "assumptions": "One underlying, quote currency and snapshot; vega/rho per 1.00 change, theta per year.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "volatility-smile",
+      "path": "/tasks/volatility-smile/",
+      "title": "Volatility Smile Analyzer",
+      "category": "Trade & execution",
+      "engineId": "bb-derivatives",
+      "mode": "volatility-smile",
+      "question": "How do manually entered implied volatilities vary with strike for one expiry?",
+      "requiredInputs": [
+        "observations"
+      ],
+      "output": "Sorted strike-IV plot and wing comparison",
+      "assumptions": "Entered observations only, one expiry and observation time; no live quote or interpolation.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "delta-hedge",
+      "path": "/tasks/delta-hedge/",
+      "title": "Delta Hedge Simulator",
+      "category": "Trade & execution",
+      "engineId": "bb-derivatives",
+      "mode": "delta-hedge",
+      "question": "How many underlying units would offset a stated option delta at a target?",
+      "requiredInputs": [
+        "optionDelta",
+        "existingHedge",
+        "targetDelta",
+        "hedgePrice",
+        "feeBps"
+      ],
+      "output": "Hypothetical hedge adjustment and known proportional fee",
+      "assumptions": "Delta and hedge quantities are in the same verified underlying; prices and Greeks are fixed assumptions.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "futures-hedge",
+      "path": "/tasks/futures-hedge/",
+      "title": "Futures Hedge Calculator",
+      "category": "Trade & execution",
+      "engineId": "bb-derivatives",
+      "mode": "futures-hedge",
+      "question": "How many whole futures contracts cover a chosen fraction of a manual exposure?",
+      "requiredInputs": [
+        "exposure",
+        "contractNotional",
+        "hedgeBps",
+        "beta"
+      ],
+      "output": "Conservative contract count and uncovered target notional",
+      "assumptions": "One quote currency; static beta and contract notional; excludes margin, basis and fees.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "funding-history",
+      "path": "/tasks/funding-history/",
+      "title": "Funding History Analyzer",
+      "category": "Trade & execution",
+      "engineId": "bb-derivatives",
+      "mode": "funding-history",
+      "question": "What net funding was paid or received across explicitly listed settlements?",
+      "requiredInputs": [
+        "side",
+        "observations"
+      ],
+      "output": "Net signed funding plus paid and received totals",
+      "assumptions": "Each dated row is one settlement; missing observations are not reconstructed.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "trading-journal",
+      "path": "/tasks/trading-journal/",
+      "title": "Trading Journal Analyzer",
+      "category": "Trade & execution",
+      "engineId": "bb-derivatives",
+      "mode": "trading-journal",
+      "question": "What net outcome and streak statistics follow from manually supplied closed trades?",
+      "requiredInputs": [
+        "trades"
+      ],
+      "output": "Net PnL, win rate, profit factor and losing streak",
+      "assumptions": "Closed trades in one manual quote currency and supplied row order; no Taxlot or tax conclusions.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "order-book-depth",
+      "path": "/tasks/order-book-depth/",
+      "title": "Order Book Depth Simulator",
+      "category": "Trade & execution",
+      "engineId": "bb-derivatives",
+      "mode": "order-book-depth",
+      "question": "How much of a hypothetical order can the entered book levels fill?",
+      "requiredInputs": [
+        "side",
+        "quantity",
+        "levels"
+      ],
+      "output": "Filled quantity, VWAP, quote cost and depth shortfall",
+      "assumptions": "A static manually entered book, not live or executable; queue priority and hidden liquidity excluded.",
       "status": "genuinely-new"
     }
   ]
