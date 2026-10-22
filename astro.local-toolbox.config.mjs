@@ -10,6 +10,7 @@ import { akInlineHash } from "./scripts/build-ak-inline.mjs";
 import { alInlineHash } from "./scripts/build-al-inline.mjs";
 import { amInlineHash } from "./scripts/build-am-inline.mjs";
 import { anInlineHash } from "./scripts/build-an-inline.mjs";
+import { bbInlineHash } from "./scripts/build-bb-inline.mjs";
 import { publicOriginFromEnv } from "./scripts/release/local-toolbox-publishing.mjs";
 
 const publicOrigin = publicOriginFromEnv();
@@ -45,6 +46,7 @@ export default defineConfig({
           alInlineHash("collateral"), alInlineHash("borrowing"),
           amInlineHash("amm"), amInlineHash("concentrated"),
           anInlineHash("evm"), anInlineHash("csv"),
+          bbInlineHash(),
         ],
       },
       styleDirective: { resources: ["'self'", "'unsafe-inline'"] },

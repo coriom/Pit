@@ -1,0 +1,22 @@
+---
+import { bbInlineScript } from "../../scripts/build-bb-inline.mjs";
+import { BB_SPEC_BY_ID } from "../lib/bb-tool-specs";
+import type { BbId } from "../lib/bb-derivatives";
+import "../styles/ah-tools.css";
+const spec = BB_SPEC_BY_ID.get(Astro.props.id as BbId);
+if (!spec) throw Error("Unreviewed derivative task");
+const script = bbInlineScript();
+---
+<section class="panel ah-tool" data-bb-tool={spec.id}>
+  <p class="notice">Illustrative browser-local mathematics · no wallet, market feed or order</p>
+  <p>{spec.question}</p>
+  <form novalidate>
+    {spec.fields.map((field) => <label>{field.label}{field.options ? <select name={field.name}>{field.options.map((option) => <option value={option} selected={option===field.example}>{option}</option>)}</select> : <input type="text" name={field.name} value={field.example} inputmode="decimal" autocomplete="off" />}</label>)}
+    <button type="button" data-bb-example>Load illustrative example</button>
+    <button class="primary" type="submit">Calculate local scenario</button>
+  </form>
+  <p role="alert" data-bb-error hidden></p>
+  <section role="status" aria-live="polite" data-bb-output hidden><h2>Modeled result</h2><p class="result-value" data-bb-primary></p><dl data-bb-fields></dl><button type="button" data-bb-download>Download local JSON</button></section>
+  <div class="rule"><h2>Assumptions and limits</h2><p>{spec.assumptions} No financial advice or guaranteed execution.</p></div>
+</section>
+<script is:inline set:html={script}></script>

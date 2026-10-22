@@ -149,6 +149,12 @@ test("each focused task opens its reviewed mode and calculates without side effe
     const response = await page.goto(`${origin}${task.path}`);
     expect(response?.status(), task.id).toBe(200);
     await expect(page.getByRole("heading", { name: task.title, exact: true })).toBeVisible();
+    if (task.engineId === "bb-derivatives") {
+      await page.locator('[data-task-shell] form button.primary[type="submit"]').click();
+      await expect(page.locator('[data-bb-output]'), task.id).toBeVisible();
+      expect(await page.evaluate(() => (window as any).__localForbidden), task.id).toEqual([]);
+      continue;
+    }
     await expect(page.locator('[data-task-shell] select[name="mode"]')).toHaveValue(task.mode);
     const panel = page.locator(`[data-task-shell] [data-mode-panel="${task.mode}"], [data-task-shell] [data-panel="${task.mode}"]`);
     if (await panel.count()) await expect(panel).toBeVisible();
@@ -173,7 +179,7 @@ test("each focused task opens its reviewed mode and calculates without side effe
   }
   await page.goto(`${origin}/tools/`);
   await page.getByRole("button", { name: "Focused tasks" }).click();
-  await expect(page.locator("[data-task]:visible")).toHaveCount(89);
+  await expect(page.locator("[data-task]:visible")).toHaveCount(97);
   await page.getByLabel("Search tools by name or purpose").fill("Convert nominal APR to APY");
   await expect(page.locator("[data-task]:visible")).toHaveCount(1);
   await page.getByRole("link", { name: /Convert nominal APR to APY/ }).click();

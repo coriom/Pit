@@ -2,10 +2,10 @@
   "version": 1,
   "definition": "A distinct manual user question with a stable direct URL; multi-mode workspaces are not double-counted.",
   "counts": {
-    "complete": 95,
+    "complete": 103,
     "existingSinglePage": 6,
     "extractedDirectTask": 89,
-    "genuinelyNewEngine": 0,
+    "genuinelyNewEngine": 8,
     "pending": 0
   },
   "tasks": [
@@ -1799,6 +1799,155 @@
       "assumptions": "Unknown costs prevent definitive profit assessment; no volume forecast.",
       "status": "extracted",
       "focusLabel": "Break-even fees including costs"
+    },
+    {
+      "id": "perpetual-pnl",
+      "path": "/tasks/perpetual-pnl/",
+      "title": "Perpetual Futures PnL",
+      "category": "Trade & execution",
+      "engineId": "bb-derivatives",
+      "mode": "perpetual-pnl",
+      "question": "What net PnL follows from a hypothetical long or short perpetual position?",
+      "requiredInputs": [
+        "side",
+        "entry",
+        "exit",
+        "quantity",
+        "leverage",
+        "entryFeeBps",
+        "exitFeeBps"
+      ],
+      "output": "Fee-adjusted PnL and return on illustrative initial margin",
+      "assumptions": "Manual prices and fees; excludes funding and exchange liquidation rules.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "perpetual-funding",
+      "path": "/tasks/perpetual-funding/",
+      "title": "Perpetual Funding Cost",
+      "category": "Trade & execution",
+      "engineId": "bb-derivatives",
+      "mode": "perpetual-funding",
+      "question": "What signed funding payment follows from a fixed rate and notional?",
+      "requiredInputs": [
+        "side",
+        "notional",
+        "fundingBps",
+        "periods"
+      ],
+      "output": "Signed payment or receipt across whole periods",
+      "assumptions": "Positive funding is paid by longs. Rates and notional are held constant.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "perpetual-margin",
+      "path": "/tasks/perpetual-margin/",
+      "title": "Perpetual Margin Buffer",
+      "category": "Trade & execution",
+      "engineId": "bb-derivatives",
+      "mode": "perpetual-margin",
+      "question": "How does manually posted margin compare with stated initial and maintenance requirements?",
+      "requiredInputs": [
+        "notional",
+        "postedMargin",
+        "initialBps",
+        "maintenanceBps"
+      ],
+      "output": "Initial requirement and modeled maintenance buffer",
+      "assumptions": "Static notional; no mark-price, exchange tiers, cross margin or liquidation guarantee.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "futures-basis",
+      "path": "/tasks/futures-basis/",
+      "title": "Futures Basis & Carry",
+      "category": "Trade & execution",
+      "engineId": "bb-derivatives",
+      "mode": "futures-basis",
+      "question": "How far does a manual futures price differ from spot, and what is the simple annualized basis?",
+      "requiredInputs": [
+        "spot",
+        "future",
+        "days"
+      ],
+      "output": "Absolute, percentage and ACT/365 annualized basis",
+      "assumptions": "Not realized carry, a funding forecast or an arbitrage recommendation.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "european-option-payoff",
+      "path": "/tasks/european-option-payoff/",
+      "title": "European Option Payoff",
+      "category": "Trade & execution",
+      "engineId": "bb-derivatives",
+      "mode": "european-option-payoff",
+      "question": "What expiry payoff remains after a manually stated premium?",
+      "requiredInputs": [
+        "kind",
+        "strike",
+        "terminal",
+        "premium"
+      ],
+      "output": "Intrinsic and net payoff per option unit",
+      "assumptions": "European expiry model; no exercise costs, multiplier or live option market.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "black-scholes-greeks",
+      "path": "/tasks/black-scholes-greeks/",
+      "title": "Black–Scholes Price & Greeks",
+      "category": "Trade & execution",
+      "engineId": "bb-derivatives",
+      "mode": "black-scholes-greeks",
+      "question": "What numerical European option value and sensitivities follow from stated assumptions?",
+      "requiredInputs": [
+        "kind",
+        "spot",
+        "strike",
+        "ratePct",
+        "volPct",
+        "years"
+      ],
+      "output": "Model price, delta, gamma, vega, theta and rho",
+      "assumptions": "No-dividend Black–Scholes illustration; constant volatility/rate; approximated normal CDF.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "implied-volatility",
+      "path": "/tasks/implied-volatility/",
+      "title": "Implied Volatility",
+      "category": "Trade & execution",
+      "engineId": "bb-derivatives",
+      "mode": "implied-volatility",
+      "question": "What bounded Black–Scholes volatility reproduces a supplied European option price?",
+      "requiredInputs": [
+        "kind",
+        "spot",
+        "strike",
+        "ratePct",
+        "years",
+        "optionPrice"
+      ],
+      "output": "Implied annual volatility with repricing residual",
+      "assumptions": "Manual option price; rejects prices outside no-arbitrage bounds. Model-dependent, not observed future volatility.",
+      "status": "genuinely-new"
+    },
+    {
+      "id": "trade-expectancy",
+      "path": "/tasks/trade-expectancy/",
+      "title": "Trade Expectancy",
+      "category": "Trade & execution",
+      "engineId": "bb-derivatives",
+      "mode": "trade-expectancy",
+      "question": "What expected payoff follows from a manual win rate and two outcome amounts?",
+      "requiredInputs": [
+        "winBps",
+        "gain",
+        "loss"
+      ],
+      "output": "Expected payoff and breakeven win rate",
+      "assumptions": "Simple two-outcome model; no tail risk, fees or recommendation.",
+      "status": "genuinely-new"
     }
   ]
 }

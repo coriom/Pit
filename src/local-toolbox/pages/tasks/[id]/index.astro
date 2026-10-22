@@ -13,6 +13,7 @@ import AmmPoolMathLab from "../../../../components/AmmPoolMathLab.astro";
 import ConcentratedLiquidityPlanner from "../../../../components/ConcentratedLiquidityPlanner.astro";
 import EvmDataInspector from "../../../../components/EvmDataInspector.astro";
 import CryptoDataWorkshop from "../../../../components/CryptoDataWorkshop.astro";
+import BbCapability from "../../../../components/BbCapability.astro";
 import { AVAILABLE_LOCAL_TASKS } from "../../../../lib/local-task-registry";
 import { LOCAL_TOOLS } from "../../../../lib/local-toolbox";
 import "../../../../styles/global.css";
@@ -22,7 +23,7 @@ export function getStaticPaths() {
   return AVAILABLE_LOCAL_TASKS.map((task) => ({ params: { id: task.id }, props: { task } }));
 }
 const { task } = Astro.props;
-const parent = LOCAL_TOOLS.find((entry) => entry.id === task.engineId)!;
+const parent = LOCAL_TOOLS.find((entry) => entry.id === task.engineId);
 const related = AVAILABLE_LOCAL_TASKS.filter((entry) => entry.engineId === task.engineId && entry.id !== task.id);
 const canonical = Astro.site ? new URL(task.path, Astro.site).href : undefined;
 ---
@@ -44,9 +45,10 @@ const canonical = Astro.site ? new URL(task.path, Astro.site).href : undefined;
     {task.engineId === "concentrated-liquidity" && <ConcentratedLiquidityPlanner />}
     {task.engineId === "evm-data-inspector" && <EvmDataInspector localOnly />}
     {task.engineId === "crypto-data-workshop" && <CryptoDataWorkshop />}
+    {task.engineId === "bb-derivatives" && <BbCapability id={task.id} />}
     {task.focusLabel && <div class="local-focus-result" data-task-focused hidden><h3>Focused result · {task.output}</h3><p data-task-focused-value></p></div>}
   </div>
-  <section class="panel local-task-related" aria-label="Related local calculations"><h2>Related calculations</h2><p><a href={`../../tools/${parent.slug}/`}>Open full {parent.title} workspace</a></p><ul>{related.map((entry) => <li><a href={`../${entry.id}/`}>{entry.title}</a></li>)}</ul></section>
+  <section class="panel local-task-related" aria-label="Related local calculations"><h2>Related calculations</h2>{parent && <p><a href={`../../tools/${parent.slug}/`}>Open full {parent.title} workspace</a></p>}<ul>{related.map((entry) => <li><a href={`../${entry.id}/`}>{entry.title}</a></li>)}</ul></section>
   <footer><a href="../../tools/">← All tools</a> · <a href="../../privacy/">Privacy</a> · <a href="../../legal/">Site information</a> · Manual scenarios; no financial advice</footer>
 </main><script is:inline>
   const shell = document.querySelector('[data-task-shell]');
