@@ -65,7 +65,11 @@ export function verifyServedSource(localSource, rawModule) {
   const encoded = rawModule.match(/^export default ((?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'));(?:\s*\/\/#[^\n]*)?\s*$/s)?.[1];
   if (!encoded) throw Error("STALE_OR_WRONG_BUILD");
   let served;
-  try { served = runInNewContext(encoded, Object.create(null), { timeout: 100 }); }
+  // Vite's double-quoted form is a JSON string. Parsing it directly avoids a
+  // VM startup timeout under a busy parallel test run while retaining the
+  // exact served-source digest comparison below. The guarded single-quoted
+  // legacy form still needs the bounded literal-only VM parser.
+  try { served = encoded.startsWith('"') ? JSON.parse(encoded) : runInNewContext(encoded, Object.create(null), { timeout: 1000 }); }
   catch { throw Error("STALE_OR_WRONG_BUILD"); }
   if (digest(served) !== digest(localSource)) throw Error("STALE_OR_WRONG_BUILD");
   return { sourceSha256: digest(served), executionAccepted: sourceGate(served) };

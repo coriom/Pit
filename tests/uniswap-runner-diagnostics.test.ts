@@ -39,6 +39,8 @@ describe("test-only Uniswap runner diagnostics", () => {
       .toThrow("STALE_OR_WRONG_BUILD");
     expect(() => verifyServedSource(source, "<html>Vercel login</html>"))
       .toThrow("STALE_OR_WRONG_BUILD");
+    expect(() => verifyServedSource(source, 'export default "\\x41";'))
+      .toThrow("STALE_OR_WRONG_BUILD");
   });
 
   it("requires a genuinely later, still-live quote after approval", () => {
