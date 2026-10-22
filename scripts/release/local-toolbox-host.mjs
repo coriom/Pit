@@ -55,7 +55,7 @@ export const LOCAL_TASK_IDS = [
 export const LOCAL_PAGES = ["index.html", "tools/index.html", "privacy/index.html", "legal/index.html", ...LOCAL_IDS.map((id) => `tools/${id}/index.html`), ...LOCAL_TASK_IDS.map((id) => `tasks/${id}/index.html`)].sort();
 const CONTENT_POLICY = [
   "default-src 'none'", "connect-src 'none'", "font-src 'self'", "img-src 'self'",
-  "object-src 'none'", "base-uri 'self'", "form-action 'self'",
+  "object-src 'none'", "base-uri 'self'", "form-action 'none'",
 ];
 const OTHER_HEADERS = {
   "Strict-Transport-Security": "max-age=86400",
@@ -132,6 +132,7 @@ function validatePolicy(htmlByPage, policy) {
       JSON.stringify([...declared("style-src")].sort()) !== JSON.stringify([...styleActual].sort()))
     throw Error("CSP hash declarations differ from executable scripts or inline styles");
   if (!policy.includes("connect-src 'none'") || !policy.includes("default-src 'none'") ||
+      !policy.includes("form-action 'none'") ||
       /'unsafe-inline'|'unsafe-eval'|\bhttps?:/i.test(policy)) throw Error("Local toolbox CSP weakened");
   return { scriptHashes: [...scriptActual].sort(), styleHashes: [...styleActual].sort() };
 }

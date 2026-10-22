@@ -61,7 +61,7 @@ export default defineConfig({
         "img-src 'self'",
         "object-src 'none'",
         "base-uri 'self'",
-        "form-action 'self'",
+        "form-action 'none'",
       ],
     },
   },

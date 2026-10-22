@@ -82,6 +82,7 @@ test("all allowlisted emitted pages load under strict headers; excluded routes s
     await expect(page.locator("h1").first()).toBeVisible();
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex,nofollow");
     expect(response?.headers()["content-security-policy"], route).toContain("connect-src 'none'");
+    expect(response?.headers()["content-security-policy"], route).toContain("form-action 'none'");
     expect(response?.headers()["content-security-policy"], route).toContain("frame-ancestors 'none'");
     expect(response?.headers()["strict-transport-security"], route).toBe("max-age=86400");
     expect(response?.headers()["x-robots-tag"], route).toBe("noindex, nofollow");
@@ -99,6 +100,24 @@ test("all allowlisted emitted pages load under strict headers; excluded routes s
   expect(await page.evaluate(() => (window as any).__arInjected)).toBeUndefined();
   await assertNoSideEffects(page, report);
   console.log(`AR_LOCAL_ARTIFACT ${browserName}: ${LOCAL_PAGES.length} pages, 5 excluded routes, CSP and privacy PASS`);
+});
+
+test("a form cannot leak manually entered values through fallback navigation", async ({ page }) => {
+  await page.goto(`${origin}/tools/pnl/`);
+  const sent: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("pit_private_input")) sent.push(request.url());
+  });
+  await page.evaluate(() => {
+    const form = document.createElement("form");
+    form.method = "GET";
+    form.action = "/?pit_private_input=should-never-leave";
+    document.body.append(form);
+    form.submit();
+  });
+  await page.waitForTimeout(100);
+  expect(page.url()).toBe(`${origin}/tools/pnl/`);
+  expect(sent).toEqual([]);
 });
 
 test("private notice pages, metadata and keyboard navigation remain usable on mobile", async ({ page }) => {
