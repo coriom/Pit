@@ -188,7 +188,9 @@ test("a form cannot leak manually entered values through fallback navigation", a
     form.method = "GET";
     form.action = "/?pit_private_input=should-never-leave";
     document.body.append(form);
-    form.submit();
+    // Firefox throws a synchronous security exception for the blocked form;
+    // Chromium blocks it without throwing. Both must leave the URL unchanged.
+    try { form.submit(); } catch { /* CSP denial is the intended outcome. */ }
   });
   await page.waitForTimeout(100);
   expect(page.url()).toBe(`${origin}/tools/pnl/`);
@@ -285,7 +287,9 @@ test("each focused task opens its reviewed mode and calculates without side effe
   }
   await page.goto(`${origin}/tools/`);
   await page.getByRole("button", { name: "Focused tasks" }).click();
-  await expect(page.locator("[data-task]:visible")).toHaveCount(113);
+  await expect(page.locator("[data-task]:visible")).toHaveCount(AVAILABLE_LOCAL_TASKS.length);
+  const visibleIds = await page.locator("[data-task]:visible").evaluateAll((cards) => cards.map((card) => card.getAttribute("data-task")));
+  expect(visibleIds.sort()).toEqual(AVAILABLE_LOCAL_TASKS.map((task) => task.id).sort());
   await page.getByLabel("Search tools by name or purpose").fill("Convert nominal APR to APY");
   await expect(page.locator("[data-task]:visible")).toHaveCount(1);
   await page.getByRole("link", { name: /Convert nominal APR to APY/ }).click();

@@ -16,3 +16,21 @@ test("Explorer search and categories expose only registered direct routes withou
   await expect(page.locator("#explorer-count")).toHaveText("0 inspections shown");
   expect(external).toEqual([]);
 });
+
+test("27-card catalogue filters promptly on a throttled mobile Chromium page", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "CPU throttling measurement uses Chromium CDP");
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+  await page.setViewportSize({ width: 390, height: 780 });
+  await page.goto("/");
+  const measured = await page.evaluate(() => {
+    const input = document.querySelector<HTMLInputElement>("#explorer-search")!;
+    const start = performance.now();
+    input.value = "chainlink";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    return { milliseconds: performance.now() - start, visible: document.querySelectorAll("#explorer-catalogue .card:not([hidden])").length };
+  });
+  console.log(`EXPLORER_CATALOGUE_PERF ${JSON.stringify({ cpuThrottle: 4, viewport: "390x780", cards: 27, ...measured })}`);
+  expect(measured.visible).toBe(1);
+  expect(measured.milliseconds).toBeLessThan(500);
+});
