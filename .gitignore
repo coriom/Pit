@@ -6,6 +6,8 @@ dist-local-toolbox/
 dist-local-toolbox-host/
 dist-local-toolbox-public/
 dist-local-toolbox-public-host/
+dist-local-toolbox-cloudflare/
+dist-local-toolbox-cloudflare-public/
 .astro/
 .env*
 !.env.example

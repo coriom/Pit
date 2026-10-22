@@ -68,6 +68,7 @@ try {
   run("pnpm", ["beta:check"]);
   run("node", ["scripts/release/beta-css-isolation.mjs"]);
   run("pnpm", ["toolbox:check"]);
+  run("node", ["scripts/release/local-toolbox-cloudflare.mjs"]);
   // Browser tests exercise precisely the production build just created.
   run("pnpm", ["test:e2e"]);
   clean();

@@ -10,6 +10,8 @@
     "beta:check": "astro build --config astro.readonly-beta.config.mjs && node scripts/release/read-only-beta-host.mjs",
     "toolbox:check": "node scripts/release/local-task-inventory.mjs --check && PIT_TOOLBOX_BUILD_MODE=private astro build --config astro.local-toolbox.config.mjs && PIT_TOOLBOX_BUILD_MODE=private node scripts/release/local-toolbox-host.mjs",
     "toolbox:public:check": "PIT_TOOLBOX_BUILD_MODE=public astro build --config astro.local-toolbox.config.mjs && PIT_TOOLBOX_BUILD_MODE=public node scripts/release/local-toolbox-host.mjs --public",
+    "toolbox:cloudflare:check": "pnpm toolbox:check && node scripts/release/local-toolbox-cloudflare.mjs",
+    "toolbox:cloudflare:public:check": "pnpm toolbox:public:check && PIT_TOOLBOX_BUILD_MODE=public node scripts/release/local-toolbox-cloudflare.mjs --public",
     "check": "astro check",
     "test": "vitest run",
     "test:e2e": "playwright test",
