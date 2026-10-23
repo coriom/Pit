@@ -6,5 +6,6 @@ CREATE TABLE IF NOT EXISTS ledger (id TEXT PRIMARY KEY, user_id TEXT NOT NULL RE
 CREATE TABLE IF NOT EXISTS payment_events (provider TEXT NOT NULL, event_id TEXT NOT NULL, payload_digest TEXT NOT NULL, order_id TEXT, kind TEXT NOT NULL, received_at TEXT NOT NULL, PRIMARY KEY(provider,event_id)) STRICT;
 CREATE TABLE IF NOT EXISTS reversals (source TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), requested INTEGER NOT NULL CHECK(requested > 0), recovered INTEGER NOT NULL CHECK(recovered >= 0), deficit INTEGER NOT NULL CHECK(deficit >= 0), created_at TEXT NOT NULL, CHECK(requested = recovered + deficit)) STRICT;
 CREATE TABLE IF NOT EXISTS paid_operations (payment_id TEXT PRIMARY KEY, operation_id TEXT NOT NULL, settled_at TEXT NOT NULL) STRICT;
+CREATE TABLE IF NOT EXISTS report_receipts (user_id TEXT NOT NULL REFERENCES users(id), request_id TEXT NOT NULL, operation_id TEXT NOT NULL, input_digest TEXT NOT NULL, credits INTEGER NOT NULL CHECK(credits > 0), created_at TEXT NOT NULL, PRIMARY KEY(user_id,request_id)) STRICT;
 CREATE INDEX IF NOT EXISTS ledger_user_idx ON ledger(user_id, created_at);
 CREATE INDEX IF NOT EXISTS orders_user_idx ON orders(user_id);

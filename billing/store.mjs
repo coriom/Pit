@@ -69,6 +69,24 @@ export class BillingStore {
     assert(op?.enabled, 'premium operation unavailable');
     return this.debit(userId, op.credits, source, now);
   }
+  chargeLocalReport(userId, operationId, requestId, inputDigest, now) {
+    const op = PREMIUM_OPERATIONS[operationId];
+    assert(op?.localTest === true && op.enabled === false && ident(userId) && ident(requestId) && /^[a-f0-9]{64}$/.test(inputDigest) && iso(now), 'invalid local report request');
+    return this.tx(() => {
+      const prior = this.row('SELECT user_id,operation_id,input_digest,credits FROM report_receipts WHERE user_id=? AND request_id=?', userId, requestId);
+      if (prior) {
+        assert(prior.operation_id === operationId && prior.input_digest === inputDigest, 'report idempotency collision');
+        const wallet = this.row('SELECT frozen,unrecovered FROM wallets WHERE user_id=?', userId);
+        assert(wallet && !wallet.frozen && !wallet.unrecovered, 'frozen balance');
+        return { charged: false, credits: prior.credits };
+      }
+      const update = this.run('UPDATE wallets SET credits=credits-? WHERE user_id=? AND frozen=0 AND unrecovered=0 AND credits>=?', op.credits, userId, op.credits);
+      assert(update.changes === 1, 'insufficient or frozen balance');
+      this.run('INSERT INTO ledger VALUES (?,?,?,?,?,?)', `report:${userId}:${requestId}`, userId, -op.credits, 'premium-report', `report:${userId}:${requestId}`, now);
+      this.run('INSERT INTO report_receipts VALUES (?,?,?,?,?,?)', userId, requestId, operationId, inputDigest, op.credits, now);
+      return { charged: true, credits: op.credits };
+    });
+  }
   #reverse(userId, amount, source, now) {
     assert(Number.isSafeInteger(amount) && amount > 0 && ident(source) && iso(now), 'invalid reversal');
     const wallet = this.row('SELECT credits FROM wallets WHERE user_id=?', userId);

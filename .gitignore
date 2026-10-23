@@ -10,6 +10,7 @@ dist-local-toolbox-cloudflare/
 dist-local-toolbox-cloudflare-public/
 dist-read-only-explorer/
 dist-read-only-explorer-host/
+dist-premium-local/
 .astro/
 .env*
 !.env.example

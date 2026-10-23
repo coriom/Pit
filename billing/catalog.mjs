@@ -9,6 +9,8 @@ export const CATALOG = Object.freeze({
 
 // Future operations are deliberately disabled: current 178 tasks stay free.
 export const PREMIUM_OPERATIONS = Object.freeze({
+  'portfolio-batch-risk': Object.freeze({ credits: 10, enabled: false, localTest: true }),
+  'trading-journal-advanced': Object.freeze({ credits: 10, enabled: false, localTest: true }),
   'future-batch-report': Object.freeze({ credits: 10, enabled: false }),
   'future-ai-analysis': Object.freeze({ credits: 25, enabled: false }),
   'future-enhanced-export': Object.freeze({ credits: 3, enabled: false }),
