@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, created_at TEXT NOT NULL) STRICT;
+CREATE TABLE IF NOT EXISTS wallets (user_id TEXT PRIMARY KEY REFERENCES users(id), credits INTEGER NOT NULL DEFAULT 0 CHECK(credits >= 0), frozen INTEGER NOT NULL DEFAULT 0 CHECK(frozen IN (0,1)), unrecovered INTEGER NOT NULL DEFAULT 0 CHECK(unrecovered >= 0)) STRICT;
+CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), sku TEXT NOT NULL, cents INTEGER NOT NULL CHECK(cents > 0), credits INTEGER NOT NULL CHECK(credits > 0), status TEXT NOT NULL CHECK(status IN ('pending','paid','refunded','expired')), expires_at TEXT NOT NULL, paid_at TEXT, provider TEXT, provider_payment_id TEXT UNIQUE) STRICT;
+CREATE TABLE IF NOT EXISTS subscriptions (user_id TEXT PRIMARY KEY REFERENCES users(id), status TEXT NOT NULL CHECK(status IN ('inactive','active','past_due','canceled','expired')), period_start TEXT, period_end TEXT, cancel_at_period_end INTEGER NOT NULL DEFAULT 0 CHECK(cancel_at_period_end IN (0,1))) STRICT;
+CREATE TABLE IF NOT EXISTS ledger (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), delta INTEGER NOT NULL CHECK(delta != 0), kind TEXT NOT NULL, source TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL) STRICT;
+CREATE TABLE IF NOT EXISTS payment_events (provider TEXT NOT NULL, event_id TEXT NOT NULL, payload_digest TEXT NOT NULL, order_id TEXT, kind TEXT NOT NULL, received_at TEXT NOT NULL, PRIMARY KEY(provider,event_id)) STRICT;
+CREATE TABLE IF NOT EXISTS reversals (source TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), requested INTEGER NOT NULL CHECK(requested > 0), recovered INTEGER NOT NULL CHECK(recovered >= 0), deficit INTEGER NOT NULL CHECK(deficit >= 0), created_at TEXT NOT NULL, CHECK(requested = recovered + deficit)) STRICT;
+CREATE TABLE IF NOT EXISTS paid_operations (payment_id TEXT PRIMARY KEY, operation_id TEXT NOT NULL, settled_at TEXT NOT NULL) STRICT;
+CREATE INDEX IF NOT EXISTS ledger_user_idx ON ledger(user_id, created_at);
+CREATE INDEX IF NOT EXISTS orders_user_idx ON orders(user_id);

@@ -13,6 +13,8 @@
     "toolbox:cloudflare:check": "pnpm toolbox:check && node scripts/release/local-toolbox-cloudflare.mjs",
     "toolbox:cloudflare:public:check": "pnpm toolbox:public:check && PIT_TOOLBOX_BUILD_MODE=public node scripts/release/local-toolbox-cloudflare.mjs --public",
     "explorer:check": "astro build --config astro.explorer.config.mjs && node scripts/release/read-only-explorer-host.mjs",
+    "billing:test": "node billing/billing.test.mjs",
+    "billing:demo": "node billing/demo.mjs",
     "check": "astro check",
     "test": "vitest run",
     "test:e2e": "playwright test",
