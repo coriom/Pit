@@ -34,7 +34,10 @@ const digest = async (value:string) => Array.from(new Uint8Array(await crypto.su
 
 // Only the production entrypoint may supply a user ID, after Better Auth getSession.
 // Local tests use a separate, never-deployed entrypoint; no request field selects identity here.
-export async function route(request:Request, env:PremiumEnv, verifiedUserId:string|null):Promise<Response> {
+export type RouteProfile = (stage:string, elapsedMs:number) => void;
+export async function route(request:Request, env:PremiumEnv, verifiedUserId:string|null, profile?:RouteProfile):Promise<Response> {
+  let started=profile ? performance.now() : 0;
+  const stage=(name:string)=>{if(profile){const now=performance.now();profile(name,now-started);started=now;}};
   try {
     const path=new URL(request.url).pathname;
     if (!allowedOrigin(request,env)) return errorResponse(403,'Origin denied.');
@@ -52,21 +55,33 @@ export async function route(request:Request, env:PremiumEnv, verifiedUserId:stri
     if (request.headers.get('Origin')!==env.PUBLIC_ORIGIN) return errorResponse(403,'Origin required.');
     if (env.PREMIUM_REPORTS_ENABLED!=='true') return errorResponse(503,'Premium reports disabled.');
     await db.ensureAccount(verifiedUserId);
+    stage('d1-ensure-account');
     await db.limitReport(verifiedUserId,Date.now());
+    stage('d1-rate-limit');
     const payload=await boundedJson(request);
     if (!payload || typeof payload!=='object' || Array.isArray(payload)) throw new BillingError(400,'Report request must be an object.');
     const record=payload as Record<string,unknown>;
     if (Object.keys(record).some(x=>!['requestId','input'].includes(x)) || typeof record.requestId!=='string' || !/^[A-Za-z0-9_-]{1,80}$/.test(record.requestId)) throw new BillingError(400,'Invalid report request.');
+    stage('request-read-parse-validation');
     const operationId=match[1] as keyof typeof operations;
     const input=record.input;
     const inputDigest=await digest(JSON.stringify([operationId,input]));
+    stage('input-digest');
     let bundle;
     try { bundle=operations[operationId](input); }
     catch { throw new BillingError(400,'Report input is invalid or unsupported.'); }
+    stage('report-calculation-csv');
     const serialized=JSON.stringify(bundle);
     if (new TextEncoder().encode(serialized).byteLength>MAX_OUTPUT) throw new BillingError(413,'Report output exceeds 256 KiB.');
+    stage('report-json-output');
     const receipt=await db.debitReport(verifiedUserId,operationId,record.requestId,inputDigest,10,new Date().toISOString());
-    return respond({...JSON.parse(serialized),receipt,entitlement:await db.account(verifiedUserId,new Date().toISOString())});
+    stage('d1-atomic-debit');
+    const entitlement=await db.account(verifiedUserId,new Date().toISOString());
+    stage('d1-entitlement-read');
+    // The bounded bundle was just serialized successfully; avoid parsing it again.
+    const response=respond({...bundle,receipt,entitlement});
+    stage('response-json-output');
+    return response;
   } catch (error) {
     if (error instanceof BillingError) return errorResponse(error.status,error.message);
     return errorResponse(503,'Premium service unavailable.');

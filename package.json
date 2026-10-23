@@ -22,6 +22,7 @@
     "premium:worker:build": "node premium-worker/build.mjs",
     "premium:worker:test": "pnpm premium:worker:build && node --test premium-worker/test.mjs",
     "premium:worker:benchmark": "pnpm premium:worker:build && node premium-worker/benchmark.mjs",
+    "premium:worker:perf:test": "pnpm premium:worker:build && node premium-worker/benchmark.mjs --assert",
     "check": "astro check",
     "test": "vitest run",
     "test:e2e": "playwright test",

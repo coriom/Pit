@@ -1,6 +1,5 @@
 /** Server-only premium reports. No browser import, wallet, RPC or persistence. */
 import { runBc } from "../src/lib/bc-statistics";
-import { runBj } from "../src/lib/bj-derivatives";
 import { calculatePerformance, type PerformanceSnapshotInput } from "../src/lib/performance-drawdown";
 import { parseCsv, spreadsheetCell } from "../src/lib/crypto-data-workshop";
 
@@ -10,6 +9,13 @@ const PCT = 10_000n;
 const MAX_AMOUNT = 10n ** 22n;
 type JsonObject = Record<string, unknown>;
 type ReportBundle = { report: JsonObject; csv: string };
+export type ReportProfile = (stage: string, elapsedMs: number) => void;
+function stages(profile?: ReportProfile) {
+  let started = profile ? performance.now() : 0;
+  return (name: string) => {
+    if (profile) { const now = performance.now(); profile(name, now - started); started = now; }
+  };
+}
 
 function fail(message: string): never { throw new Error(message); }
 function object(value: unknown, fields: readonly string[], name: string): JsonObject {
@@ -50,14 +56,21 @@ function round(n: bigint, d: bigint): bigint {
   return n < 0n ? -((-n + d / 2n) / d) : (n + d / 2n) / d;
 }
 function csv(rows: readonly (readonly string[])[], spreadsheetSafe = true): string {
-  return rows.map(row => row.map(cell => `"${(spreadsheetSafe ? spreadsheetCell(cell) : cell).replace(/"/g, '""')}"`).join(",")).join("\r\n") + "\r\n";
+  const lines: string[] = [];
+  for (const row of rows) {
+    const cells: string[] = [];
+    for (const cell of row) cells.push(`"${(spreadsheetSafe ? spreadsheetCell(cell) : cell).replace(/"/g, '""')}"`);
+    lines.push(cells.join(","));
+  }
+  return `${lines.join("\r\n")}\r\n`;
 }
 function integer(value: unknown, name: string, min: number, max: number): number {
   if (!Number.isSafeInteger(value) || (value as number) < min || (value as number) > max) fail(`${name} must be an integer from ${min} to ${max}.`);
   return value as number;
 }
 
-export function portfolioBatchRisk(input: unknown): ReportBundle {
+export function portfolioBatchRisk(input: unknown, profile?: ReportProfile): ReportBundle {
+  const stage = stages(profile);
   const root = object(input, ["currency", "periodsPerYear", "dates", "assets", "snapshots"], "Portfolio report input");
   const currency = text(root.currency, "Manual quote currency", /^[A-Z]{3}$/, 3);
   const frequency = integer(root.periodsPerYear, "Periods per year", 1, 365);
@@ -81,6 +94,7 @@ export function portfolioBatchRisk(input: unknown): ReportBundle {
     return { id, label, value, returns, shock };
   });
   const total = assets.reduce((sum, a) => sum + a.value, 0n);
+  stage("input-validation");
   if (total > MAX_AMOUNT) fail("Portfolio total exceeds the supported bound.");
   const shocked = assets.map(a => ({ ...a, projected: round(a.value * (100n * PCT + a.shock), 100n * PCT) }));
   const projectedTotal = shocked.reduce((sum, a) => sum + a.projected, 0n);
@@ -90,12 +104,14 @@ export function portfolioBatchRisk(input: unknown): ReportBundle {
   const hhi = round(assets.reduce((sum, a) => sum + a.value * a.value, 0n) * 10000n, total * total);
   const portfolioReturns = dates.map((_, j) => fmt(round(assets.reduce((sum, a) => sum + a.value * a.returns[j]!, 0n), total), 4));
   const volatility = runBc("realized-volatility", { returns: portfolioReturns.join(","), periodsPerYear: String(frequency), method: "simple" });
+  stage("allocation-volatility");
   const warnings: string[] = ["All values, return observations and shocks are manually supplied; labels are not verified asset identities."];
   const correlations: { left: string; right: string; correlation: string | null }[] = [];
+  const returnSeries = assets.map(a => a.returns.map(r => fmt(r, 4)).join(","));
   for (let i = 0; i < assets.length; i++) for (let j = i + 1; j < assets.length; j++) {
     let correlation: string | null = null;
     try {
-      const result = runBc("correlation-beta", { assetReturns: assets[i]!.returns.map(r => fmt(r, 4)).join(","), benchmarkReturns: assets[j]!.returns.map(r => fmt(r, 4)).join(",") });
+      const result = runBc("correlation-beta", { assetReturns: returnSeries[i]!, benchmarkReturns: returnSeries[j]! });
       correlation = result.fields["Pearson correlation"] ?? null;
     } catch (error) {
       if (!(error instanceof Error) || !error.message.includes("constant series")) throw error;
@@ -103,6 +119,7 @@ export function portfolioBatchRisk(input: unknown): ReportBundle {
     }
     correlations.push({ left: assets[i]!.id, right: assets[j]!.id, correlation });
   }
+  stage("correlations");
   let history: JsonObject | null = null;
   if (root.snapshots !== undefined) {
     const snapshots = list(root.snapshots, "Historical snapshots", 2, 30).map((v, i) => {
@@ -114,18 +131,23 @@ export function portfolioBatchRisk(input: unknown): ReportBundle {
     if (result.status !== "complete") warnings.push(...result.reasons);
     warnings.push("Historical balances and per-asset returns are separate supplied series; consistency is not inferred.");
   } else warnings.push("No dated portfolio balances: cash-flow-adjusted TWR and drawdown are unavailable.");
+  stage("history");
   if (dates.length < 30) warnings.push("Short return sample: volatility and correlations are unstable.");
   const report = { version: REPORT_VERSION, operation: "portfolio-batch-risk", currency, coverage: { assets: assets.length, alignedPeriods: dates.length, historicalSnapshots: root.snapshots ? (root.snapshots as unknown[]).length : 0 }, allocation: { total: fmt(total), largestAssetId: top.id, largestWeightPct: fmt(round(top.value * 100n * PCT, total), 4), hhi: hhi.toString(), assets: rows }, risk: { annualizedVolatilityPct: volatility.fields["Annualized realized volatility (%)"], periodVolatilityPct: volatility.fields["Sample period volatility (%)"], fixedWeightPortfolioReturnsPct: portfolioReturns, correlations }, stress: { projectedTotal: fmt(projectedTotal), change: fmt(projectedTotal - total), changePct: fmt(round((projectedTotal - total) * 100n * PCT, total), 4) }, history, warnings, assumptions: ["One manual quote currency; valuations are not verified prices.", "Fixed starting weights combine synchronized simple period returns; no rebalancing or compounding of holdings is inferred.", "Shocks apply independently to each starting value; no probability, fee or trade recommendation.", "Sample volatility uses the existing statistical estimator and square-root-of-time annualization."] } satisfies JsonObject;
-  return { report, csv: csv([["assetId", "label", `value_${currency}`, "weightPct", "shockPct", `projectedValue_${currency}`, "projectedWeightPct"], ...rows.map(r => [r.id, r.label, r.value, r.weightPct, r.shockPct, r.projectedValue, r.projectedWeightPct ?? "undefined"])]) };
+  const result = { report, csv: csv([["assetId", "label", `value_${currency}`, "weightPct", "shockPct", `projectedValue_${currency}`, "projectedWeightPct"], ...rows.map(r => [r.id, r.label, r.value, r.weightPct, r.shockPct, r.projectedValue, r.projectedWeightPct ?? "undefined"])]) };
+  stage("output-csv");
+  return result;
 }
 
-export function advancedTradingJournal(input: unknown): ReportBundle {
+export function advancedTradingJournal(input: unknown, profile?: ReportProfile): ReportBundle {
+  const stage = stages(profile);
   const root = object(input, ["currency", "startingCapital", "tradesCsv"], "Trading journal input");
   const currency = text(root.currency, "Manual quote currency", /^[A-Z]{3}$/, 3);
   const startingCapital = raw(root.startingCapital, "Starting capital");
   if (startingCapital <= 0n) fail("Starting capital must be positive for drawdown.");
   const source = text(root.tradesCsv, "Trade CSV", /^[\s\S]+$/, 65536);
   const parsed = parseCsv(source, ",", true);
+  stage("input-csv-parse");
   if (parsed.issues.length || parsed.rows.length < 2 || parsed.rows.length > 500 || parsed.header.join(",") !== "id,date,strategy,grossPnl,fees,initialRisk") fail("Use 2–500 complete rows with header id,date,strategy,grossPnl,fees,initialRisk.");
   const ids = new Set<string>(); let previous = "", equity = startingCapital, peak = startingCapital, maxDrawdown = 0n;
   let gross = 0n, fees = 0n, net = 0n, wins = 0, losses = 0, breakeven = 0;
@@ -155,14 +177,19 @@ export function advancedTradingJournal(input: unknown): ReportBundle {
     group.count++; if (outcome > 0n) group.wins++; group.net += outcome; strategies.set(strategy, group);
     prepared.push({ id, date: at, strategy, gross: gain, fee, risk, net: outcome, equity });
   }
+  stage("row-validation-calculation");
   if (gross > MAX_AMOUNT || gross < -MAX_AMOUNT || fees > MAX_AMOUNT || net > MAX_AMOUNT || net < -MAX_AMOUNT) fail("Journal totals exceed the supported bound.");
-  const freeCsv = csv([["id", "grossPnl", "fees"], ...prepared.map(t => [t.id, fmt(t.gross), fmt(t.fee)])], false);
-  const free = runBj("trading-journal", { trades: freeCsv });
-  if (free.fields["Net PnL"] !== fmt(net)) fail("Existing journal engine parity check failed.");
+  // Same eight-place, truncating positive ratio as the free journal engine.
+  // Golden parity is checked in tests, avoiding a second 500-row CSV parse per request.
+  const profitFactor = grossLosses ? fmt(grossWins * MONEY / grossLosses) : "undefined without losses";
+  stage("journal-aggregate");
   const warnings = ["Closed trades only; no deposits, open positions, tax lots or causality inference."];
   if (riskCount < prepared.length) warnings.push(`${prepared.length - riskCount} trade(s) lack stated initial risk; R-multiple coverage is partial.`);
   if (prepared.length < 30) warnings.push("Small journal sample: outcome frequencies are unstable.");
   const byStrategy = [...strategies.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([strategy, s]) => ({ strategy, trades: s.count, wins: s.wins, netPnl: fmt(s.net), winRatePct: fmt(round(BigInt(s.wins) * 100n * PCT, BigInt(s.count)), 4) }));
-  const report = { version: REPORT_VERSION, operation: "trading-journal-advanced", currency, coverage: { trades: prepared.length, riskObservedTrades: riskCount, strategies: strategies.size }, summary: { startingCapital: fmt(startingCapital), endingModeledEquity: fmt(equity), grossPnl: fmt(gross), totalFees: fmt(fees), netPnl: fmt(net), wins, losses, breakeven, winRatePct: fmt(round(BigInt(wins) * 100n * PCT, BigInt(prepared.length)), 4), profitFactor: free.fields["Profit factor"], maximumDrawdownPct: fmt(maxDrawdown, 4), meanRealizedR: riskCount ? fmt(round(sumR, BigInt(riskCount))) : null, averageWin: wins ? fmt(round(grossWins, BigInt(wins))) : null, averageLoss: losses ? fmt(round(grossLosses, BigInt(losses))) : null }, byStrategy, warnings, assumptions: ["Rows are ordered closed trades in one manual quote currency.", "Equity starts at the supplied capital, changes only by net closed-trade PnL and excludes external cash flows.", "Drawdown is relative to the running modeled equity peak; fees are deducted once.", "Realized R uses supplied initial risk; missing risk is not replaced with zero."] } satisfies JsonObject;
-  return { report, csv: csv([["tradeId", "date", "strategy", `grossPnl_${currency}`, `fee_${currency}`, `netPnl_${currency}`, `initialRisk_${currency}`, `modeledEquity_${currency}`], ...prepared.map(t => [t.id, t.date, t.strategy, fmt(t.gross), fmt(t.fee), fmt(t.net), t.risk === null ? "" : fmt(t.risk), fmt(t.equity)])]) };
+  const report = { version: REPORT_VERSION, operation: "trading-journal-advanced", currency, coverage: { trades: prepared.length, riskObservedTrades: riskCount, strategies: strategies.size }, summary: { startingCapital: fmt(startingCapital), endingModeledEquity: fmt(equity), grossPnl: fmt(gross), totalFees: fmt(fees), netPnl: fmt(net), wins, losses, breakeven, winRatePct: fmt(round(BigInt(wins) * 100n * PCT, BigInt(prepared.length)), 4), profitFactor, maximumDrawdownPct: fmt(maxDrawdown, 4), meanRealizedR: riskCount ? fmt(round(sumR, BigInt(riskCount))) : null, averageWin: wins ? fmt(round(grossWins, BigInt(wins))) : null, averageLoss: losses ? fmt(round(grossLosses, BigInt(losses))) : null }, byStrategy, warnings, assumptions: ["Rows are ordered closed trades in one manual quote currency.", "Equity starts at the supplied capital, changes only by net closed-trade PnL and excludes external cash flows.", "Drawdown is relative to the running modeled equity peak; fees are deducted once.", "Realized R uses supplied initial risk; missing risk is not replaced with zero."] } satisfies JsonObject;
+  stage("report-assembly");
+  const result = { report, csv: csv([["tradeId", "date", "strategy", `grossPnl_${currency}`, `fee_${currency}`, `netPnl_${currency}`, `initialRisk_${currency}`, `modeledEquity_${currency}`], ...prepared.map(t => [t.id, t.date, t.strategy, fmt(t.gross), fmt(t.fee), fmt(t.net), t.risk === null ? "" : fmt(t.risk), fmt(t.equity)])]) };
+  stage("output-csv");
+  return result;
 }

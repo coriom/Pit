@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { advancedTradingJournal, portfolioBatchRisk } from "../premium/reports";
 import { journalExample, portfolioExample } from "../premium/examples.mjs";
+import { runBj } from "../src/lib/bj-derivatives";
 
 describe("premium report references", () => {
   it("combines independently known allocation, stress, flow-neutral history and sample volatility", () => {
@@ -33,12 +34,23 @@ describe("premium report references", () => {
     expect(summary).toMatchObject({ grossPnl: "60", totalFees: "25", netPnl: "35", endingModeledEquity: "1035", wins: 2, losses: 2, winRatePct: "50" });
     expect(Number(summary.maximumDrawdownPct)).toBeCloseTo(-85 / 1110 * 100, 3);
     expect(Number(summary.meanRealizedR)).toBeCloseTo((2.2 - 2.125 + 55 / 30) / 3, 6);
+    expect(summary.profitFactor).toBe("1.26923076"); // 165 / 130, truncated to eight places.
     expect(report.byStrategy).toEqual([
       { strategy: "MeanRevert", trades: 2, wins: 0, netPnl: "-130", winRatePct: "0" },
       { strategy: "Momentum", trades: 2, wins: 2, netPnl: "165", winRatePct: "100" },
     ]);
     expect(csv).toContain("'-80"); // spreadsheet-safe, unlike exact JSON
     expect(JSON.stringify(report)).toContain("riskObservedTrades");
+  });
+  it("keeps the free journal's profit-factor semantics without reparsing 500 rows", () => {
+    const rows = Array.from({ length: 500 }, (_, i) => `T${i},2026-01-01,Test,${i % 3 === 0 ? "-15" : "12"},1,10`);
+    const tradesCsv = `id,date,strategy,grossPnl,fees,initialRisk\n${rows.join("\n")}`;
+    const report = advancedTradingJournal({ currency: "USD", startingCapital: "100000", tradesCsv }).report;
+    const freeCsv = `id,grossPnl,fees\n${rows.map(row => { const [id, , , pnl, fee] = row.split(","); return `${id},${pnl},${fee}`; }).join("\n")}`;
+    const free = runBj("trading-journal", { trades: freeCsv });
+    expect((report.summary as Record<string, unknown>).profitFactor).toBe(free.fields["Profit factor"]);
+    expect((report.summary as Record<string, unknown>).netPnl).toBe(free.fields["Net PnL"]);
+    expect(report.coverage).toMatchObject({ trades: 500 });
   });
   it("rejects malformed CSV, duplicate IDs, negative equity and protects missing risk", () => {
     expect(() => advancedTradingJournal({ ...journalExample, tradesCsv: journalExample.tradesCsv.replace("D,", "A,") })).toThrow(/unique/);
