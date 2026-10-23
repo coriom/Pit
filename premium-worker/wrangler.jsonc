@@ -1,0 +1,9 @@
+{
+  // Intentionally undeployable until a reviewed D1 database and OAuth client exist.
+  "name": "pit-premium-disabled",
+  "main": "../dist-premium-worker/worker.mjs",
+  "compatibility_date": "2026-08-06",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": { "PREMIUM_REPORTS_ENABLED": "false" },
+  "d1_databases": [{ "binding": "DB", "database_name": "REPLACE_WITH_REVIEWED_D1", "database_id": "REPLACE_WITH_REVIEWED_D1_ID" }]
+}
