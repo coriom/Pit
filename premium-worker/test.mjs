@@ -2,10 +2,23 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { Miniflare } from 'miniflare';
+import { createSiweMessage } from 'viem/siwe';
+import { privateKeyToAccount } from 'viem/accounts';
 import { portfolioExample, journalExample } from '../premium/examples.mjs';
 
 const origin='https://premium.example.test', now='2026-10-23T00:00:00.000Z';
-const settings={modules:true,compatibilityDate:'2026-08-06',compatibilityFlags:['nodejs_compat'],d1Databases:{DB:'12345678-1234-1234-1234-123456789012'},bindings:{PUBLIC_ORIGIN:origin,PREMIUM_REPORTS_ENABLED:'true',BETTER_AUTH_SECRET:'0123456789abcdef0123456789abcdef0123456789abcdef',GOOGLE_CLIENT_ID:'local-fixture-client',GOOGLE_CLIENT_SECRET:'local-fixture-secret'}};
+const settings={modules:true,compatibilityDate:'2026-08-06',compatibilityFlags:['nodejs_compat'],d1Databases:{DB:'12345678-1234-1234-1234-123456789012'},bindings:{PUBLIC_ORIGIN:origin,PREMIUM_REPORTS_ENABLED:'true',BETTER_AUTH_SECRET:'0123456789abcdef0123456789abcdef0123456789abcdef'}};
+const wallet1=privateKeyToAccount(`0x${'11'.repeat(32)}`),wallet2=privateKeyToAccount(`0x${'22'.repeat(32)}`);
+async function walletLogin(mf,wallet=wallet1,overrides={}) {
+  const nonceResponse=await mf.dispatchFetch(`${origin}/api/auth/siwe/nonce`,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json','CF-Connecting-IP':'192.0.2.10'},body:'{}'});
+  assert.equal(nonceResponse.status,200,await nonceResponse.clone().text());
+  const nonce=(await nonceResponse.json()).nonce;
+  const message=createSiweMessage({domain:overrides.domain??new URL(origin).host,address:wallet.address,uri:overrides.uri??`${origin}/`,version:'1',chainId:overrides.chainId??8453,nonce,issuedAt:overrides.issuedAt??new Date(),expirationTime:overrides.expirationTime??new Date(Date.now()+240000)});
+  const signature=await wallet.signMessage({message});
+  const verify=()=>mf.dispatchFetch(`${origin}/api/auth/siwe/verify`,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json','CF-Connecting-IP':'192.0.2.10'},body:JSON.stringify({message,signature})});
+  const response=await verify();
+  return {response,nonce,message,signature,verify,cookie:response.headers.getSetCookie().find(x=>x.startsWith('__Secure-better-auth.session_token='))?.split(';')[0]};
+}
 async function fixture(bindings={}) {
   const mf=new Miniflare({...settings,bindings:{...settings.bindings,...bindings},scriptPath:'dist-premium-worker-test/worker.mjs'});
   const call=async(path,body,headers={}) => {
@@ -13,7 +26,7 @@ async function fixture(bindings={}) {
     const text=await response.text(); let data; try { data=JSON.parse(text); } catch { data={raw:text}; }
     return {status:response.status,data};
   };
-  for(const name of ['0000_auth.sql','0001_billing.sql']) {
+  for(const name of ['0000_auth.sql','0001_billing.sql','0002_wallet_siwe.sql']) {
     const sql=readFileSync(new URL(`./migrations/${name}`,import.meta.url),'utf8').replace(/^--.*$/gm,'');
     const response=await call('/__test/sql',{sql,mode:'exec'});
     assert.equal(response.status,200,`migration ${name}: ${JSON.stringify(response.data)}`);
@@ -22,7 +35,7 @@ async function fixture(bindings={}) {
     const response=await call('/__test/sql',{sql:'INSERT INTO user(id,name,email,emailVerified,createdAt,updatedAt) VALUES (?,?,?,?,?,?)',bindings:[id,id,`${id}@example.test`,1,0,0]});
     assert.equal(response.status,200);
   }
-  return {mf,call,async paid(credits=50,userId='alice',eventId='paid1') { return call('/__test/payment',{action:'paid',event:{provider:'stripe-test',eventId,digest:'a'.repeat(64),userId,credits,kind:'pack-paid'},now}); }};
+  return {mf,call,async paid(credits=50,userId='alice',eventId='paid1') { return call('/__test/payment',{action:'paid',event:{provider:'crypto-fixture',eventId,digest:'a'.repeat(64),userId,credits,kind:'pack-paid'},now}); }};
 }
 const report=(requestId,input=portfolioExample,operation='portfolio-batch-risk')=>({path:`/v1/reports/${operation}`,body:{requestId,input},headers:{'X-Local-Test-Identity':'alice'}});
 
@@ -36,80 +49,88 @@ test('production Worker has no fixture identity path and no credentials fail clo
   } finally { await mf.dispose(); }
 });
 
-test('Better Auth starts Google OAuth with secure state cookies; untrusted origin fails',async()=>{
-  const {mf}=await fixture();
-  try {
-    const request=(originHeader)=>mf.dispatchFetch(`${origin}/api/auth/sign-in/social`,{method:'POST',headers:{'Content-Type':'application/json',Origin:originHeader},body:JSON.stringify({provider:'google',callbackURL:origin})});
-    const good=await request(origin);
-    const body=await good.text();
-    assert.equal(good.status,200,body.slice(0,400));
-    assert.match(body,/accounts\.google\.com/);
-    assert.match(body,/code_challenge=/);
-    assert.match(good.headers.get('set-cookie')??'',/HttpOnly/i);
-    assert.match(good.headers.get('set-cookie')??'',/Secure/i);
-    const bad=await request('https://evil.example');
-    assert.ok(bad.status>=400);
-    const tooLarge=await mf.dispatchFetch(`${origin}/api/auth/sign-in/social`,{method:'POST',headers:{'Content-Type':'application/json',Origin:origin},body:'x'.repeat(16385)});
-    assert.equal(tooLarge.status,413);
-  } finally { await mf.dispose(); }
-});
-
-test('production OAuth callback creates an isolated session and logout revokes it using a mocked Google exchange',async()=>{
-  let tokenCalls=0;
-  const fakeJwt=(subject,email)=>`${Buffer.from('{"alg":"none","typ":"JWT"}').toString('base64url')}.${Buffer.from(JSON.stringify({sub:subject,email,email_verified:true,name:'Fixture Person',iss:'https://accounts.google.com',aud:'local-fixture-client',exp:Math.floor(Date.now()/1000)+3600})).toString('base64url')}.fixture`;
-  let subject='google-subject-1',email='fixture@example.test';
-  const mf=new Miniflare({...settings,scriptPath:'dist-premium-worker/worker.mjs',outboundService:request=>{
-    if (new URL(request.url).href==='https://oauth2.googleapis.com/token') {
-      tokenCalls++;
-      return Response.json({access_token:'local-only-fixture',token_type:'Bearer',expires_in:3600,id_token:fakeJwt(subject,email)});
-    }
-    throw new Error('Unexpected outbound request in OAuth fixture.');
-  }});
+test('production SIWE signs in an EOA, strips bearer token, isolates wallets, expires and logs out',async()=>{
+  const mf=new Miniflare({...settings,scriptPath:'dist-premium-worker/worker.mjs',outboundService:()=>{throw Error('No RPC or OAuth request permitted.')}});
   try {
     const db=await mf.getD1Database('DB');
-    for(const name of ['0000_auth.sql','0001_billing.sql']) await db.exec(readFileSync(new URL(`./migrations/${name}`,import.meta.url),'utf8').replace(/^--.*$/gm,''));
-    const start=async()=>{
-      const response=await mf.dispatchFetch(`${origin}/api/auth/sign-in/social`,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({provider:'google',callbackURL:origin})});
-      assert.equal(response.status,200,await response.clone().text());
-      return {url:(await response.json()).url,stateCookie:(response.headers.get('set-cookie')??'').split(';')[0]};
-    };
-    const finish=async()=>{
-      const started=await start();
-      const url=new URL(started.url);
-      const response=await mf.dispatchFetch(`${origin}/api/auth/callback/google?code=local-only&state=${encodeURIComponent(url.searchParams.get('state'))}`,{headers:{Cookie:started.stateCookie},redirect:'manual'});
-      assert.equal(response.status,302,await response.clone().text());
-      const cookies=response.headers.getSetCookie();
-      const sessionCookie=cookies.find(value=>value.startsWith('__Secure-better-auth.session_token='));
-      assert.ok(sessionCookie,`Cookie names: ${cookies.map(value=>value.split('=')[0]).join(', ')}`);
-      assert.match(sessionCookie,/HttpOnly/); assert.match(sessionCookie,/Secure/);
-      return sessionCookie.split(';')[0];
-    };
-    const cookie=await finish();
-    const account=await mf.dispatchFetch(`${origin}/v1/account`,{headers:{Cookie:cookie,Origin:origin}});
+    for(const name of ['0000_auth.sql','0001_billing.sql','0002_wallet_siwe.sql']) await db.exec(readFileSync(new URL(`./migrations/${name}`,import.meta.url),'utf8').replace(/^--.*$/gm,''));
+    const first=await walletLogin(mf);
+    assert.equal(first.response.status,200,await first.response.clone().text());
+    assert.ok(first.cookie);
+    assert.match(first.response.headers.get('set-cookie')??'',/HttpOnly;.*Secure/i);
+    assert.equal(Object.hasOwn(await first.response.json(),'token'),false);
+    assert.equal((await first.verify()).status,401);
+    const identity=await mf.dispatchFetch(`${origin}/v1/identity`,{headers:{Cookie:first.cookie}});
+    assert.equal(identity.status,200);
+    assert.equal((await identity.json()).address,wallet1.address);
+    const account=await mf.dispatchFetch(`${origin}/v1/account`,{headers:{Cookie:first.cookie}});
     assert.equal(account.status,200,await account.clone().text());
-    assert.equal((await account.json()).credits,0);
-    assert.equal(tokenCalls,1);
-    const signout=await mf.dispatchFetch(`${origin}/api/auth/sign-out`,{method:'POST',headers:{Cookie:cookie,Origin:origin,'Content-Type':'application/json'},body:'{}'});
-    assert.equal(signout.status,200,await signout.clone().text());
-    assert.equal((await mf.dispatchFetch(`${origin}/v1/account`,{headers:{Cookie:cookie,Origin:origin}})).status,401);
-    const restored=await finish();
-    assert.notEqual(restored,cookie);
-    assert.equal((await mf.dispatchFetch(`${origin}/v1/account`,{headers:{Cookie:restored,Origin:origin}})).status,200);
-    await db.prepare('UPDATE session SET expiresAt=? WHERE userId=(SELECT id FROM user WHERE email=?)').bind(0,'fixture@example.test').run();
-    assert.equal((await mf.dispatchFetch(`${origin}/v1/account`,{headers:{Cookie:restored,Origin:origin}})).status,401);
-    subject='google-subject-2';
-    const started=await start();
-    const second=new URL(started.url);
-    const collision=await mf.dispatchFetch(`${origin}/api/auth/callback/google?code=local-only&state=${encodeURIComponent(second.searchParams.get('state'))}`,{headers:{Cookie:started.stateCookie},redirect:'manual'});
-    assert.equal(collision.status,302);
-    assert.doesNotMatch(collision.headers.get('set-cookie')??'',/__Secure-better-auth\.session_token=/);
-    const users=await db.prepare('SELECT COUNT(*) AS n FROM user').first();
-    assert.equal(users.n,1);
-    email='second@example.test';
-    const secondCookie=await finish();
-    const secondAccount=await mf.dispatchFetch(`${origin}/v1/account`,{headers:{Cookie:secondCookie,Origin:origin}});
-    assert.equal(secondAccount.status,200);
-    assert.notEqual((await secondAccount.json()).userId,(await db.prepare('SELECT id FROM user WHERE email=?').bind('fixture@example.test').first()).id);
+    const firstId=(await account.json()).userId;
+    const user=await db.prepare('SELECT email,emailVerified FROM user WHERE id=?').bind(firstId).first();
+    assert.match(user.email,/\.invalid$/);
+    assert.equal(user.emailVerified,0);
+    await db.prepare('UPDATE billing_wallets SET credits=50 WHERE user_id=?').bind(firstId).run();
+    const second=await walletLogin(mf,wallet2);
+    assert.equal(second.response.status,200,await second.response.clone().text());
+    const secondAccount=await mf.dispatchFetch(`${origin}/v1/account`,{headers:{Cookie:second.cookie}});
+    const secondState=await secondAccount.json();
+    assert.equal(secondState.credits,0);
+    assert.notEqual(secondState.userId,firstId);
+    await db.prepare('DELETE FROM walletAddress WHERE userId=?').bind(secondState.userId).run();
+    assert.equal((await mf.dispatchFetch(`${origin}/v1/account`,{headers:{Cookie:second.cookie}})).status,401);
+    const logout=await mf.dispatchFetch(`${origin}/api/auth/sign-out`,{method:'POST',headers:{Cookie:first.cookie,Origin:origin,'Content-Type':'application/json'},body:'{}'});
+    assert.equal(logout.status,200,await logout.clone().text());
+    assert.equal((await mf.dispatchFetch(`${origin}/v1/account`,{headers:{Cookie:first.cookie}})).status,401);
+    const again=await walletLogin(mf);
+    assert.equal(again.response.status,200);
+    assert.equal((await (await mf.dispatchFetch(`${origin}/v1/account`,{headers:{Cookie:again.cookie}})).json()).credits,50);
+    await db.prepare('UPDATE session SET expiresAt=0 WHERE userId=?').bind(firstId).run();
+    assert.equal((await mf.dispatchFetch(`${origin}/v1/account`,{headers:{Cookie:again.cookie}})).status,401);
+    assert.equal((await mf.dispatchFetch(`${origin}/api/auth/sign-in/social`,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:'{}'})).status,404);
+  } finally {await mf.dispose();}
+});
+
+test('SIWE rejects wrong signer, URI, domain, chain, stale time and cross-origin requests',async()=>{
+  const mf=new Miniflare({...settings,scriptPath:'dist-premium-worker/worker.mjs',outboundService:()=>{throw Error('No external request permitted.')}});
+  try {
+    const db=await mf.getD1Database('DB');
+    for(const name of ['0000_auth.sql','0001_billing.sql','0002_wallet_siwe.sql']) await db.exec(readFileSync(new URL(`./migrations/${name}`,import.meta.url),'utf8').replace(/^--.*$/gm,''));
+    for(const invalid of [{domain:'evil.example.test'},{uri:'https://evil.example.test/'},{chainId:1},{issuedAt:new Date(Date.now()-600000),expirationTime:new Date(Date.now()+10000)},{expirationTime:new Date(Date.now()-1000)}]) {
+      const attempt=await walletLogin(mf,wallet1,invalid);
+      assert.equal(attempt.response.status,401,JSON.stringify(invalid));
+    }
+    const nonceResponse=await mf.dispatchFetch(`${origin}/api/auth/siwe/nonce`,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json','CF-Connecting-IP':'192.0.2.10'},body:'{}'});
+    const {nonce}=await nonceResponse.json();
+    const message=createSiweMessage({domain:new URL(origin).host,address:wallet1.address,uri:`${origin}/`,version:'1',chainId:8453,nonce,issuedAt:new Date(),expirationTime:new Date(Date.now()+240000)});
+    const wrongSignature=await wallet2.signMessage({message});
+    const rejected=await mf.dispatchFetch(`${origin}/api/auth/siwe/verify`,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json','CF-Connecting-IP':'192.0.2.10'},body:JSON.stringify({message,signature:wrongSignature})});
+    assert.equal(rejected.status,401);
+    const validSignature=await wallet1.signMessage({message});
+    const reused=await mf.dispatchFetch(`${origin}/api/auth/siwe/verify`,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json','CF-Connecting-IP':'192.0.2.10'},body:JSON.stringify({message,signature:validSignature})});
+    assert.equal(reused.status,401);
+    const unknownNonceMessage=createSiweMessage({domain:new URL(origin).host,address:wallet1.address,uri:`${origin}/`,version:'1',chainId:8453,nonce:'A1B2C3D4E5F6G7H8',issuedAt:new Date(),expirationTime:new Date(Date.now()+240000)});
+    const unknownNonceSignature=await wallet1.signMessage({message:unknownNonceMessage});
+    const unknownNonce=await mf.dispatchFetch(`${origin}/api/auth/siwe/verify`,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json','CF-Connecting-IP':'192.0.2.10'},body:JSON.stringify({message:unknownNonceMessage,signature:unknownNonceSignature})});
+    assert.equal(unknownNonce.status,401);
+    const contractSignature=await mf.dispatchFetch(`${origin}/api/auth/siwe/verify`,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json','CF-Connecting-IP':'192.0.2.10'},body:JSON.stringify({message:unknownNonceMessage,signature:'0x1626ba7e'})});
+    assert.equal(contractSignature.status,401);
+    const badOrigin=await mf.dispatchFetch(`${origin}/api/auth/siwe/nonce`,{method:'POST',headers:{Origin:'https://evil.example.test','Content-Type':'application/json'},body:'{}'});
+    assert.equal(badOrigin.status,403);
+  } finally {await mf.dispose();}
+});
+
+test('production nonce issuance is bounded by an atomic D1 rate limit',async()=>{
+  const mf=new Miniflare({...settings,scriptPath:'dist-premium-worker/worker.mjs'});
+  try {
+    const db=await mf.getD1Database('DB');
+    for(const name of ['0000_auth.sql','0001_billing.sql','0002_wallet_siwe.sql']) await db.exec(readFileSync(new URL(`./migrations/${name}`,import.meta.url),'utf8').replace(/^--.*$/gm,''));
+    const issue=()=>mf.dispatchFetch(`${origin}/api/auth/siwe/nonce`,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json','CF-Connecting-IP':'192.0.2.55'},body:'{}'});
+    for(let i=0;i<20;i++) assert.equal((await issue()).status,200);
+    assert.equal((await issue()).status,429);
+    const rows=await db.prepare('SELECT ip_digest,attempts FROM wallet_auth_rate_limits').all();
+    assert.equal(rows.results.length,1);
+    assert.equal(rows.results[0].attempts,20);
+    assert.match(rows.results[0].ip_digest,/^[a-f0-9]{64}$/);
   } finally {await mf.dispose();}
 });
 
@@ -185,7 +206,7 @@ test('verified event replay and refund freeze with deficit are atomic',async()=>
     assert.equal((await paid(20)).data.duplicate,false);
     assert.equal((await paid(20)).data.duplicate,true);
     const x=report('spent'); assert.equal((await call(x.path,x.body,x.headers)).status,200);
-    const event={provider:'stripe-test',eventId:'refund1',digest:'b'.repeat(64),referenceEventId:'paid1',userId:'alice'};
+    const event={provider:'crypto-fixture',eventId:'refund1',digest:'b'.repeat(64),referenceEventId:'paid1',userId:'alice'};
     assert.equal((await call('/__test/payment',{action:'refund',event,now})).status,200);
     const account=(await call('/v1/account',undefined,{'X-Local-Test-Identity':'alice'})).data;
     assert.equal(account.credits,0); assert.equal(account.unrecovered,10); assert.equal(account.frozen,true);
@@ -217,14 +238,14 @@ test('report rate limit is enforced before computation or debit',async()=>{
 test('out-of-order reversal blocks later credit; Pro expiration is read-only and cannot be forged',async()=>{
   const {mf,call}=await fixture();
   try {
-    const invalid={provider:'stripe-test',eventId:'invalid',digest:'a'.repeat(64),userId:'alice',credits:10,kind:'pro-paid',periodEnd:'not-a-date'};
+    const invalid={provider:'crypto-fixture',eventId:'invalid',digest:'a'.repeat(64),userId:'alice',credits:10,kind:'pro-paid',periodEnd:'not-a-date'};
     assert.equal((await call('/__test/payment',{action:'paid',event:invalid,now})).status,400);
     assert.equal((await call('/__test/payment',{action:'paid',event:{...invalid,kind:'unverified',periodEnd:'2026-11-23T00:00:00.000Z'},now})).status,400);
     assert.equal((await call('/__test/payment',{action:'paid',event:{...invalid,kind:'pack-paid',credits:1_000_000_001},now})).status,400);
-    const refund={provider:'stripe-test',eventId:'early-refund',digest:'b'.repeat(64),referenceEventId:'late-paid',userId:'alice'};
+    const refund={provider:'crypto-fixture',eventId:'early-refund',digest:'b'.repeat(64),referenceEventId:'late-paid',userId:'alice'};
     assert.equal((await call('/__test/payment',{action:'refund',event:refund,now})).data.pending,true);
     assert.equal((await call('/__test/payment',{action:'refund',event:refund,now})).data.duplicate,true);
-    const late={provider:'stripe-test',eventId:'late-paid',digest:'a'.repeat(64),userId:'alice',credits:100,kind:'pro-paid',periodEnd:'2026-11-23T00:00:00.000Z'};
+    const late={provider:'crypto-fixture',eventId:'late-paid',digest:'a'.repeat(64),userId:'alice',credits:100,kind:'pro-paid',periodEnd:'2026-11-23T00:00:00.000Z'};
     assert.equal((await call('/__test/payment',{action:'paid',event:late,now})).data.blocked,true);
     const account=(await call('/v1/account',undefined,{'X-Local-Test-Identity':'alice'})).data;
     assert.equal(account.credits,0); assert.equal(account.plan,'free');
@@ -232,14 +253,14 @@ test('out-of-order reversal blocks later credit; Pro expiration is read-only and
     assert.equal((await call('/__test/payment',{action:'paid',event:{...late,eventId:'pro2'},now})).status,200);
     const active=(await call('/v1/account',undefined,{'X-Local-Test-Identity':'alice'})).data;
     assert.equal(active.plan,'pro'); assert.equal(active.credits,100);
-    const canceled=await call('/__test/payment',{action:'subscription',event:{provider:'stripe-test',eventId:'cancel1',digest:'c'.repeat(64),userId:'alice',kind:'pro-cancel-requested',occurredAt:'2026-10-24T00:00:00.000Z'}});
+    const canceled=await call('/__test/payment',{action:'subscription',event:{provider:'crypto-fixture',eventId:'cancel1',digest:'c'.repeat(64),userId:'alice',kind:'pro-cancel-requested',occurredAt:'2026-10-24T00:00:00.000Z'}});
     assert.equal(canceled.data.applied,true);
     const canceling=(await call('/v1/account',undefined,{'X-Local-Test-Identity':'alice'})).data;
     assert.equal(canceling.plan,'pro'); assert.equal(canceling.subscription.status,'canceling');
-    const failed=await call('/__test/payment',{action:'subscription',event:{provider:'stripe-test',eventId:'fail1',digest:'d'.repeat(64),userId:'alice',kind:'pro-renewal-failed',occurredAt:'2026-10-25T00:00:00.000Z'}});
+    const failed=await call('/__test/payment',{action:'subscription',event:{provider:'crypto-fixture',eventId:'fail1',digest:'d'.repeat(64),userId:'alice',kind:'pro-renewal-failed',occurredAt:'2026-10-25T00:00:00.000Z'}});
     assert.equal(failed.data.applied,true);
     assert.equal((await call('/v1/account',undefined,{'X-Local-Test-Identity':'alice'})).data.plan,'free');
-    const lateCancel=await call('/__test/payment',{action:'subscription',event:{provider:'stripe-test',eventId:'cancel2',digest:'e'.repeat(64),userId:'alice',kind:'pro-cancel-requested',occurredAt:'2026-10-25T12:00:00.000Z'}});
+    const lateCancel=await call('/__test/payment',{action:'subscription',event:{provider:'crypto-fixture',eventId:'cancel2',digest:'e'.repeat(64),userId:'alice',kind:'pro-cancel-requested',occurredAt:'2026-10-25T12:00:00.000Z'}});
     assert.equal(lateCancel.data.applied,false);
     assert.equal((await call('/v1/account',undefined,{'X-Local-Test-Identity':'alice'})).data.plan,'free');
     await call('/__test/payment',{action:'paid',event:{...late,eventId:'late-renewal'},now:'2026-10-24T12:00:00.000Z'});

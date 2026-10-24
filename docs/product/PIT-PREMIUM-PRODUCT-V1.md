@@ -1,43 +1,48 @@
-# PIT Premium V1: local test prototype
+# PIT Premium V1: wallet-only local prototype
 
-**Status: local test only.** The 178 existing tasks (151 offline Toolbox, 27 read-only Explorer) remain free and outside billing. No premium API, checkout, identity fixture or payment bypass is included in either static package. The two reports below are real calculations behind a loopback-only Node service; neither is a public offer or deployable service.
+**Status: local test only; premium production reports and payments disabled.** The 178 existing tasks (151 offline Toolbox, 27 read-only Explorer) remain free without a wallet. Neither static package contains billing, wallet sign-in, premium reports or a payment bypass.
 
-## Value and boundaries
+## Valuable reports
 
-| Operation | Distinct user question | Inputs and outputs | Provisional debit |
+| Report | Distinct question | Bounded inputs and output | Provisional debit |
 | --- | --- | --- | --- |
-| Portfolio Batch Risk Report | How do my manually valued holdings, synchronized returns, optional cash-flow-adjusted history and chosen shocks fit together? | 2–8 holdings, 3–60 aligned return dates, optional 2–30 snapshots. Reports allocation, concentration/HHI, sample volatility, pairwise correlation, fixed-weight return series, stress change, and historical TWR/drawdown only when provided. JSON and spreadsheet-safe CSV. | 10 credits |
-| Trading Journal Advanced Report | What did my ordered closed trades earn after fees, and how did risk and strategy groups differ? | 2–500 closed trades with UTC date, strategy, gross PnL, fee and optional initial risk; starting capital. Reports gross/net PnL, fees, win/loss distribution, modeled equity drawdown, strategy groups, R-multiple coverage, JSON and spreadsheet-safe CSV. | 10 credits |
+| Portfolio Batch Risk | How do manual holdings, synchronized returns, optional cash-flow-adjusted history and a chosen shock fit together? | 2–8 holdings, 3–60 aligned dates, optional 2–30 snapshots; allocation, concentration, volatility, correlation, stress, supported TWR/drawdown, exact JSON and spreadsheet-safe CSV. | 10 credits |
+| Trading Journal Advanced | What did ordered closed trades earn after fees, and how did strategies and risk groups differ? | 2–500 trades with UTC date, strategy, gross PnL, fees and optional initial risk; net PnL, distribution, modeled drawdown, strategy groups, R coverage and exports. | 10 credits |
 
-These reports combine existing `bc-statistics`, `performance-drawdown`, `bj-derivatives` and bounded CSV parsing. They do not fetch prices, infer missing data, explain causes, predict returns or recommend trades. Manual currency labels are not verified market prices or asset identities. Portfolio return observations and historical snapshots are separate manually supplied series; the tool does not assert they reconcile. CSV exports escape spreadsheet-formula-leading cells; JSON retains exact decimal strings. Reports are bounded and generated in memory. The billing database stores only an input digest, receipt and ledger entries, not imported holdings or trades. A future hosted server would receive user financial data and needs an explicit privacy disclosure before use.
+Reports reuse the existing statistical, historical-performance and bounded CSV engines. They do not fetch prices, fill missing data, predict returns or recommend trades. The server receives user-provided financial data for in-memory processing; the D1 design stores only digests, receipts and ledger entries. A hosted service requires a truthful privacy notice before use.
 
-## Commercial contract proposed for review
+## Wallet identity
+
+- The production-oriented Worker uses pinned Better Auth 1.7.12's SIWE plugin, D1-backed single-use nonce and secure HttpOnly session cookie. PIT additionally requires the exact origin URI, Base chain ID 8453, EIP-4361 version 1, current five-minute issue/expiry window and offline EOA signature recovery. Nonce and verification requests share a D1-backed per-IP rate limit; raw IPs are not stored.
+- No Google or password provider is configured. The SIWE plugin's internally required email is an unverified `.invalid` placeholder. Email cannot authenticate, recover, receive messages or establish ownership. Automatic account linking is disabled. Premium routes additionally require a verified Base wallet association, so old non-wallet sessions cannot reach a report or balance.
+- ERC-1271 smart-contract wallets are **unsupported** until their chain-scoped signature validation and RPC boundary are separately reviewed. Losing the controlling wallet may mean losing access to the account and credits. Balances do not transfer to a merely claimed replacement address.
+- The loopback-only UI demonstrates connect, off-chain sign-in, account and ledger read, fictional credits, both reports, downloads and sign-out. Its in-process credit fixture is not part of the deployable Worker. Cloudflare Access on the existing sandbox remains a separate operator-only infrastructure gate, not PIT customer login.
+
+The additive `premium-worker/migrations/0002_wallet_siwe.sql` adds the SIWE wallet association and authentication rate-limit tables. It does not delete or reinterpret existing Better Auth users, sessions or billing ledger entries. The existing protected Cloudflare D1 still has only migrations 0000 and 0001; **0002 has not been applied remotely**.
+
+## Crypto-only commercial proposal
 
 | Offer | Provisional terms |
 | --- | --- |
-| Free | All existing 178 tasks; no account required by either existing static product. |
-| Pro | €9.90 per paid month, 100 credits on verified renewal; not unlimited reports. Cancellation leaves the current paid period to expire; refund/chargeback freezes disputed credit access in the local ledger model. |
-| Packs | €5 / 50, €10 / 110, €25 / 300 internal non-transferable service credits. Expiration and statutory refund policy require jurisdiction-specific review. |
-| Pay per use | Future operation-scoped USDC settlement; no account credits minted by a one-time payment. Not implemented in this prototype. |
+| Free | All 178 existing tasks; no wallet required. |
+| Pro | Indicative €9.90 per **30-day paid period**, 100 credits after verified settlement. Each renewal requires a separate payment; no recurring allowance or automatic debit. |
+| Packs | Indicative €5 / 50, €10 / 110, €25 / 300 internal, non-transferable service credits. |
+| Pay per use | Future operation-scoped USDC settlement without minting account credits. |
 
-No real payment path is enabled. Card (Stripe), merchant crypto checkout (CoinGate candidate) and direct Base USDC (future x402) appear as **disabled test-only choices**. The local fixture is provisioned by simulated signed Stripe events; there is no client-side credit issuance route. A report is validated and serialized before one atomic credit debit. `(user_id, request_id)` plus input digest makes exact retries idempotent, while a changed payload is rejected. Invalid reports, exhausted/frozen balances and database errors fail closed. A response lost after commit can be retrieved by an exact retry without a second debit. The local UI starts only on `127.0.0.1`, uses an HttpOnly SameSite fixture cookie, checks Host and Origin and is `noindex`; it must never be deployed with fixture authentication.
+Only Base mainnet `eip155:8453` and [Circle's native USDC contract](https://www.circle.com/blog/usdc-now-available-natively-on-base) `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` are candidates for live settlement. Bridged USDbC `0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA` is rejected in mocks. A future server-issued order must bind wallet account, SKU, expiry, chain, token contract, exact six-decimal atomic USDC amount and independently verified merchant recipient; a client-provided transaction hash is insufficient. EUR display prices require an explicit quoted conversion to USDC. No conversion or payout is configured now.
 
-## Measured cost and pricing screen
+The local crypto settlement fixture checks server order, exact chain/asset/recipient/amount, expiry, confirmed provider readback, event uniqueness and refund reconciliation. A manual Pro renewal extends from the later of settlement time or an active period end. Existing ledger constraints prevent negative credit balances and duplicate report debits. Historical Stripe test fixtures remain in `billing/payments.mjs` for regression only; no card checkout appears in the active UI, demo or production Worker.
 
-Measured on local Node v22.22.3, one process, 30 sequential iterations per workload (2026-10-23). RSS is **whole-process memory**, not marginal per-request memory; there is no production Worker CPU, D1 or bandwidth measurement.
+The candidate merchant address `0x8B87aECC9413C2c5b853e81AA94b60990e7aBdbE` is **unverified and unused**. Ownership challenge and independently reviewed payout configuration are required before activation. No private key is requested or stored.
 
-| Bounded workload | Median / p95 / max wall time | Process RSS before → after | Heap delta |
-| --- | --- | --- | --- |
-| 8 assets × 60 synchronized observations | 2.855 / 4.558 / 12.327 ms | 47.27 → 58.23 MiB | +0.18 MiB |
-| 500 closed trades | 10.282 / 15.678 / 31.519 ms | 58.23 → 77.05 MiB | +2.53 MiB |
+The existing x402-shaped fixture tests a challenge, facilitator verification, settlement and operation-specific delivery. It is **not an official x402 production integration** and uses no custom payment cryptography. The future server boundary should use the [x402 Foundation's maintained v2 core and EVM server packages](https://github.com/x402-foundation/x402) with a reviewed facilitator: bind one exact report operation to a Base/native-USDC payment requirement, verify and settle through that integration before returning the bounded result, and retain replay evidence without storing raw report input. Real accountless pay-per-use remains disabled until the SDK, facilitator, replay behavior and verified payout address are reviewed together. It must never credit a wallet account merely because an anonymous operation was paid.
 
-The server-only report bundle is 57,462 bytes. The [current Cloudflare Workers Free pricing and limits](https://developers.cloudflare.com/workers/platform/pricing/) state a 10 ms CPU limit per request; these Node wall times do **not** establish Worker eligibility. D1, authentication, storage, observability, VAT, refunds, chargebacks, processor geography and customer support remain unmeasured. [Stripe France's standard EEA card rate](https://stripe.com/fr/pricing) is listed as 1.5% + €0.25 per successful payment; actual merchant pricing and Stripe Billing fees must be checked for the eventual account. At that illustrative rate, the existing `billing/economics.mjs` screen yields about €0.8125–€0.935 net per 10 credits across packs before VAT, infrastructure and overhead. This is **not** a measured report margin or proof users will pay. CoinGate and x402 settlement fees are not established here. The 10-credit setting therefore stays local-test-only and both production operations remain disabled pending measured hosted costs and product validation.
+## Acceptance and release gates
 
-## Test and integration boundary
+Run `pnpm billing:test`, `pnpm billing:demo`, `pnpm premium:test`, `pnpm premium:worker:test` and focused premium Playwright for the local prototype. The actual hosted Worker CPU and D1 costs remain unmeasured. Cloudflare Workers Free has a [10 ms CPU/request limit](https://developers.cloudflare.com/workers/platform/limits/); local workerd wall timing cannot certify this. Both production premium operations stay disabled.
 
-- Local commands: `pnpm billing:test`, `pnpm billing:demo`, `pnpm premium:test`, `pnpm premium:benchmark`, `pnpm premium:dev` and `pnpm exec playwright test -c playwright.premium.config.ts`.
-- The existing Toolbox and Explorer checks remain the isolation gates. Neither static build imports `premium/`, `billing/`, payment adapters or the local identity fixture.
-- Production prerequisites: real authentication and account recovery; a deployed transactional database/atomic debit with rate limits and audit retention policy; reviewed Stripe test-mode checkout and signed webhook integration; a verified crypto merchant agreement, chain/token/recipient and settlement reconciliation; a separately reviewed official x402 v2 integration; truthful server-processing privacy notice; operator identity/contact, legal/consumer-rights, VAT/tax and refund/expiration decisions; provider-specific cost and load testing. The candidate receiving address in earlier billing notes remains unverified and unused.
-- AI analysis remains disabled until quality, privacy and provider costs are measured. Free tools remain unaffected by any future billing decision.
+Phase CC local acceptance: billing 17/17, premium report 5/5 plus loopback/service 6/6, Miniflare Worker/D1 11/11, focused Chromium 2/2, and Astro typecheck 380 files with zero errors. The dedicated Firefox browser binary was unavailable, so Firefox was not verified. `pnpm premium:worker:perf:test` passed with a worst-supported 500-trade journal warm engine p95 of 10 ms; this is a local workerd interval, **not hosted CPU**. Private Toolbox, Explorer and historical six-tool beta packages retained their prior SHA-256 hashes. No protected Cloudflare or Vercel resource was modified.
 
-**Decision:** useful local integrated prototype; **NO-GO for a protected integrated deployment with fixture authentication** and **NO-GO for real-money launch**. A separately reviewed production-safe identity and sandbox payment environment is required before hosted QA.
+Before protected wallet-authenticated sandbox deployment: apply migration 0002 to the reviewed D1, provision a strong session secret and exact HTTPS origin securely, replace the inert Worker only after Access is reconfirmed for all URLs, run real signed-wallet/browser checks, and prove hosted CPU, D1 atomicity and privacy. Before real money: independently verify merchant ownership, integrate trustworthy payment settlement and official x402 v2 where applicable, decide credit expiration/refunds/consumer rights/tax and disclose server processing. No live payment endpoint is implemented.
+
+**Decision: usable local wallet and crypto-only prototype; NO-GO for real-money or public launch.**

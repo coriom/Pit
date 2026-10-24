@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { CATALOG, PREMIUM_OPERATIONS } from './catalog.mjs';
+import { BASE_NETWORK, BASE_USDC, UNVERIFIED_MERCHANT_CANDIDATE } from './crypto-contract.mjs';
 
 const ident = value => typeof value === 'string' && /^[a-zA-Z0-9:_-]{1,96}$/.test(value);
 const iso = value => typeof value === 'string' && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString() === value;
@@ -44,6 +45,17 @@ export class BillingStore {
       assert(this.row('SELECT 1 FROM users WHERE id=?', userId), 'unknown user');
       this.run("INSERT INTO orders(id,user_id,sku,cents,credits,status,expires_at) VALUES (?,?,?,?,?,'pending',?)", id, userId, sku, item.cents, item.credits ?? item.monthlyCredits, expiresAt);
       return this.row('SELECT * FROM orders WHERE id=?', id);
+    });
+  }
+  attachMockCryptoInvoice({ orderId, recipient, atomicAmount, issuedAt }) {
+    assert(ident(orderId) && iso(issuedAt) && /^0x[\da-fA-F]{40}$/.test(recipient??'') &&
+      recipient.toLowerCase()!==UNVERIFIED_MERCHANT_CANDIDATE.toLowerCase() &&
+      /^[1-9]\d{0,11}$/.test(atomicAmount??''),'invalid fictional crypto quote');
+    return this.tx(() => {
+      const order=this.row('SELECT * FROM orders WHERE id=?',orderId);
+      assert(order?.status==='pending' && issuedAt<order.expires_at,'unknown or expired pending order');
+      this.run('INSERT INTO crypto_invoices VALUES (?,?,?,?,?,?,?,?)',orderId,BASE_NETWORK,BASE_USDC,recipient,atomicAmount,order.expires_at,'fictional-local-quote',issuedAt);
+      return {orderId,chain:BASE_NETWORK,token:BASE_USDC,recipient,atomicAmount,expiresAt:order.expires_at,callbackToken:'fixture-secret'};
     });
   }
   #credit(userId, amount, kind, source, now) {

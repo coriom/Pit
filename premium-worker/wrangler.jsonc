@@ -1,5 +1,6 @@
 {
-  // Intentionally undeployable until a reviewed D1 database and OAuth client exist.
+  // Intentionally undeployable until a reviewed D1 binding, SIWE origin and
+  // secure session secret exist. The protected CB sandbox is not updated here.
   "name": "pit-premium-disabled",
   "main": "../dist-premium-worker/worker.mjs",
   "compatibility_date": "2026-08-06",

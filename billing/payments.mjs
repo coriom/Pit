@@ -1,4 +1,5 @@
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import { BASE_NETWORK, BASE_USDC, validMockInvoice, sameSettlement, sameStoredInvoice } from './crypto-contract.mjs';
 
 const fail = message => { throw new Error(message); };
 const digest = value => createHash('sha256').update(value).digest('hex');
@@ -7,8 +8,9 @@ const same = (a, b) => {
   return left.length === right.length && timingSafeEqual(left, right);
 };
 
-// Local Stripe test-mode boundary. Verify the unmodified body before parsing it.
-// A production Worker needs a separately reviewed Stripe SDK/Workers adapter.
+// Retired local Stripe regression fixture from the earlier billing prototype.
+// It is not imported by the Worker, current demo, or wallet UI. No card
+// checkout is part of the wallet-only product.
 export function verifyStripeWebhook(raw, header, secret, nowSeconds) {
   if (typeof raw !== 'string' || raw.length > 65536 || !secret?.startsWith('whsec_')) fail('invalid Stripe webhook');
   const segments = Object.fromEntries(String(header).split(',').map(part => part.trim().split('=')));
@@ -48,28 +50,31 @@ export function processStripeWebhook(store, raw, header, secret, now) {
 // only a trusted order-readback fixture; no live API, token or payout address.
 export function mockCoinGateSettlement(store, invoice, readback, now) {
   const order = store.row('SELECT * FROM orders WHERE id=?', invoice.orderId);
-  if (!order || !same(invoice.callbackToken, readback.callbackToken) ||
+  const stored=store.row('SELECT * FROM crypto_invoices WHERE order_id=?',invoice.orderId);
+  if (!validMockInvoice(invoice,order) || !sameStoredInvoice(invoice,stored) || !same(invoice.callbackToken, readback.callbackToken) ||
       readback.orderId !== order.id || readback.status !== 'paid' ||
       readback.priceCents !== order.cents || readback.currency !== 'EUR' ||
-      readback.chain !== invoice.chain || readback.token !== invoice.token ||
-      readback.recipient !== invoice.recipient || readback.atomicAmount !== invoice.atomicAmount ||
+      !sameSettlement(invoice,readback) ||
       now > invoice.expiresAt || !readback.confirmed) fail('crypto settlement unverified');
-  return store.payment({ provider: 'coingate-mock', eventId: readback.eventId, paymentId: readback.transactionId, orderId: order.id, userId: order.user_id, cents: order.cents, currency: 'EUR', kind: 'paid', digest: digest(JSON.stringify(readback)) }, now);
+  const current=store.snapshot(order.user_id,now);
+  const anchor=current.plan==='pro' && current.subscription.periodEnd>now ? current.subscription.periodEnd : now;
+  const periodEnd=order.sku==='pro' ? new Date(Date.parse(anchor)+30*86400000).toISOString() : undefined;
+  return store.payment({ provider: 'coingate-mock', eventId: readback.eventId, paymentId: readback.transactionId, orderId: order.id, userId: order.user_id, cents: order.cents, currency: 'EUR', kind: 'paid', digest: digest(JSON.stringify(readback)),periodEnd }, now);
 }
 
 export function mockCoinGateReversal(store, invoice, readback, now) {
   const order = store.row('SELECT * FROM orders WHERE id=?', invoice.orderId);
-  if (!order || !same(invoice.callbackToken, readback.callbackToken) ||
+  const stored=store.row('SELECT * FROM crypto_invoices WHERE order_id=?',invoice.orderId);
+  if (!validMockInvoice(invoice,order) || !sameStoredInvoice(invoice,stored) || !same(invoice.callbackToken, readback.callbackToken) ||
       readback.orderId !== order.id || readback.status !== 'refunded' ||
       readback.priceCents !== order.cents || readback.currency !== 'EUR' ||
-      readback.chain !== invoice.chain || readback.token !== invoice.token ||
-      readback.recipient !== invoice.recipient || readback.atomicAmount !== invoice.atomicAmount ||
+      !sameSettlement(invoice,readback) ||
       !readback.reconciled) fail('crypto reversal unverified');
   return store.payment({ provider: 'coingate-mock', eventId: readback.eventId, paymentId: readback.transactionId, orderId: order.id, userId: order.user_id, cents: order.cents, currency: 'EUR', kind: 'refunded', digest: digest(JSON.stringify(readback)) }, now);
 }
 
 export function x402Challenge({ resourceUrl, operationId, network, asset, amount, payTo }) {
-  if (!/^https:\/\//.test(resourceUrl) || !/^eip155:\d+$/.test(network) || !/^0x[a-fA-F0-9]{40}$/.test(asset) || !/^0x[a-fA-F0-9]{40}$/.test(payTo) || !/^[1-9]\d{0,11}$/.test(amount)) fail('invalid x402 mock requirements');
+  if (!/^https:\/\//.test(resourceUrl) || network!==BASE_NETWORK || asset?.toLowerCase()!==BASE_USDC.toLowerCase() || !/^0x[a-fA-F0-9]{40}$/.test(payTo) || !/^[1-9]\d{0,11}$/.test(amount)) fail('invalid x402 mock requirements');
   return { x402Version: 2, error: 'PAYMENT-SIGNATURE header is required', resource: { url: resourceUrl, description: `Mock ${operationId}`, mimeType: 'application/json' }, accepts: [{ scheme: 'exact', network, amount, asset, payTo, maxTimeoutSeconds: 60 }] };
 }
 

@@ -1,21 +1,17 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createHmac } from 'node:crypto';
 import { BillingStore } from '../billing/store.mjs';
-import { processStripeWebhook } from '../billing/payments.mjs';
+import { mockCoinGateSettlement } from '../billing/payments.mjs';
 import { PremiumLocalService } from './service.mjs';
 import { portfolioExample, journalExample } from './examples.mjs';
 import * as reports from '../dist-premium-local/reports.mjs';
 
 const now = '2026-10-23T00:00:00.000Z', next = '2026-11-23T00:00:00.000Z';
-const secret = 'whsec_local_premium_fixture';
 function fixture() {
   const store = new BillingStore(); store.user('alice', now); store.user('bob', now);
   store.order({ id: 'fixture-pack', userId: 'alice', sku: 'pack10', expiresAt: next });
-  const event = { id: 'paid-once', type: 'checkout.session.completed', data: { object: { id: 'fixture-pay', payment_status: 'paid', amount_total: 1000, currency: 'eur', metadata: { pit_order_id: 'fixture-pack', pit_user_id: 'alice' } } } };
-  const raw = JSON.stringify(event), timestamp = Math.floor(Date.parse(now) / 1000);
-  const signature = `t=${timestamp},v1=${createHmac('sha256', secret).update(`${timestamp}.${raw}`).digest('hex')}`;
-  processStripeWebhook(store, raw, signature, secret, now);
+  const invoice=store.attachMockCryptoInvoice({orderId:'fixture-pack',recipient:`0x${'2'.repeat(40)}`,atomicAmount:'10000000',issuedAt:now});
+  mockCoinGateSettlement(store,invoice,{...invoice,eventId:'paid-once',transactionId:'fixture-pay',status:'paid',priceCents:1000,currency:'EUR',confirmed:true},now);
   return { store, service: new PremiumLocalService(store, [['alice-local', 'alice'], ['bob-local', 'bob']], reports) };
 }
 
@@ -65,7 +61,7 @@ test('refund freezes report access and preserves original purchase history', () 
   const { store, service } = fixture();
   const request = { operationId: 'portfolio-batch-risk', requestId: 'once', input: portfolioExample };
   service.run('alice-local', request, now);
-  store.payment({ provider: 'stripe-test', eventId: 'refund-local', paymentId: 'fixture-pay', orderId: 'fixture-pack', userId: 'alice', cents: 1000, currency: 'EUR', kind: 'refunded', digest: 'a'.repeat(64) }, now);
+  store.payment({ provider: 'coingate-mock', eventId: 'refund-local', paymentId: 'fixture-pay', orderId: 'fixture-pack', userId: 'alice', cents: 1000, currency: 'EUR', kind: 'refunded', digest: 'a'.repeat(64) }, now);
   assert.equal(store.snapshot('alice', now).frozen, true);
   assert.throws(() => service.run('alice-local', request, now), /frozen/);
   assert.ok(service.history('alice-local').some(x => x.kind === 'premium-report'));

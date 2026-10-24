@@ -9,3 +9,4 @@ CREATE TABLE IF NOT EXISTS paid_operations (payment_id TEXT PRIMARY KEY, operati
 CREATE TABLE IF NOT EXISTS report_receipts (user_id TEXT NOT NULL REFERENCES users(id), request_id TEXT NOT NULL, operation_id TEXT NOT NULL, input_digest TEXT NOT NULL, credits INTEGER NOT NULL CHECK(credits > 0), created_at TEXT NOT NULL, PRIMARY KEY(user_id,request_id)) STRICT;
 CREATE INDEX IF NOT EXISTS ledger_user_idx ON ledger(user_id, created_at);
 CREATE INDEX IF NOT EXISTS orders_user_idx ON orders(user_id);
+CREATE TABLE IF NOT EXISTS crypto_invoices (order_id TEXT PRIMARY KEY REFERENCES orders(id), chain TEXT NOT NULL CHECK(chain='eip155:8453'), asset TEXT NOT NULL, recipient TEXT NOT NULL, atomic_amount TEXT NOT NULL, expires_at TEXT NOT NULL, quote_source TEXT NOT NULL CHECK(quote_source='fictional-local-quote'), issued_at TEXT NOT NULL) STRICT;

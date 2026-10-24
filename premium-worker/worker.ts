@@ -1,4 +1,4 @@
-import { authConfigured, authRequestAllowed, createAuth, type PremiumEnv } from './auth';
+import { authConfigured, authRequestAllowed, createAuth, limitWalletAuth, verifiedWallet, type PremiumEnv } from './auth';
 import { route } from './router';
 
 export async function boundedAuthRequest(request:Request):Promise<Request|null> {
@@ -27,11 +27,24 @@ export default {
       if (!authRequestAllowed(request,env)) return Response.json({error:'Origin denied.'},{status:403});
       const auth=createAuth(env);
       if (url.pathname.startsWith('/api/auth/')) {
+        const allowed=new Map([['/api/auth/siwe/nonce','POST'],['/api/auth/siwe/verify','POST'],['/api/auth/sign-out','POST']]);
+        if (allowed.get(url.pathname)!==request.method) return Response.json({error:'Authentication route unavailable.'},{status:404});
+        if (url.pathname!=='/api/auth/sign-out' && !await limitWalletAuth(request,env)) return Response.json({error:'Wallet authentication rate limited or unavailable.'},{status:429});
         const bounded=await boundedAuthRequest(request);
-        return bounded ? auth.handler(bounded) : Response.json({error:'Authentication request exceeds 16 KiB.'},{status:413});
+        if (!bounded) return Response.json({error:'Authentication request exceeds 16 KiB.'},{status:413});
+        const response=await auth.handler(bounded);
+        if (url.pathname==='/api/auth/siwe/verify' && response.ok) {
+          // Better Auth's SIWE endpoint also returns the bearer session token in
+          // JSON. PIT uses only the HttpOnly cookie and removes that body field.
+          const {token:_token,...safe}=await response.json() as Record<string,unknown>;
+          return Response.json(safe,{status:response.status,headers:response.headers});
+        }
+        return response;
       }
       const session=await auth.api.getSession({headers:request.headers});
-      return route(request,env,session?.user?.id??null);
+      const wallet=session?.user?.id ? await verifiedWallet(env,session.user.id) : null;
+      if (url.pathname==='/v1/identity') return wallet ? Response.json({address:wallet.address,chainId:wallet.chainId},{headers:{'Cache-Control':'no-store'}}) : Response.json({error:'Verified wallet session required.'},{status:401});
+      return route(request,env,wallet ? session!.user.id : null);
     } catch {
       return Response.json({error:'Premium service unavailable.'},{status:503,headers:{'Cache-Control':'no-store','X-Robots-Tag':'noindex'}});
     }

@@ -10,6 +10,7 @@ import { CATALOG, PREMIUM_OPERATIONS } from './catalog.mjs';
 import { LocalBillingApi } from './local-api.mjs';
 import { packEconomics, screenFutureOperation } from './economics.mjs';
 import { processStripeWebhook, mockCoinGateSettlement, mockCoinGateReversal, x402Challenge, mockX402Resource } from './payments.mjs';
+import { BASE_NETWORK, BASE_USDC, BASE_USDBC, MERCHANT_PAYOUT_VERIFIED, UNVERIFIED_MERCHANT_CANDIDATE } from './crypto-contract.mjs';
 
 const t0 = '2026-10-23T00:00:00.000Z', t1 = '2026-11-23T00:00:00.000Z', t2 = '2026-12-23T00:00:00.000Z';
 const secret = 'whsec_local_fixture_only';
@@ -170,18 +171,20 @@ test('subscription renewal, cancellation, failure, expiry and refund', () => {
 });
 test('CoinGate mock rejects wrong chain, token, recipient, amount, expired and unconfirmed settlement', () => {
   const s = fixture();
-  const invoice = { orderId: 'order1', callbackToken: 'fixture-secret', chain: 'eip155:8453', token: 'USDC', recipient: 'mock-recipient', atomicAmount: '1000000', expiresAt: t1 };
+  assert.throws(()=>s.attachMockCryptoInvoice({orderId:'order1',recipient:UNVERIFIED_MERCHANT_CANDIDATE,atomicAmount:'1000000',issuedAt:t0}),/invalid/);
+  const invoice = s.attachMockCryptoInvoice({orderId:'order1',recipient:`0x${'2'.repeat(40)}`,atomicAmount:'1000000',issuedAt:t0});
   const readback = { ...invoice, eventId: 'cg1', transactionId: 'tx1', status: 'paid', priceCents: 1000, currency: 'EUR', confirmed: true };
-  for (const change of [{ chain: 'eip155:1' }, { token: 'USDT' }, { recipient: 'other' }, { atomicAmount: '1' }, { confirmed: false }, { callbackToken: 'wrong' }]) {
+  for (const change of [{ chain: 'eip155:1' }, { token: BASE_USDBC }, { recipient: `0x${'3'.repeat(40)}` }, { atomicAmount: '1' }, { confirmed: false }, { callbackToken: 'wrong' }]) {
     assert.throws(() => mockCoinGateSettlement(s, invoice, { ...readback, ...change }, t0), /unverified/);
   }
   assert.throws(() => mockCoinGateSettlement(s, invoice, readback, t2), /unverified/);
+  assert.throws(() => mockCoinGateSettlement(s, {...invoice,atomicAmount:'2'}, {...readback,atomicAmount:'2'}, t0),/unverified/);
   assert.equal(mockCoinGateSettlement(s, invoice, readback, t0).balance.credits, 110);
   assert.deepEqual(mockCoinGateSettlement(s, invoice, readback, t0), { duplicate: true }); s.close();
 });
 test('CoinGate mock refund needs reconciled provider readback and reverses once', () => {
   const s = fixture();
-  const invoice = { orderId: 'order1', callbackToken: 'fixture-secret', chain: 'eip155:8453', token: 'USDC', recipient: 'mock-recipient', atomicAmount: '1000000', expiresAt: t1 };
+  const invoice = s.attachMockCryptoInvoice({orderId:'order1',recipient:`0x${'2'.repeat(40)}`,atomicAmount:'1000000',issuedAt:t0});
   const paid = { ...invoice, eventId: 'cg1', transactionId: 'tx1', status: 'paid', priceCents: 1000, currency: 'EUR', confirmed: true };
   mockCoinGateSettlement(s, invoice, paid, t0);
   const reversed = { ...paid, eventId: 'cg-refund1', status: 'refunded', reconciled: true };
@@ -190,8 +193,25 @@ test('CoinGate mock refund needs reconciled provider readback and reverses once'
   assert.deepEqual(mockCoinGateReversal(s, invoice, reversed, t0), { duplicate: true });
   s.close();
 });
+test('manual Base USDC Pro renewal extends the paid 30-day period without recurring allowance',()=>{
+  const s=fixture('pro');
+  const invoice=s.attachMockCryptoInvoice({orderId:'order1',recipient:`0x${'2'.repeat(40)}`,atomicAmount:'9900000',issuedAt:t0});
+  const paid={...invoice,eventId:'pro-payment-1',transactionId:'fictional-tx-1',status:'paid',priceCents:990,currency:'EUR',confirmed:true};
+  const first=mockCoinGateSettlement(s,invoice,paid,t0);
+  assert.equal(first.balance.plan,'pro');
+  assert.equal(first.balance.subscription.periodEnd,'2026-11-22T00:00:00.000Z');
+  const renewalAt='2026-11-01T00:00:00.000Z';
+  s.order({id:'pro2',userId:'alice',sku:'pro',expiresAt:t2});
+  const renewalInvoice=s.attachMockCryptoInvoice({orderId:'pro2',recipient:`0x${'2'.repeat(40)}`,atomicAmount:'9900000',issuedAt:renewalAt});
+  const second=mockCoinGateSettlement(s,renewalInvoice,{...paid,...renewalInvoice,eventId:'pro-payment-2',transactionId:'fictional-tx-2'},renewalAt);
+  assert.equal(second.balance.subscription.periodEnd,'2026-12-22T00:00:00.000Z');
+  assert.equal(second.balance.credits,200);
+  s.close();
+});
 test('x402 mock challenges then verifies and settles one operation only', async () => {
-  const s = fixture(); const challenge = x402Challenge({ resourceUrl: 'https://example.invalid/premium', operationId: 'batch', network: 'eip155:8453', asset: `0x${'1'.repeat(40)}`, amount: '10000', payTo: `0x${'2'.repeat(40)}` });
+  const s = fixture(); const challenge = x402Challenge({ resourceUrl: 'https://example.invalid/premium', operationId: 'batch', network: BASE_NETWORK, asset: BASE_USDC, amount: '10000', payTo: `0x${'2'.repeat(40)}` });
+  assert.equal(MERCHANT_PAYOUT_VERIFIED,false);
+  assert.throws(()=>x402Challenge({resourceUrl:'https://example.invalid/premium',operationId:'batch',network:BASE_NETWORK,asset:BASE_USDBC,amount:'10000',payTo:`0x${'2'.repeat(40)}`}),/invalid/);
   const facilitator = { verify: async () => ({ valid: true, operationId: 'batch' }), settle: async () => ({ success: true, operationId: 'batch', paymentId: 'mocktx1' }) };
   assert.equal((await mockX402Resource(s, challenge, null, facilitator, 'batch', t0, () => 'secret')).status, 402);
   await assert.rejects(() => mockX402Resource(s, challenge, 'payload', { ...facilitator, verify: async () => ({ valid: false }) }, 'batch', t0, () => 'secret'), /verification/);

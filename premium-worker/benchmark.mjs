@@ -2,6 +2,8 @@ import { readFileSync, statSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 import { execFileSync } from 'node:child_process';
 import { Miniflare } from 'miniflare';
+import { createSiweMessage } from 'viem/siwe';
+import { privateKeyToAccount } from 'viem/accounts';
 
 const origin='https://premium.example.test';
 const dates=Array.from({length:60},(_,i)=>new Date(Date.UTC(2026,0,1+i)).toISOString().slice(0,10));
@@ -9,30 +11,31 @@ const portfolio={currency:'USD',periodsPerYear:365,dates,assets:Array.from({leng
 const journal={currency:'USD',startingCapital:'1000000',tradesCsv:['id,date,strategy,grossPnl,fees,initialRisk',...Array.from({length:500},(_,i)=>`trade${i},${new Date(Date.UTC(2026,0,1+i)).toISOString().slice(0,10)},${i%2?'Trend':'Range'},${i%3?'12':'-15'},1,10`)].join('\r\n')};
 const worstPortfolio={...portfolio,assets:portfolio.assets.map((asset,i)=>({...asset,id:`asset${i}_${'x'.repeat(16)}`,label:`Asset ${i} ${'Long Label '.repeat(3)}`.slice(0,40),returnsPct:dates.map((_,j)=>`${(j*(i+3))%13-6}.1234`)})),snapshots:dates.slice(0,30).map((date,i)=>({date,endingValue:String(100000+i*1000),externalFlow:'0'}))};
 const worstJournal={currency:'USD',startingCapital:'1000000',tradesCsv:['id,date,strategy,grossPnl,fees,initialRisk',...Array.from({length:500},(_,i)=>`T${String(i).padStart(3,'0')}${'x'.repeat(28)},${new Date(Date.UTC(2026,0,1+i)).toISOString().slice(0,10)},S${String(i%4)}${'y'.repeat(29)},${i%3?'12.00000000':'-15.00000000'},1.00000000,10.00000000`)].join('\r\n')};
-const fakeJwt=`${Buffer.from('{"alg":"none","typ":"JWT"}').toString('base64url')}.${Buffer.from(JSON.stringify({sub:'benchmark-google',email:'authenticated-benchmark@example.test',email_verified:true,name:'Benchmark',iss:'https://accounts.google.com',aud:'local-fixture-client',exp:Math.floor(Date.now()/1000)+3600})).toString('base64url')}.fixture`;
-const mockGoogle=request=>{
-  if(request.url==='https://oauth2.googleapis.com/token')return Response.json({access_token:'local-only-fixture',token_type:'Bearer',expires_in:3600,id_token:fakeJwt});
-  throw Error('Unexpected outbound request during local auth benchmark.');
-};
+const wallet=privateKeyToAccount(`0x${'11'.repeat(32)}`);
+async function walletSession(mf) {
+  const headers={Origin:origin,'Content-Type':'application/json','CF-Connecting-IP':'192.0.2.11'};
+  const nonce=await mf.dispatchFetch(`${origin}/api/auth/siwe/nonce`,{method:'POST',headers,body:'{}'});
+  if(nonce.status!==200)throw Error(`SIWE nonce: ${nonce.status}`);
+  const message=createSiweMessage({domain:new URL(origin).host,address:wallet.address,uri:`${origin}/`,version:'1',chainId:8453,nonce:(await nonce.json()).nonce,issuedAt:new Date(),expirationTime:new Date(Date.now()+240000)});
+  const signed=await mf.dispatchFetch(`${origin}/api/auth/siwe/verify`,{method:'POST',headers,body:JSON.stringify({message,signature:await wallet.signMessage({message})})});
+  if(signed.status!==200)throw Error(`SIWE verify: ${signed.status}`);
+  const cookie=signed.headers.getSetCookie().find(value=>value.startsWith('__Secure-better-auth.session_token='))?.split(';')[0];
+  if(!cookie)throw Error('SIWE fixture did not create a secure session.');
+  return cookie;
+}
 const workerdMemory=()=>{try{return execFileSync('ps',['-C','workerd','-o','pid=,rss='],{encoding:'utf8'}).trim().split('\n').filter(Boolean).map(line=>{const [pid,rssKiB]=line.trim().split(/\s+/).map(Number);return {pid,rssMiB:+(rssKiB/1024).toFixed(2)};});}catch{return [];}};
 const initialWorkerdPids=new Set(workerdMemory().map(x=>x.pid));
-const mf=new Miniflare({modules:true,scriptPath:'dist-premium-worker-test/worker.mjs',compatibilityDate:'2026-08-06',compatibilityFlags:['nodejs_compat'],d1Databases:{DB:'12345678-1234-1234-1234-123456789012'},bindings:{PUBLIC_ORIGIN:origin,PREMIUM_REPORTS_ENABLED:'true',BETTER_AUTH_SECRET:'0123456789abcdef0123456789abcdef0123456789abcdef',GOOGLE_CLIENT_ID:'local-fixture-client',GOOGLE_CLIENT_SECRET:'local-fixture-secret'},outboundService:mockGoogle});
+const mf=new Miniflare({modules:true,scriptPath:'dist-premium-worker-test/worker.mjs',compatibilityDate:'2026-08-06',compatibilityFlags:['nodejs_compat'],d1Databases:{DB:'12345678-1234-1234-1234-123456789012'},bindings:{PUBLIC_ORIGIN:origin,PREMIUM_REPORTS_ENABLED:'true',BETTER_AUTH_SECRET:'0123456789abcdef0123456789abcdef0123456789abcdef'},outboundService:()=>{throw Error('No external request permitted.')}});
 const dispatch=async(path,value,headers={})=>mf.dispatchFetch(`${origin}${path}`,{method:value===undefined?'GET':'POST',headers:{Origin:origin,'Content-Type':'application/json',...headers},body:value===undefined?undefined:JSON.stringify(value)});
 const check=async(response,label)=>{if(!response.ok)throw Error(`${label}: ${response.status} ${(await response.text()).slice(0,300)}`);return response;};
 const stats=values=>{const a=[...values].sort((x,y)=>x-y);return {count:a.length,medianMs:+a[Math.floor(a.length/2)].toFixed(3),p95Ms:+a[Math.ceil(a.length*.95)-1].toFixed(3),maxMs:+a.at(-1).toFixed(3)};};
 const stageStats=samples=>Object.fromEntries([...new Set(samples.flatMap(x=>x.map(y=>y.stage)))].map(stage=>[stage,stats(samples.map(x=>x.find(y=>y.stage===stage)?.elapsedMs??0))]));
 try {
-  for(const migration of ['0000_auth.sql','0001_billing.sql']) {
+  for(const migration of ['0000_auth.sql','0001_billing.sql','0002_wallet_siwe.sql']) {
     const sql=readFileSync(new URL(`./migrations/${migration}`,import.meta.url),'utf8').replace(/^--.*$/gm,'');
     await check(await dispatch('/__test/sql',{sql,mode:'exec'}),migration);
   }
-  const authStart=await check(await dispatch('/api/auth/sign-in/social',{provider:'google',callbackURL:origin}),'test OAuth start');
-  const authState=(await authStart.json()).url;
-  const authStateCookie=(authStart.headers.get('set-cookie')??'').split(';')[0];
-  const authCallback=await mf.dispatchFetch(`${origin}/api/auth/callback/google?code=local-only&state=${encodeURIComponent(new URL(authState).searchParams.get('state'))}`,{headers:{Cookie:authStateCookie},redirect:'manual'});
-  if(authCallback.status!==302)throw Error(`Test OAuth callback: ${authCallback.status}`);
-  const authCookie=authCallback.headers.getSetCookie().find(value=>value.startsWith('__Secure-better-auth.session_token='))?.split(';')[0];
-  if(!authCookie)throw Error('Test OAuth fixture did not create a secure session.');
+  const authCookie=await walletSession(mf);
   await check(await dispatch('/__test/sql',{sql:'INSERT INTO user(id,name,email,emailVerified,createdAt,updatedAt) VALUES (?,?,?,?,?,?)',bindings:['bench','Benchmark','bench@example.test',1,0,0]}),'user');
   await check(await dispatch('/__test/sql',{sql:'INSERT INTO user(id,name,email,emailVerified,createdAt,updatedAt) VALUES (?,?,?,?,?,?)',bindings:['bench-journal','Benchmark Journal','bench-journal@example.test',1,0,0]}),'journal user');
   await check(await dispatch('/v1/account',undefined,{'X-Local-Test-Identity':'bench'}),'account');
@@ -86,20 +89,14 @@ try {
   output.concurrentReportAndReads=concurrent.map(x=>x.status);
   const parallel=await Promise.all(Array.from({length:4},()=>dispatch('/__test/engine-timing',{operation:'trading-journal-advanced',input:journal})));
   output.concurrentJournalEngine=await Promise.all(parallel.map(async x=>{const value=await (await check(x,'parallel journal')).json();return +value.synchronousMs.toFixed(3);}));
-  // Exercise the real Worker entrypoint and Better Auth session path. The Google
-  // token exchange is a local outbound fixture; no provider is contacted.
-  const authMf=new Miniflare({modules:true,scriptPath:'dist-premium-worker/worker.mjs',compatibilityDate:'2026-08-06',compatibilityFlags:['nodejs_compat'],d1Databases:{DB:'12345678-1234-1234-1234-123456789013'},bindings:{PUBLIC_ORIGIN:origin,PREMIUM_REPORTS_ENABLED:'true',BETTER_AUTH_SECRET:'0123456789abcdef0123456789abcdef0123456789abcdef',GOOGLE_CLIENT_ID:'local-fixture-client',GOOGLE_CLIENT_SECRET:'local-fixture-secret'},outboundService:mockGoogle});
+  // Exercise the real Worker entrypoint and a locally signed SIWE session.
+  const authMf=new Miniflare({modules:true,scriptPath:'dist-premium-worker/worker.mjs',compatibilityDate:'2026-08-06',compatibilityFlags:['nodejs_compat'],d1Databases:{DB:'12345678-1234-1234-1234-123456789013'},bindings:{PUBLIC_ORIGIN:origin,PREMIUM_REPORTS_ENABLED:'true',BETTER_AUTH_SECRET:'0123456789abcdef0123456789abcdef0123456789abcdef'},outboundService:()=>{throw Error('No external request permitted.')}});
   try {
     const db=await authMf.getD1Database('DB');
-    for(const migration of ['0000_auth.sql','0001_billing.sql'])await db.exec(readFileSync(new URL(`./migrations/${migration}`,import.meta.url),'utf8').replace(/^--.*$/gm,''));
-    const start=await check(await authMf.dispatchFetch(`${origin}/api/auth/sign-in/social`,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({provider:'google',callbackURL:origin})}),'OAuth start');
-    const state=(await start.json()).url;const stateCookie=(start.headers.get('set-cookie')??'').split(';')[0];
-    const callback=await authMf.dispatchFetch(`${origin}/api/auth/callback/google?code=local-only&state=${encodeURIComponent(new URL(state).searchParams.get('state'))}`,{headers:{Cookie:stateCookie},redirect:'manual'});
-    if(callback.status!==302)throw Error(`OAuth callback: ${callback.status}`);
-    const sessionCookie=callback.headers.getSetCookie().find(value=>value.startsWith('__Secure-better-auth.session_token='))?.split(';')[0];
-    if(!sessionCookie)throw Error('Local OAuth fixture did not create a secure session.');
-    const user=await db.prepare('SELECT id FROM user WHERE email=?').bind('authenticated-benchmark@example.test').first();
-    if(!user?.id)throw Error('Local OAuth fixture did not create a user.');
+    for(const migration of ['0000_auth.sql','0001_billing.sql','0002_wallet_siwe.sql'])await db.exec(readFileSync(new URL(`./migrations/${migration}`,import.meta.url),'utf8').replace(/^--.*$/gm,''));
+    const sessionCookie=await walletSession(authMf);
+    const user=await db.prepare('SELECT userId AS id FROM walletAddress WHERE address=?').bind(wallet.address).first();
+    if(!user?.id)throw Error('Local SIWE fixture did not create a user.');
     await db.prepare('INSERT INTO billing_wallets(user_id,credits) VALUES (?,100)').bind(user.id).run();
     await db.prepare("INSERT INTO billing_ledger(id,user_id,delta,kind,source,created_at) VALUES (?,?,100,'pack-paid',?,?)").bind('benchmark-credit',user.id,'benchmark-credit',new Date().toISOString()).run();
     output.authenticatedFullRequestWall={};
