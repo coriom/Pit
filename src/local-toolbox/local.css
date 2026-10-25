@@ -29,4 +29,13 @@
 .local-focus-result { border: 1px solid #d8f977; border-radius: .6rem; padding: .85rem 1rem; margin: .8rem 0 1.2rem; background: #172810; }
 .local-focus-result h3 { margin: 0 0 .35rem; font-size: 1rem; }
 .local-focus-result p { margin: 0; font-size: clamp(1.15rem,2.5vw,1.6rem); font-weight: 700; overflow-wrap: anywhere; }
+.v2-catalog-controls { display: grid; gap: 1rem; }
+.v2-catalog-controls .local-search { display: block; max-width: none; }
+.v2-catalog-controls input,.v2-catalog-controls select { width: 100%; min-height: 44px; margin-top: .35rem; }
+.v2-selects { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,220px),1fr)); gap: 1rem; }
+.v2-category-filters { margin: 0; }
+.v2-category-filters button { min-height: 44px; }
+.v2-category-filters small { margin-left: .25rem; opacity: .8; }
+.v2-planned-card { border-style: dashed; }
+.local-task-card small { display: block; margin-top: .8rem; color: #d8f977; }
 @media (max-width: 760px) { .local-filter-list button { flex: 1 1 140px; } .shell > header { flex-wrap: wrap; gap: .6rem; } .shell > header nav { display: flex; flex-wrap: wrap; gap: .6rem 1rem; } }

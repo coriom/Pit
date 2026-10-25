@@ -216,24 +216,41 @@ test("private notice pages, metadata and keyboard navigation remain usable on mo
   await assertNoSideEffects(page, report);
 });
 
-test("search and task filters keep the twenty tools reachable by keyboard on mobile", async ({ page }) => {
+test("V2 search and categories keep the twenty free workspaces reachable on mobile", async ({ page }) => {
   const report = await guard(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${origin}/`);
-  await page.getByRole("link", { name: "Explore all 20 tools" }).click();
-  await expect(page.getByRole("heading", { name: "Choose a task." })).toBeVisible();
+  await page.getByRole("link", { name: "Explore free tools" }).click();
+  await expect(page.getByRole("heading", { name: "Find the right tool." })).toBeVisible();
   await expect(page.locator("[data-tool]:visible")).toHaveCount(20);
-  await page.getByLabel("Search tools by name or purpose").fill("vesting");
+  await page.getByLabel("Search tools by name or purpose").fill("Vesting & Unlock Planner");
   await expect(page.locator("[data-tool]:visible")).toHaveCount(1);
-  await expect(page.locator("#tool-match-count")).toContainText("entries shown");
+  await expect(page.locator("#tool-match-count")).toHaveText("1 entry shown");
   await page.getByLabel("Search tools by name or purpose").fill("");
-  await page.getByRole("button", { name: "Data inspection" }).focus();
+  await page.getByRole("button", { name: /Developer Tools/ }).focus();
   await page.keyboard.press("Enter");
-  await expect(page.locator("[data-tool]:visible")).toHaveCount(2);
+  await expect(page.locator("[data-tool]:visible")).toHaveCount(1);
   await expect(page.locator("[data-task]:visible")).not.toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Data inspection" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: /Developer Tools/ })).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("link", { name: /EVM Data Inspector/ }).click();
   await expect(page.getByRole("heading", { name: "EVM Data Inspector" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2)).toBe(true);
+  await assertNoSideEffects(page, report);
+});
+
+test("V2 proposed fees remain informational and never expose an action", async ({ page }) => {
+  const report = await guard(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${origin}/tools/`);
+  await page.getByLabel("Availability").selectOption("planned");
+  await expect(page.locator("[data-availability='planned']:visible")).toHaveCount(7);
+  await expect(page.locator("[data-availability='available']:visible")).toHaveCount(0);
+  await page.getByRole("button", { name: /Token Creator/ }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("[data-availability='planned']:visible")).toHaveCount(2);
+  await expect(page.locator("[data-availability='planned'] a, [data-availability='planned'] button, [data-availability='planned'] form")).toHaveCount(0);
+  await expect(page.locator("[data-availability='planned']:visible").first()).toContainText("No wallet action, checkout or transaction is available.");
+  await expect(page.locator("[data-availability='planned']:visible")).toHaveCount(2);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2)).toBe(true);
   await assertNoSideEffects(page, report);
 });

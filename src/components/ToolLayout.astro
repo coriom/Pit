@@ -2,6 +2,7 @@
 import { relatedTools, toolDiscoverability, type ToolDefinition } from "../lib/tool-registry";
 import { READ_ONLY_TOOL_IDS } from "../lib/read-only-beta";
 import { LOCAL_TOOL_ID_SET } from "../lib/local-toolbox";
+import { categoryForLocal, categoryLabel } from "../lib/v2-catalog-core";
 import "../styles/global.css";
 const { tool, betaOnly = false, localOnly = false } = Astro.props as { tool: ToolDefinition; betaOnly?: boolean; localOnly?: boolean };
 const seo = toolDiscoverability(tool);
@@ -13,6 +14,7 @@ const modeLabel = {
   execution: "Execution · wallet approval required",
 }[tool.executionMode];
 const localCanonical = localOnly && Astro.site ? new URL(tool.path, Astro.site).href : undefined;
+const localCategory = categoryLabel(categoryForLocal(tool.id, tool.category));
 ---
 <html lang="en">
   <head>
@@ -36,10 +38,10 @@ const localCanonical = localOnly && Astro.site ? new URL(tool.path, Astro.site).
         <span class="tag">{betaOnly ? "READ-ONLY CANDIDATE" : localOnly ? Astro.site ? "LOCAL TOOLBOX" : "LOCAL TOOLBOX CANDIDATE" : "TESTNET PREVIEW"}</span>
       </header>
       <section class="hero">
-        <div class="eyebrow">{tool.category} / {tool.status}</div>
+        <div class="eyebrow">{localOnly ? localCategory : tool.category} / {tool.status}</div>
         <h1>{tool.title}</h1>
         <p>{tool.description}</p>
-        <p class="tool-mode">{modeLabel}</p>
+        <p class="tool-mode">{localOnly ? "Available now · Free · No wallet · No network request" : modeLabel}</p>
       </section>
       <slot />
       {related.length > 0 && <section aria-label="Other tools" class="panel">

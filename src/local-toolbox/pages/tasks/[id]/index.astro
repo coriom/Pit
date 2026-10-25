@@ -18,6 +18,7 @@ import BcCapability from "../../../../components/BcCapability.astro";
 import BdCapability from "../../../../components/BdCapability.astro";
 import { AVAILABLE_LOCAL_TASKS } from "../../../../lib/local-task-registry";
 import { LOCAL_TOOLS } from "../../../../lib/local-toolbox";
+import { categoryForLocal, categoryLabel } from "../../../../lib/v2-catalog-core";
 import "../../../../styles/global.css";
 import "../../../local.css";
 
@@ -28,10 +29,11 @@ const { task } = Astro.props;
 const parent = LOCAL_TOOLS.find((entry) => entry.id === task.engineId);
 const related = AVAILABLE_LOCAL_TASKS.filter((entry) => entry.engineId === task.engineId && entry.id !== task.id);
 const canonical = Astro.site ? new URL(task.path, Astro.site).href : undefined;
+const v2Category = categoryLabel(categoryForLocal(task.engineId, task.category, task.id));
 ---
 <html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width" /><meta name="description" content={task.question} />{canonical && <link rel="canonical" href={canonical} />}<meta property="og:type" content="website" /><meta property="og:site_name" content="PIT" /><meta property="og:title" content={task.title} /><meta property="og:description" content={task.question} />{canonical && <meta property="og:url" content={canonical} />}<title>{task.title} · PIT Toolbox</title></head><body><a class="local-skip" href="#main-content">Skip to main content</a><main class="shell" id="main-content">
   <header><a href="../../" class="brand">pit<span>.</span></a><nav aria-label="Main navigation"><a href="../../">Home</a><a href="../../tools/">Toolbox</a><a href="../../privacy/">Privacy</a><a href="../../legal/">Site information</a></nav><span class="tag">LOCAL · NO WALLET</span></header>
-  <section class="hero local-task-intro"><div class="eyebrow">{task.category} · browser-local calculation</div><h1>{task.title}</h1><p>{task.question}</p><p class="muted">Use the labelled manual inputs below. PIT calculates {task.output.toLowerCase()}.</p><p class="muted">{task.assumptions}</p>{task.engineId === "crypto-data-workshop" && task.mode !== "inspect" && <p class="notice">Start with a chosen local file or the fictional example. Run CSV inspect to verify its structure, then return to this mode and explicitly confirm the mapping before export.</p>}</section>
+  <section class="hero local-task-intro"><div class="eyebrow">{v2Category} · browser-local calculation</div><h1>{task.title}</h1><p>{task.question}</p><p class="tool-mode">Available now · Free · No wallet · No network request</p><p class="muted">Use the labelled manual inputs below. PIT calculates {task.output.toLowerCase()}.</p><p class="muted">{task.assumptions}</p>{task.engineId === "crypto-data-workshop" && task.mode !== "inspect" && <p class="notice">Start with a chosen local file or the fictional example. Run CSV inspect to verify its structure, then return to this mode and explicitly confirm the mapping before export.</p>}</section>
   <div data-task-shell data-task-engine={task.engineId} data-initial-mode={task.mode} data-focus-label={task.focusLabel} data-preset-name={task.preset?.name} data-preset-value={task.preset?.value}>
     {task.engineId === "token-fee-converter" && <TokenFeeConverter />}
     {task.engineId === "yield-growth" && <YieldGrowthPlanner />}

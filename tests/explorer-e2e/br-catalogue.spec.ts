@@ -1,4 +1,17 @@
 import { expect, test } from "@playwright/test";
+import { EXPLORER_TOOLS } from "../../src/lib/explorer-registry";
+
+test("all read-only Explorer deep links load without querying an RPC", async ({ page }) => {
+  const external: string[] = [];
+  page.on("request", (request) => { if (request.url().startsWith("https://")) external.push(request.url()); });
+  for (const tool of EXPLORER_TOOLS) {
+    const response = await page.goto(`/inspect/${tool.id}/`);
+    expect(response?.status(), tool.id).toBe(200);
+    await expect(page.getByRole("heading", { name: tool.title, exact: true })).toBeVisible();
+    await expect(page.getByText("No query sent.")).toBeVisible();
+  }
+  expect(external).toEqual([]);
+});
 
 test("Explorer search and categories expose only registered direct routes without RPC", async ({ page }) => {
   const external: string[] = [];
@@ -14,6 +27,13 @@ test("Explorer search and categories expose only registered direct routes withou
   await expect(page.locator("#explorer-catalogue .card:visible")).toHaveAttribute("href", "/inspect/chainlink-feed/");
   await page.getByLabel("Search inspections").fill("no such inspection");
   await expect(page.locator("#explorer-count")).toHaveText("0 inspections shown");
+  await page.getByLabel("Search inspections").fill("ENS resolver");
+  await page.getByLabel("Category").selectOption("Assets & accounts");
+  await expect(page.locator("#explorer-catalogue .card:visible")).toHaveCount(1);
+  await page.locator("#explorer-network").selectOption("base");
+  await expect(page.locator("#explorer-count")).toHaveText("0 inspections shown");
+  await page.locator("#explorer-network").selectOption("ethereum");
+  await expect(page.locator("#explorer-catalogue .card:visible")).toHaveCount(1);
   expect(external).toEqual([]);
 });
 
