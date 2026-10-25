@@ -29,6 +29,8 @@ export type V2CatalogueEntry = Readonly<{
   walletRequired: boolean;
   risk: string;
   indicativeFee?: string;
+  /** Only in the separate, non-hosted Anvil operations build; never a free-toolbox route. */
+  localMvpPath?: string;
   feeModel?: Readonly<{ serviceFee: string; gas: "separate estimate"; total: "not quoted"; paymentAsset: "USDC"; status: "proposal only" }>;
 }>;
 
@@ -41,10 +43,18 @@ const proposedOperations = [
   { id: "custom-vesting", title: "Custom vesting", description: "A future reviewed token vesting operation.", category: "vesting-locking", indicativeFee: "79 USDC", pricing: "fixed fee" },
   { id: "simple-token-management", title: "Simple token management operation", description: "A future reviewed, operation-specific token administration flow.", category: "token-management", indicativeFee: "2–5 USDC", pricing: "variable fee" },
 ] as const;
+const localMvpPaths: Record<string, string> = {
+  "standard-erc20-creation": "/operations/token-creator/",
+  "advanced-erc20-creation": "/operations/token-creator/",
+  "erc20-bulk-distribution": "/operations/multisender/",
+  "token-locker": "/operations/token-locker/",
+  "custom-vesting": "/operations/token-vesting/",
+};
 export const PLANNED_OPERATIONS: readonly V2CatalogueEntry[] = proposedOperations.map((entry) => ({
   ...entry, tags: ["future operation"], networks: [] as ("ethereum" | "base")[],
+  localMvpPath: localMvpPaths[entry.id],
   execution: "planned" as const, availability: "planned" as const,
-  walletRequired: true, risk: "No contract, quote, checkout or transaction exists in this phase.",
+  walletRequired: true, risk: "Unavailable in the hosted free catalog; the separate local Anvil MVP has no remote transaction or checkout.",
   feeModel: { serviceFee: entry.indicativeFee, gas: "separate estimate" as const, total: "not quoted" as const, paymentAsset: "USDC" as const, status: "proposal only" as const },
 }));
 

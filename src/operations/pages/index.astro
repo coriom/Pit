@@ -1,0 +1,5 @@
+---
+import Layout from "../components/Layout.astro";
+import { operationCatalog } from "../lib/catalog";
+---
+<Layout title="PIT operations" description="Four functional ERC-20 operations for an isolated local Anvil chain."><section class="hero"><div class="eyebrow">PIT V2 · local operations MVP</div><h1>Prepare, simulate and inspect Web3 operations.</h1><p>Four ERC-20 workflows run only against a local Anvil chain (31337). Connect a local test wallet; never use a real wallet or mainnet funds here.</p><p class="notice">Commercial fees shown below are indicative proposals and inactive. Local gas measurements are not remote-network quotes.</p></section><div class="grid">{operationCatalog.map((item)=><a class="panel" href={`/operations/${item.id}/`}><small class="eyebrow">{item.category}</small><h2>{item.title}</h2><p>{item.description}</p><small>Indicative PIT fee: {item.fee} · inactive</small></a>)}</div></Layout>

@@ -1,4 +1,7 @@
 node_modules/
+out/
+cache/
+dist-operations/
 dist/
 dist-readonly-beta/
 dist-readonly-beta-host/

@@ -44,5 +44,7 @@ describe("PIT V2 catalogue adapters", () => {
       expect(entry.feeModel).toMatchObject({ gas: "separate estimate", total: "not quoted", status: "proposal only" });
       expect([...V2_LOCAL_TASKS, ...V2_EXPLORER_TASKS].some((working) => working.id === entry.id)).toBe(false);
     }
+    expect(PLANNED_OPERATIONS.filter((entry) => entry.localMvpPath)).toHaveLength(5);
+    expect(PLANNED_OPERATIONS.every((entry) => entry.path === undefined)).toBe(true);
   });
 });
