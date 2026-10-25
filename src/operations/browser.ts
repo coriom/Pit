@@ -94,6 +94,7 @@ function boot(kind: OperationId) {
     const gasEstimate = await publicClient.estimateContractGas({ address, abi, functionName, args, account: account! });
     const blockLimit = (await publicClient.getBlock()).gasLimit;
     if (gasEstimate >= blockLimit / 2n) throw Error("Local transaction exceeds the conservative half-block gas budget.");
+    await assertLocalChain();
     lifecycle.textContent = `Pending · ${functionName} local estimate ${gasEstimate} gas`;
     const hash = await wallet().writeContract({ address, abi, functionName, args, chain: foundry, account: account! });
     const result = await receipt(hash);
@@ -109,7 +110,8 @@ function boot(kind: OperationId) {
   }
   async function approval(token: Address, spender: Address, amount: bigint) {
     const existing = BigInt(await publicClient.readContract({ address: token, abi: erc20Abi, functionName: "allowance", args: [account!, spender] }) as bigint);
-    if (existing >= amount) return "Existing allowance covers this exact operation.";
+    if (existing >= amount) return `Existing allowance ${existing} raw units for spender ${spender} covers the required ${amount} raw units; no new approval sent.`;
+    set("Awaiting exact local approval", `Token ${token}\nSpender ${spender}\nRequired ${amount} raw units; current allowance ${existing}. The wallet will be asked for no more than the required amount. Reject if any field differs.`);
     const result = await call(token, erc20Abi, "approve", [spender, amount]);
     return `Exact required allowance set in local transaction ${result.hash}; gas ${result.gas}.`;
   }
@@ -152,8 +154,8 @@ function boot(kind: OperationId) {
     return { kind, token, decimals: d, amount, beneficiary, start, duration, cliff };
   }
   function preview(p: Prepared) {
-    if (p.kind === "token-creator") return `${p.preset} token · ${p.name} (${p.symbol}) · ${formatUnits(p.supply!,18)} initial · recipient ${p.beneficiary}\nCap ${formatUnits(p.cap!,18)} · mint ${p.minting ? "enabled" : "disabled"} · burn ${p.burning ? "enabled" : "disabled"} · pause ${p.pausing ? "enabled" : "disabled"}. Creator ${account} controls enabled roles. No PIT role.`;
-    if (p.kind === "multisender") return `${p.recipients!.length} distinct recipients · total ${formatUnits(p.total!,p.decimals!)} token units · standard token ${p.token}. All-or-nothing; nonstandard fee/rebase tokens may revert.`;
+    if (p.kind === "token-creator") return `${p.preset} token · ${p.name} (${p.symbol}) · ${formatUnits(p.supply!,18)} initial · recipient ${p.beneficiary}\nCap ${formatUnits(p.cap!,18)} · mint ${p.minting ? "enabled" : "disabled"} · burn ${p.burning ? "enabled" : "disabled"} · pause ${p.pausing ? "enabled" : "disabled"}. Creator ${account} controls enabled roles. Advanced default admin is unique; transfer requires acceptance after one day. No PIT role.`;
+    if (p.kind === "multisender") return `${p.recipients!.length} distinct recipients · total ${formatUnits(p.total!,p.decimals!)} token units · standard token ${p.token}. All-or-nothing; nonstandard fee/rebase tokens may revert.\n${p.recipients!.map((r) => `${r.address}: ${formatUnits(r.amount,p.decimals!)} token units`).join("\n")}`;
     if (p.kind === "token-locker") return `${formatUnits(p.amount!,p.decimals!)} token units of ${p.token} locked for ${p.beneficiary} until ${new Date(Number(p.unlock!)*1000).toISOString()}. Beneficiary immutable; no early release.`;
     return `${formatUnits(p.amount!,p.decimals!)} token units of ${p.token} vest for ${p.beneficiary} from ${new Date(Number(p.start!)*1000).toISOString()} for ${p.duration!/86400n} days; cliff ${new Date(Number(p.cliff!)*1000).toISOString()}. Fully fund before start.`;
   }
@@ -166,6 +168,9 @@ function boot(kind: OperationId) {
   connectButton.addEventListener("click", async () => {
     try {
       if (!window.ethereum) throw Error("No injected wallet found. Use an Anvil test wallet only.");
+      account = undefined; prepared = undefined; simulated = false;
+      simulateButton.disabled = true; executeButton.disabled = true;
+      walletState.textContent = "Awaiting connection";
       await assertLocalChain();
       const list = await window.ethereum.request({ method: "eth_requestAccounts" }) as string[];
       account = requiredAddress(list[0] ?? "");

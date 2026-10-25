@@ -17,6 +17,8 @@
     "operations:test": "forge test --offline && vitest run tests/operations-inputs.test.ts",
     "operations:anvil:test": "forge build --offline && node tests/operations-local-evm.test.mjs",
     "operations:e2e": "pnpm operations:check && playwright test --config playwright.operations.config.ts",
+    "operations:manifest": "forge build --offline && node scripts/operations/deployment-manifest.mjs",
+    "operations:deployment:dry-run": "node --test tests/operations-deployment-rehearsal.test.mjs",
     "billing:test": "node billing/billing.test.mjs",
     "billing:demo": "node billing/demo.mjs",
     "premium:build": "node premium/build.mjs",

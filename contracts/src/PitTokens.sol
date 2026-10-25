@@ -5,7 +5,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import {ERC20Capped} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 import {ERC20Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {AccessControlDefaultAdminRules} from "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
 
 contract PitStandardToken is ERC20 {
     error InvalidConfiguration();
@@ -20,7 +20,7 @@ contract PitStandardToken is ERC20 {
     }
 }
 
-contract PitAdvancedToken is ERC20, ERC20Burnable, ERC20Capped, ERC20Pausable, AccessControl {
+contract PitAdvancedToken is ERC20, ERC20Burnable, ERC20Capped, ERC20Pausable, AccessControlDefaultAdminRules {
     error InvalidConfiguration();
     error FeatureDisabled();
 
@@ -40,7 +40,7 @@ contract PitAdvancedToken is ERC20, ERC20Burnable, ERC20Capped, ERC20Pausable, A
         bool minting_,
         bool burning_,
         bool pausing_
-    ) ERC20(name_, symbol_) ERC20Capped(cap_) {
+    ) ERC20(name_, symbol_) ERC20Capped(cap_) AccessControlDefaultAdminRules(1 days, administrator_) {
         if (
             bytes(name_).length == 0 || bytes(symbol_).length == 0 || supply_ == 0 || cap_ < supply_
                 || recipient_ == address(0) || administrator_ == address(0)
@@ -48,7 +48,6 @@ contract PitAdvancedToken is ERC20, ERC20Burnable, ERC20Capped, ERC20Pausable, A
         mintingEnabled = minting_;
         burningEnabled = burning_;
         pausingEnabled = pausing_;
-        _grantRole(DEFAULT_ADMIN_ROLE, administrator_);
         if (minting_) _grantRole(MINTER_ROLE, administrator_);
         if (pausing_) _grantRole(PAUSER_ROLE, administrator_);
         _mint(recipient_, supply_);

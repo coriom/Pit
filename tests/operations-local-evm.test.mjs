@@ -59,6 +59,11 @@ test("all four operations execute on ephemeral Anvil with real receipts and read
   await write(advanced, advancedA.abi, "mint", [creator, 50n]);
   assert.equal(await read(advanced, advancedA.abi, "totalSupply"), 150n);
   await assert.rejects(publicClient.simulateContract({ address: advanced, abi: advancedA.abi, functionName: "mint", args: [creator, 1n], account: creator }));
+  await write(advanced, advancedA.abi, "pause");
+  await assert.rejects(publicClient.simulateContract({ address: advanced, abi: advancedA.abi, functionName: "transfer", args: [recipient, 1n], account: creator }));
+  await write(advanced, advancedA.abi, "unpause");
+  await write(advanced, advancedA.abi, "burn", [1n]);
+  assert.equal(await read(advanced, advancedA.abi, "totalSupply"), 149n);
 
   const senderDeployment = await deploy(senderA);
   const sender = senderDeployment.contractAddress;
@@ -68,18 +73,22 @@ test("all four operations execute on ephemeral Anvil with real receipts and read
   assert.equal(await read(token, tokenA.abi, "balanceOf", [recipient]), amounts[0]);
   assert.equal(await read(token, tokenA.abi, "balanceOf", [beneficiary]), amounts[1]);
   assert.equal(await read(token, tokenA.abi, "allowance", [creator, sender]), 0n);
-  const manyRecipients = Array.from({ length: 100 }, (_, i) => `0x${(i + 1000).toString(16).padStart(40, "0")}`);
-  await write(token, tokenA.abi, "approve", [sender, 100n]);
-  const fullBatch = await write(sender, senderA.abi, "send", [token, manyRecipients, Array(100).fill(1n)]);
-  assert.equal(await read(token, tokenA.abi, "balanceOf", [manyRecipients[99]]), 1n);
+  const batchGas = {};
+  for (const count of [1, 10, 50, 100]) {
+    const addresses = Array.from({ length: count }, (_, i) => `0x${(count * 1000 + i + 1).toString(16).padStart(40, "0")}`);
+    await write(token, tokenA.abi, "approve", [sender, BigInt(count)]);
+    const receipt = await write(sender, senderA.abi, "send", [token, addresses, Array(count).fill(1n)]);
+    batchGas[count] = receipt.gasUsed.toString();
+    assert.equal(await read(token, tokenA.abi, "balanceOf", [addresses[count - 1]]), 1n);
+  }
   const blockGasLimit = (await publicClient.getBlock()).gasLimit;
-  assert.ok(fullBatch.gasUsed < blockGasLimit / 2n);
+  assert.ok(BigInt(batchGas[100]) < blockGasLimit / 2n);
 
   const now = (await publicClient.getBlock()).timestamp;
   const lockDeployment = await deploy(lockA, [token, beneficiary, now + 100n]);
   const lock = lockDeployment.contractAddress;
-  await write(token, tokenA.abi, "approve", [lock, parseUnits("25", 18)]);
-  await write(lock, lockA.abi, "fund", [parseUnits("25", 18)]);
+  const lockApprove = await write(token, tokenA.abi, "approve", [lock, parseUnits("25", 18)]);
+  const lockFund = await write(lock, lockA.abi, "fund", [parseUnits("25", 18)]);
   await assert.rejects(publicClient.simulateContract({ address: lock, abi: lockA.abi, functionName: "release", account: beneficiary }));
   await rpc("evm_setNextBlockTimestamp", [Number(now + 100n)]); await rpc("evm_mine");
   const releaseWallet = createWalletClient({ account: beneficiary, chain: foundry, transport: http(url) });
@@ -89,13 +98,14 @@ test("all four operations execute on ephemeral Anvil with real receipts and read
   const next = (await publicClient.getBlock()).timestamp;
   const vestDeployment = await deploy(vestA, [token, beneficiary, next + 100n, 100n, next + 150n, 101n]);
   const vest = vestDeployment.contractAddress;
-  await write(token, tokenA.abi, "approve", [vest, 101n]); await write(vest, vestA.abi, "fund");
+  const vestApprove = await write(token, tokenA.abi, "approve", [vest, 101n]);
+  const vestFund = await write(vest, vestA.abi, "fund");
   await rpc("evm_setNextBlockTimestamp", [Number(next + 150n)]); await rpc("evm_mine");
   assert.equal(await read(vest, vestA.abi, "releasable"), 50n);
-  await wait(await releaseWallet.writeContract({ address: vest, abi: vestA.abi, functionName: "release" }));
+  const vestPartialRelease = await wait(await releaseWallet.writeContract({ address: vest, abi: vestA.abi, functionName: "release" }));
   await rpc("evm_setNextBlockTimestamp", [Number(next + 200n)]); await rpc("evm_mine");
-  await wait(await releaseWallet.writeContract({ address: vest, abi: vestA.abi, functionName: "release" }));
+  const vestFinalRelease = await wait(await releaseWallet.writeContract({ address: vest, abi: vestA.abi, functionName: "release" }));
   assert.equal(await read(vest, vestA.abi, "released"), 101n);
   assert.equal(await read(token, tokenA.abi, "balanceOf", [beneficiary]), parseUnits("45", 18) + 101n);
-  console.log(JSON.stringify({ localChain: 31337, factoryDeploymentGas: factoryDeployment.gasUsed.toString(), standardCreationGas: standardReceipt.gasUsed.toString(), advancedCreationGas: advancedReceipt.gasUsed.toString(), senderDeploymentGas: senderDeployment.gasUsed.toString(), twoRecipientGas: sent.gasUsed.toString(), hundredRecipientGas: fullBatch.gasUsed.toString(), blockGasLimit: blockGasLimit.toString(), lockDeploymentGas: lockDeployment.gasUsed.toString(), lockReleaseGas: lockRelease.gasUsed.toString(), vestDeploymentGas: vestDeployment.gasUsed.toString(), vestingReleasedRaw: "101" }));
+  console.log(JSON.stringify({ localChain: 31337, factoryDeploymentGas: factoryDeployment.gasUsed.toString(), standardCreationGas: standardReceipt.gasUsed.toString(), advancedCreationGas: advancedReceipt.gasUsed.toString(), senderDeploymentGas: senderDeployment.gasUsed.toString(), twoRecipientGas: sent.gasUsed.toString(), batchGas, blockGasLimit: blockGasLimit.toString(), lockDeploymentGas: lockDeployment.gasUsed.toString(), lockApprovalGas: lockApprove.gasUsed.toString(), lockFundingGas: lockFund.gasUsed.toString(), lockReleaseGas: lockRelease.gasUsed.toString(), vestDeploymentGas: vestDeployment.gasUsed.toString(), vestApprovalGas: vestApprove.gasUsed.toString(), vestFundingGas: vestFund.gasUsed.toString(), vestPartialReleaseGas: vestPartialRelease.gasUsed.toString(), vestFinalReleaseGas: vestFinalRelease.gasUsed.toString(), vestingReleasedRaw: "101" }));
 });

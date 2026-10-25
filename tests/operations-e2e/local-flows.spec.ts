@@ -154,3 +154,39 @@ test("advanced preset and invalid states stay explicit on mobile", async ({ page
   await expect(page.locator("#lifecycle")).toHaveText("Invalid input");
   expect(requests).toEqual([]);
 });
+
+test("wrong network and wallet rejection cannot produce a success receipt", async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as any).ethereum = { request: async ({ method, params = [] }: { method: string; params?: unknown[] }) => {
+      const response = await fetch("http://127.0.0.1:8545", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: method === "eth_requestAccounts" ? "eth_accounts" : method, params }) });
+      const data = await response.json(); if (data.error) throw Error(`Local RPC error ${data.error.code}`); return data.result;
+    }};
+  });
+  await page.goto("/operations/token-creator/");
+  await page.getByRole("button", { name: "Connect local wallet" }).click();
+  await page.getByLabel("Token name").fill("Rejected Local");
+  await page.getByLabel("Symbol").fill("RJL");
+  await page.getByLabel("Initial supply (18 decimals)").fill("10");
+  await page.getByLabel("Initial recipient").fill(accounts[0]);
+  await page.evaluate(() => {
+    const provider = (window as any).ethereum;
+    provider.originalRequest = provider.request.bind(provider);
+    provider.request = (request: { method: string; params?: unknown[] }) => request.method === "eth_chainId" ? "0x2105" : provider.originalRequest(request);
+  });
+  await page.getByRole("button", { name: "Validate and review" }).click();
+  await expect(page.locator("#lifecycle")).toHaveText("Invalid input");
+  await expect(page.locator("#result")).toContainText("Wrong network");
+  await page.evaluate(() => { const provider = (window as any).ethereum; provider.request = provider.originalRequest; });
+  await page.getByRole("button", { name: "Validate and review" }).click();
+  await page.getByRole("button", { name: "Simulate on Anvil" }).click();
+  await expect(page.locator("#lifecycle")).toHaveText("Ready for local execution");
+  await page.evaluate(() => {
+    const provider = (window as any).ethereum;
+    const originalRequest = provider.request.bind(provider);
+    provider.request = (request: { method: string; params?: unknown[] }) => request.method === "eth_sendTransaction" ? Promise.reject(Error("User rejected local transaction")) : originalRequest(request);
+  });
+  await page.getByRole("button", { name: "Execute locally" }).click();
+  await expect(page.locator("#lifecycle")).toContainText("Failed or reverted");
+  await expect(page.locator("#result")).toContainText("User rejected local transaction");
+  await expect(page.getByRole("button", { name: "Execute locally" })).toBeDisabled();
+});
