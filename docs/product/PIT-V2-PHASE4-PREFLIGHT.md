@@ -1,6 +1,6 @@
 # PIT V2 Phase 4 — Base Sepolia preflight (NO BROADCAST)
 
-Status: **funding and transaction authorization pending**. This is a bounded testnet envelope, not a deployment record. Recheck all live values immediately before the operator GO and before every transaction. No external PIT transaction has been sent.
+Status: **funded; transaction authorization pending**. This is a bounded testnet envelope, not a deployment record. Recheck all live values immediately before the operator GO and before every transaction. No external PIT transaction has been sent.
 
 ## Reviewed source and minimal deployment set
 
@@ -20,7 +20,7 @@ Status: **funding and transaction authorization pending**. This is a bounded tes
 | MultiSender recipient A | `0xA945c984d4cD94528D0Ee3eCEe540EE66F1843B0` | Dedicated encrypted test keystore; token receipt only. |
 | MultiSender recipient B | `0xf938C5E7D1e6bf62a2399aE6b14ca13708478ab7` | Dedicated encrypted test keystore; token receipt only. |
 
-The existing `deopt-deployer` keystore is out of scope. No private key, seed phrase, keystore password, real wallet, or PIT merchant address belongs in this deployment record. The signer's Base Sepolia balance and nonce were **0 ETH and 0** at preflight.
+The existing `deopt-deployer` keystore is out of scope. No private key, seed phrase, keystore password, real wallet, or PIT merchant address belongs in this deployment record. At Base Sepolia block **50,288,395**, the signer's read-only RPC balance was **0.001 test ETH** and nonce **0**. The funding transaction hash was not supplied; the balance and chain ID were independently read back.
 
 | Instance | Test configuration | Initial authority |
 |---|---|---|
@@ -46,10 +46,12 @@ A preflight `OPTIONS` request with local origin `http://127.0.0.1:4414` received
 
 With signer nonce 0 and exactly this ordering (both shared deployments, token creations and admin checks, batch, lock deployment/funding, vesting deployment/funding, then time-based releases), predicted `CREATE` addresses are: factory `0xE861d10ab302B66f619b15323C96d9F3BbfDc230`, MultiSender `0xf1c076cDF4A3C0bbBc491cF3578CA2F3d99424eA`, standard token `0x8ECa4F7e0B62eB0937A360074E5d67c3e6f1858a`, advanced token `0x1378294Fc8fCE1dA23A5a69025e9534FED32bee2`, locker `0x0d3bC5ADA20de6B05967c947E559a4f3C662e1C6`, and vesting `0x1b7844B2d4fAC6Eaa36c6A0F837C3d3E0F183970`. These are **conditional predictions, not deployed contracts**. A changed nonce or transaction order invalidates them and requires renewed review.
 
-The sum of provisional **per-transaction gas-limit ceilings** is **9,550,000** gas; individual caps range from 80,000 to 3,200,000 gas. At a proposed **100,000,000 wei (0.1 gwei) max fee per gas**, the L2 ceiling from those caps is **0.000955 test ETH**. Additional L1 data and any operator fee must be checked before every write; the sampled RPC fee is not an all-in quote. Proposed **aggregate all-in campaign spend ceiling: 0.005 Base Sepolia test ETH**. Stop if any per-transaction cap, current fee, all-in estimate or remaining campaign allowance cannot be verified. The separately funded wallet should hold no more than **0.01 test ETH**, so unrelated funds are never put at risk.
+The sum of provisional **per-transaction gas-limit ceilings** is **9,550,000** gas; individual caps range from 80,000 to 3,200,000 gas. At a proposed **50,000,000 wei (0.05 gwei) max fee per gas**, the L2 ceiling from those caps is **0.0004775 test ETH**. Reserve an additional **0.00002 test ETH per transaction** for L1 data and operator fees, or **0.00038** across the 19 writes. This planning sum is **0.0008575 test ETH**; proposed **aggregate all-in campaign spend ceiling: 0.0009 Base Sepolia test ETH**. Read the on-chain GasPriceOracle again before every write and stop if its upper bound plus the operator fee exceeds that transaction's reserve. Check actual signer balance deltas after each receipt; stop if the next worst-case cost could exceed the remaining campaign allowance. The sampled `eth_gasPrice` remained **6,000,000 wei** at block 50,288,395, below the proposed 50,000,000-wei cap. The currently funded **0.001 test ETH** balance is sufficient only while these explicit ceilings hold; do not top it up silently.
 
-The wallet currently holds **0**, so funding is required before GO. Funding does **not** authorize PIT to broadcast. Only the explicit `GO PIT4 BASE SEPOLIA` response to an updated final envelope may authorize the first PIT testnet write. No Base mainnet, Ethereum mainnet, real USDC, PIT fee, hosted deployment, or production infrastructure change is included.
+`scripts/operations/sepolia-budget.mjs` implements the pure per-action gas, fee, nonce, signer, funding and aggregate-budget rejection rules, with negative tests. It is **not a broadcaster**. After GO, every actual write must pass this guard with fresh RPC values in the same controlled transaction path, plus destination/calldata checks; the existence of this module alone does not authorize or perform a transaction.
+
+Funding does **not** authorize PIT to broadcast. Only the explicit `GO PIT4 BASE SEPOLIA` response to this displayed envelope may authorize the first PIT testnet write. No Base mainnet, Ethereum mainnet, real USDC, PIT fee, hosted deployment, or production infrastructure change is included.
 
 ## Remaining safe work and release boundary
 
-Before GO: verify signer funding and nonce, refresh chain/fee estimates, freeze exact source/build artifacts and transaction values, confirm all-in fee guard and browser preview policy. The operations frontend is still Anvil-only; Base Sepolia execution remains disabled. After GO, receipt, runtime code, role and on-chain state checks must precede browser activation. Browser acceptance requires ordinary wallet confirmation; the encrypted CLI keystore alone does not prove browser-wallet availability. This campaign does not verify hosted SIWE or authorize a public operations site.
+Before GO: refresh signer funding and nonce, chain/fee estimates, and exact source/build artifacts; confirm the all-in fee guard and browser preview policy. The operations frontend is still Anvil-only; Base Sepolia execution remains disabled. After GO, receipt, runtime code, role and on-chain state checks must precede browser activation. Browser acceptance requires ordinary wallet confirmation; the encrypted CLI keystore alone does not prove browser-wallet availability. This campaign does not verify hosted SIWE or authorize a public operations site.
