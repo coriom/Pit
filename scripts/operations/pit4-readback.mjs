@@ -46,7 +46,12 @@ if (totalActualCostWei > 900_000_000_000_000n) throw Error("Campaign cost exceed
 for (const [index, label] of [[0, "factory"], [1, "sender"], [2, "standard"], [3, "advanced"], [10, "lock"], [13, "vesting"]]) {
   equal(campaign.receipts[index].txHash.toLowerCase(), config[label].deploymentTx.toLowerCase(), `${label} manifest transaction`);
 }
-equal(BigInt(rpc("eth_getBalance", [SEPOLIA_SIGNER, "latest"])), 1_000_000_000_000_000n - totalActualCostWei, "signer campaign balance conservation");
+// A later incoming balance change must not invalidate Phase 4's historical
+// cost proof. Reject any net loss below the proven postflight balance.
+const expectedPostCampaignBalance = 1_000_000_000_000_000n - totalActualCostWei;
+const currentBalance = BigInt(rpc("eth_getBalance", [SEPOLIA_SIGNER, "latest"]));
+if (currentBalance < expectedPostCampaignBalance) throw Error("Signer balance fell below the proven Phase 4 postflight balance");
+const balanceAbovePostflight = currentBalance - expectedPostCampaignBalance;
 const codeHashes = {};
 for (const label of ["factory", "sender", "standard", "advanced", "lock", "vesting"]) {
   const item = config[label];
@@ -89,4 +94,4 @@ equal(get(standardAddress, token.abi, "balanceOf", [config.vesting.address]), 0n
 const nonce = Number(BigInt(rpc("eth_getTransactionCount", [signer, "latest"])));
 equal(nonce, 19, "campaign transaction count");
 equal(Number(BigInt(rpc("eth_getTransactionCount", [signer, "pending"]))), 19, "pending nonce");
-console.log(JSON.stringify({ status: "PASS", chainId: chain, block: Number(BigInt(block.number)), signer, nonce, receiptCount: 19, totalActualCostWei: totalActualCostWei.toString(), codeHashes, standardSupply: "1000e18", advancedSupply: "149e18", lockReleased: "25e18", vestingReleased: "100e18", allRecipientAndRoleChecks: true }, null, 2));
+console.log(JSON.stringify({ status: "PASS", chainId: chain, block: Number(BigInt(block.number)), signer, nonce, receiptCount: 19, totalActualCostWei: totalActualCostWei.toString(), currentBalanceWei: currentBalance.toString(), balanceAbovePostflightWei: balanceAbovePostflight.toString(), codeHashes, standardSupply: "1000e18", advancedSupply: "149e18", lockReleased: "25e18", vestingReleased: "100e18", allRecipientAndRoleChecks: true }, null, 2));

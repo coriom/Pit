@@ -3,6 +3,7 @@ out/
 cache/
 dist-operations/
 dist-operations-sepolia/
+dist-operations-sepolia-wallet/
 dist-operations-deployment/
 dist/
 dist-readonly-beta/

@@ -1,0 +1,6 @@
+---
+import Layout from "../components/Layout.astro";
+import { operationCatalog } from "../../operations/lib/catalog";
+import { previewDescriptions } from "../../operations-sepolia/preview-copy";
+---
+<Layout title="PIT operations" description="Private, explicitly enabled Base Sepolia wallet acceptance on localhost."><section class="hero"><div class="eyebrow">PIT V2 · private Base Sepolia wallet test</div><h1>Test the PIT operations with your wallet.</h1><p>This local preview uses reviewed Base Sepolia contracts. Every write requires your wallet confirmation and a new bounded campaign approval. Never enter a seed phrase.</p><p class="notice">Commercial fees are indicative proposals and inactive. Network test ETH only.</p></section><div class="grid">{operationCatalog.map((item)=><a class="panel" href={`/operations/${item.id}/`}><small class="eyebrow">{item.category}</small><h2>{item.title}</h2><p>{previewDescriptions[item.id]}</p><small>Indicative PIT fee: {item.fee} · inactive</small></a>)}</div></Layout>
