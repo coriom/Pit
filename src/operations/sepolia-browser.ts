@@ -1,6 +1,6 @@
 import { decodeFunctionResult, encodeFunctionData, keccak256, parseAbi, type Abi, type Address, type Hex } from "viem";
 
-type Deployment = { address: Address; deploymentTx: `0x${string}`; deploymentBlock: number; runtimeKeccak: `0x${string}` };
+type Deployment = { address: Address; deploymentTx: string; deploymentBlock: number; runtimeKeccak: string };
 type Config = { chainId: 84532; rpc: "https://sepolia.base.org"; signer: Address; factory: Deployment; sender: Deployment; standard: Deployment; advanced: Deployment; lock: Deployment; vesting: Deployment };
 declare const __PIT_SEPOLIA_CONFIG__: Config;
 
@@ -62,7 +62,7 @@ function line(label: string, value: unknown) { return `${label}: ${String(value)
 function date(seconds: bigint) { return new Date(Number(seconds) * 1000).toISOString(); }
 async function codeMatches(item: Deployment) {
   const code = await client.getCode({ address: item.address });
-  if (!code || keccak256(code).toLowerCase() !== item.runtimeKeccak.toLowerCase()) throw Error(`Verified runtime mismatch at ${item.address}`);
+  if (!code || keccak256(code).slice(2).toLowerCase() !== item.runtimeKeccak.toLowerCase()) throw Error(`Verified runtime mismatch at ${item.address}`);
 }
 async function inspect(): Promise<string> {
   if (await client.getChainId() !== 84532) throw Error("RPC returned a different chain ID");

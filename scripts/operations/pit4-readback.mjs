@@ -35,7 +35,8 @@ let totalActualCostWei = 0n;
 for (let index = 0; index < campaign.receipts.length; index++) {
   const row = campaign.receipts[index];
   equal(row.index, index, "campaign receipt order");
-  const receipt = rpc("eth_getTransactionReceipt", [row.txHash]);
+  if (!/^[0-9a-fA-F]{64}$/.test(row.txHash)) throw Error(`Invalid action ${index} transaction digest`);
+  const receipt = rpc("eth_getTransactionReceipt", [`0x${row.txHash}`]);
   equal(receipt?.status, "0x1", `action ${index} receipt`);
   equal(Number(BigInt(receipt.blockNumber)), row.blockNumber, `action ${index} block`);
   equal(BigInt(receipt.gasUsed), BigInt(row.gasUsed), `action ${index} gas used`);
@@ -51,8 +52,8 @@ for (const label of ["factory", "sender", "standard", "advanced", "lock", "vesti
   const item = config[label];
   const code = rpc("eth_getCode", [item.address, "latest"]);
   if (code === "0x") throw Error(`${label} code missing`);
-  equal(keccak256(code).toLowerCase(), item.runtimeKeccak.toLowerCase(), `${label} runtime`);
-  const receipt = rpc("eth_getTransactionReceipt", [item.deploymentTx]);
+  equal(keccak256(code).slice(2).toLowerCase(), item.runtimeKeccak.toLowerCase(), `${label} runtime`);
+  const receipt = rpc("eth_getTransactionReceipt", [`0x${item.deploymentTx}`]);
   equal(receipt?.status, "0x1", `${label} deployment receipt`);
   codeHashes[label] = item.runtimeKeccak;
 }

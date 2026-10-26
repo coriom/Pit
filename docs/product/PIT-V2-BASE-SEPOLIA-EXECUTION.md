@@ -17,6 +17,8 @@ The operator supplied the exact `GO PIT4 BASE SEPOLIA` approval for the [display
 
 All six on-chain runtime Keccak hashes and deployment transaction receipts are pinned in [`deployments/base-sepolia.json`](../../deployments/base-sepolia.json). Their code was compared with the reviewed Foundry artifacts, masking only compiler-declared immutables. This **runtime match is distinct from public source verification**.
 
+Tracked public transaction and code hashes use exactly 64 hexadecimal characters **without** the optional `0x` prefix. RPC clients restore that prefix when querying Base Sepolia. This keeps the repository's existing 0x-prefixed-secret detector intact; it does not change any hash value.
+
 ## Execution receipts and gas
 
 The machine-readable receipt list is in [`deployments/base-sepolia-receipts.json`](../../deployments/base-sepolia-receipts.json). It records every transaction hash, block, gas used, effective price, and observed signer balance delta. A complete independent postflight is implemented in `scripts/operations/pit4-readback.mjs`.
@@ -25,9 +27,9 @@ The machine-readable receipt list is in [`deployments/base-sepolia-receipts.json
 
 | Time-dependent action | Successful transaction | Block | Gas used |
 |---|---|---:|---:|
-| Locker release, after unlock | `0x294c4c359519aba272848b5f10dabbcb01e0d2bff3bed62680018186d388b615` | 50,308,084 | 62,684 |
-| Vesting partial release, after cliff | `0x9b2aaa0d7f0ac492844d5999320ea50e5e0c2d02184d13f5aa5bf345e79740d7` | 50,310,122 | 68,182 |
-| Vesting final release, after completion | `0xf270c72504e4b220f6c45e6495ff1aac792137855ca12a56e1927150548324b9` | 50,314,640 | 45,937 |
+| Locker release, after unlock | `294c4c359519aba272848b5f10dabbcb01e0d2bff3bed62680018186d388b615` | 50,308,084 | 62,684 |
+| Vesting partial release, after cliff | `9b2aaa0d7f0ac492844d5999320ea50e5e0c2d02184d13f5aa5bf345e79740d7` | 50,310,122 | 68,182 |
+| Vesting final release, after completion | `f270c72504e4b220f6c45e6495ff1aac792137855ca12a56e1927150548324b9` | 50,314,640 | 45,937 |
 
 ## Testnet behavior and limits
 

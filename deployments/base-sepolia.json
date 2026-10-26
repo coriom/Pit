@@ -6,38 +6,38 @@
   "signer": "0xCb8c794c7B33FeC20C30D970725933bE1fc656C6",
   "factory": {
     "address": "0xE861d10ab302B66f619b15323C96d9F3BbfDc230",
-    "deploymentTx": "0xe4d2f61450b43909bca7e8bb8e053ec50f8011e1f8008f3479959e12a3027cf1",
+    "deploymentTx": "e4d2f61450b43909bca7e8bb8e053ec50f8011e1f8008f3479959e12a3027cf1",
     "deploymentBlock": 50299313,
-    "runtimeKeccak": "0x4d749b6a74e282c6fd9d17fc3ed9e30637f4c6f73841d55be5dc9de7034f4724"
+    "runtimeKeccak": "4d749b6a74e282c6fd9d17fc3ed9e30637f4c6f73841d55be5dc9de7034f4724"
   },
   "sender": {
     "address": "0xf1c076cDF4A3C0bbBc491cF3578CA2F3d99424eA",
-    "deploymentTx": "0xdbfdfad18ba130f7621932c077a53429f50513f3e31f6a7bb2545970de9f6fc4",
+    "deploymentTx": "dbfdfad18ba130f7621932c077a53429f50513f3e31f6a7bb2545970de9f6fc4",
     "deploymentBlock": 50299453,
-    "runtimeKeccak": "0xa3c229e5a099981a744c4e2fb0db329265a07c914c066e9f3f3a41892dfa9a7d"
+    "runtimeKeccak": "a3c229e5a099981a744c4e2fb0db329265a07c914c066e9f3f3a41892dfa9a7d"
   },
   "standard": {
     "address": "0x8ECa4F7e0B62eB0937A360074E5d67c3e6f1858a",
-    "deploymentTx": "0x231392f48672213a875f20c550360af85d66827ff1abe3a09d4747db3f1596f3",
+    "deploymentTx": "231392f48672213a875f20c550360af85d66827ff1abe3a09d4747db3f1596f3",
     "deploymentBlock": 50300655,
-    "runtimeKeccak": "0xc198a903c72945fd9328d9bb79c41db177771df07d921d1c5bd97b446ac4aba6"
+    "runtimeKeccak": "c198a903c72945fd9328d9bb79c41db177771df07d921d1c5bd97b446ac4aba6"
   },
   "advanced": {
     "address": "0x1378294Fc8fCE1dA23A5a69025e9534FED32bee2",
-    "deploymentTx": "0x0698ceedcf1cb93044f03b3f9a66eadea2fa42fd15114f3b2b72ab1f44bc21d4",
+    "deploymentTx": "0698ceedcf1cb93044f03b3f9a66eadea2fa42fd15114f3b2b72ab1f44bc21d4",
     "deploymentBlock": 50300842,
-    "runtimeKeccak": "0x0f5c2eac88e0032cf4fa3a748af5b65318804dc54a16ca42909623f30ad4aa71"
+    "runtimeKeccak": "0f5c2eac88e0032cf4fa3a748af5b65318804dc54a16ca42909623f30ad4aa71"
   },
   "lock": {
     "address": "0x0d3bC5ADA20de6B05967c947E559a4f3C662e1C6",
-    "deploymentTx": "0x98fd7883f4ebbede8354dcf2cdfbfcc090dc8bfe110555b23f97d69b5f92bd2d",
+    "deploymentTx": "98fd7883f4ebbede8354dcf2cdfbfcc090dc8bfe110555b23f97d69b5f92bd2d",
     "deploymentBlock": 50301989,
-    "runtimeKeccak": "0x34a84512fad243c5d4278851aa5a5a65403bafb64fb33122136a981617bb66b8"
+    "runtimeKeccak": "34a84512fad243c5d4278851aa5a5a65403bafb64fb33122136a981617bb66b8"
   },
   "vesting": {
     "address": "0x1b7844B2d4fAC6Eaa36c6A0F837C3d3E0F183970",
-    "deploymentTx": "0xe4e68951c4c4d8abc4ac051ba8a5b33bf13e3e08b47cd0c4a188b52f4b8c95ad",
+    "deploymentTx": "e4e68951c4c4d8abc4ac051ba8a5b33bf13e3e08b47cd0c4a188b52f4b8c95ad",
     "deploymentBlock": 50302525,
-    "runtimeKeccak": "0xd0e3e9cc7b34c8ca0a886566bfffcc98ab9b32c232f37101776befa293ea493f"
+    "runtimeKeccak": "d0e3e9cc7b34c8ca0a886566bfffcc98ab9b32c232f37101776befa293ea493f"
   }
 }
