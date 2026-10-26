@@ -1,0 +1,8 @@
+---
+import Layout from "../../../components/Layout.astro";
+import { operationCatalog } from "../../../../operations/lib/catalog";
+import { previewDescriptions } from "../../../preview-copy";
+export function getStaticPaths(){return operationCatalog.map((item)=>({params:{id:item.id},props:{item}}));}
+const { item } = Astro.props;
+---
+<Layout title={item.title} description={previewDescriptions[item.id]}><section class="hero"><div class="eyebrow">{item.category} · Base Sepolia read-only</div><h1>{item.title}</h1><p>{previewDescriptions[item.id]}</p><p class="notice">Indicative PIT service fee: {item.fee}, inactive. This preview reads only the reviewed demonstration contracts. No wallet connection or transaction is available.</p></section><div id="operation-root" data-operation={item.id}></div><script src="../../../../operations/sepolia-browser.ts"></script></Layout>

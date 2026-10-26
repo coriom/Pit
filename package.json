@@ -14,6 +14,7 @@
     "toolbox:cloudflare:public:check": "pnpm toolbox:public:check && PIT_TOOLBOX_BUILD_MODE=public node scripts/release/local-toolbox-cloudflare.mjs --public",
     "explorer:check": "astro build --config astro.explorer.config.mjs && node scripts/release/read-only-explorer-host.mjs",
     "operations:check": "forge build --offline && node scripts/operations/generate-artifacts.mjs && astro build --config astro.operations.config.mjs && node scripts/operations/check-artifact.mjs",
+    "operations:sepolia:check": "forge build --offline && node scripts/operations/generate-artifacts.mjs && PIT_OPERATIONS_MODE=base-sepolia astro build --config astro.operations.config.mjs && PIT_OPERATIONS_MODE=base-sepolia node scripts/operations/check-artifact.mjs",
     "operations:test": "forge test --offline && vitest run tests/operations-inputs.test.ts && node --test tests/operations-sepolia-config.test.mjs tests/operations-sepolia-budget.test.mjs",
     "operations:anvil:test": "forge build --offline && node tests/operations-local-evm.test.mjs",
     "operations:e2e": "pnpm operations:check && playwright test --config playwright.operations.config.ts",

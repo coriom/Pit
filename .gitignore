@@ -2,6 +2,7 @@ node_modules/
 out/
 cache/
 dist-operations/
+dist-operations-sepolia/
 dist-operations-deployment/
 dist/
 dist-readonly-beta/

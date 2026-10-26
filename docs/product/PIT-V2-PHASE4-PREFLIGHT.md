@@ -1,6 +1,6 @@
 # PIT V2 Phase 4 — Base Sepolia preflight (NO BROADCAST)
 
-Status: **funded; transaction authorization pending**. This is a bounded testnet envelope, not a deployment record. Recheck all live values immediately before the operator GO and before every transaction. No external PIT transaction has been sent.
+Status: **historical preflight snapshot**. The operator later supplied the exact GO; actual receipts and current status are recorded in [the execution record](PIT-V2-BASE-SEPOLIA-EXECUTION.md). This page preserves the authorization envelope as shown before the first external transaction.
 
 ## Reviewed source and minimal deployment set
 
