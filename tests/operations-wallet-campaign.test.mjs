@@ -11,13 +11,16 @@ function fixture() {
     timestamp: 1_800_000_000n, maxFeePerGasWei: 50_000_000n, l1ReservePerTxWei: 10_000_000_000n,
     name: "PIT Test", symbol: "PITX", unlockDelay: 1800n, startDelay: 2700n, duration: 1800n, cliffDelay: 900n }).campaign;
 }
-test("exact-step campaign accepts the twelve reviewed actions and destinations", () => {
-  assert.equal(validateWalletCampaign(fixture(), deployment).steps.length, 12);
+test("exact-step campaign accepts the eleven reviewed actions and newly created token", () => {
+  const campaign = validateWalletCampaign(fixture(), deployment);
+  assert.equal(campaign.steps.length, 11);
+  assert.equal(campaign.steps[1].to, campaign.token);
 });
 test("campaign rejects signer, chain, nonce, destination and calldata mutation", () => {
   for (const mutate of [
     (x) => { x.chainId = 8453; },
     (x) => { x.signer = deployment.signer; },
+    (x) => { x.token = deployment.standard.address; },
     (x) => { x.steps[1].nonce = 2; },
     (x) => { x.expiresAt = 0; },
     (x) => { x.steps[0].to = deployment.standard.address; },
@@ -25,6 +28,7 @@ test("campaign rejects signer, chain, nonce, destination and calldata mutation",
     (x) => { x.steps[5].to = deployment.sender.address; },
     (x) => { x.steps[7].label = "deploy-lock"; },
     (x) => { x.steps.pop(); },
+    (x) => { x.forms.lock.beneficiary = deployment.signer; },
   ]) { const x = fixture(); mutate(x); assert.throws(() => validateWalletCampaign(x, deployment)); }
 });
 test("campaign fails closed on aggregate fee and unbounded gas or extra fields", () => {

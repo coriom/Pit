@@ -5,13 +5,17 @@ const artifact = (source, name) => JSON.parse(readFileSync(`out/${source}.sol/${
 const minute = (seconds) => (seconds + 59n) / 60n * 60n;
 const date = (seconds) => new Date(Number(seconds) * 1000).toISOString().slice(0, 16);
 
-/** Exact reviewed twelve-step browser campaign; no signing or RPC calls. */
+/** Exact reviewed eleven-step browser campaign; no signing or RPC calls. */
 export function buildPit4bPlan({ deployment, signer, nonce, timestamp, maxFeePerGasWei, l1ReservePerTxWei, name, symbol, unlockDelay, startDelay, duration, cliffDelay }) {
   if (deployment.chainId !== 84532 || !Number.isSafeInteger(nonce) || nonce < 0 || typeof timestamp !== "bigint" ||
       startDelay <= unlockDelay || duration < 900n || duration % 60n !== 0n || cliffDelay <= 0n || cliffDelay >= duration) throw Error("Invalid campaign plan inputs");
   if (!signer || signer.toLowerCase() === deployment.signer.toLowerCase()) throw Error("Separate browser signer required");
   const unlock = minute(timestamp + unlockDelay), start = minute(timestamp + startDelay), cliff = start + cliffDelay;
-  const token = deployment.standard.address, factory = deployment.factory.address, sender = deployment.sender.address;
+  // The first factory transaction creates this disposable token. Its exact
+  // address is fixed by the independently checked current factory nonce (3).
+  // Reusing it avoids a separate signer, token-funding transaction and custody.
+  const factory = deployment.factory.address, sender = deployment.sender.address;
+  const token = getContractAddress({ from: factory, nonce: 3n });
   const lock = getContractAddress({ from: signer, nonce: BigInt(nonce + 3) }), vest = getContractAddress({ from: signer, nonce: BigInt(nonce + 7) });
   const recipientA = "0xA945c984d4cD94528D0Ee3eCEe540EE66F1843B0";
   const recipientB = "0xf938C5E7D1e6bf62a2399aE6b14ca13708478ab7";
@@ -33,9 +37,8 @@ export function buildPit4bPlan({ deployment, signer, nonce, timestamp, maxFeePer
   add("exact-approval", token, encodeFunctionData({ abi: tokenAbi, functionName: "approve", args: [vest, u("4")] }), 80_000);
   add("fund-schedule", vest, encodeFunctionData({ abi: vestArtifact.abi, functionName: "fund" }), 120_000);
   add("release-schedule", vest, encodeFunctionData({ abi: vestArtifact.abi, functionName: "release" }), 100_000);
-  add("release-schedule", vest, encodeFunctionData({ abi: vestArtifact.abi, functionName: "release" }), 100_000);
   const budget = steps.reduce((sum, step) => sum + BigInt(step.gasLimit) * maxFeePerGasWei + l1ReservePerTxWei, 0n);
-  const campaign = { schema: "pit4b.base-sepolia.exact-steps.v1", chainId: 84532, signer, startNonce: nonce, expiresAt: Number(start + duration + 3600n), maxFeePerGasWei: String(maxFeePerGasWei), l1ReservePerTxWei: String(l1ReservePerTxWei), maxTotalWei: String(budget), steps };
   const forms = { creator: { name, symbol, supply: "10", recipient: signer }, multisender: { token, csv: `address,amount\n${recipientA},1\n${recipientB},2` }, lock: { token, amount: "3", beneficiary: signer, unlock: date(unlock), address: lock }, vest: { token, amount: "4", beneficiary: signer, start: date(start), cliff: date(cliff), minutes: String(duration / 60n), address: vest } };
-  return { campaign, forms, expectedCreatedToken: getContractAddress({ from: factory, nonce: 3n }), unlock, start, cliff, end: start + duration };
+  const campaign = { schema: "pit4b.base-sepolia.exact-steps.v2", chainId: 84532, signer, token, startNonce: nonce, expiresAt: Number(start + duration + 3600n), maxFeePerGasWei: String(maxFeePerGasWei), l1ReservePerTxWei: String(l1ReservePerTxWei), maxTotalWei: String(budget), steps, forms };
+  return { campaign, forms, expectedCreatedToken: token, unlock, start, cliff, end: start + duration };
 }

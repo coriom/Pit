@@ -1,5 +1,5 @@
 // Local fork fixture only. All later signed requests go to 127.0.0.1:8555.
-import { createPublicClient, encodeFunctionData, getAddress, http, parseAbi, parseUnits } from "viem";
+import { createPublicClient, getAddress, http } from "viem";
 import { randomBytes } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { buildPit4bPlan } from "../../scripts/operations/pit4b-plan.mjs";
@@ -11,11 +11,6 @@ if (await client.getChainId() !== 84532) throw Error("Fork must use chain 84532"
 // This is an arbitrary local-only impersonated address, not a wallet key.
 const signer = getAddress(`0x${randomBytes(20).toString("hex")}`);
 await client.request({ method: "anvil_setBalance", params: [signer, "0xde0b6b3a7640000"] });
-await client.request({ method: "anvil_impersonateAccount", params: [deployment.signer] });
-const transfer = encodeFunctionData({ abi: parseAbi(["function transfer(address,uint256) returns (bool)"]), functionName: "transfer", args: [signer, parseUnits("10", 18)] });
-const fundingHash = await client.request({ method: "eth_sendTransaction", params: [{ from: deployment.signer, to: deployment.standard.address, data: transfer }] });
-if ((await client.waitForTransactionReceipt({ hash: fundingHash, timeout: 30_000 })).status !== "success") throw Error("Local fork token funding failed");
-await client.request({ method: "anvil_stopImpersonatingAccount", params: [deployment.signer] });
 await client.request({ method: "anvil_impersonateAccount", params: [signer] });
 const nonce = await client.getTransactionCount({ address: signer, blockTag: "pending" });
 if (nonce !== 0) throw Error("Browser test account must start at nonce 0");

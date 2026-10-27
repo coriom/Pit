@@ -14,7 +14,12 @@ import type { OperationId } from "./lib/catalog";
 type Deployment = { address: Address; runtimeKeccak: string };
 type Config = { chainId: 84532; rpc: "https://sepolia.base.org"; signer: Address; factory: Deployment; sender: Deployment; standard: Deployment; advanced: Deployment };
 type Step = { nonce: number; label: string; to: Address | null; calldataKeccak: string; gasLimit: number };
-type Campaign = { chainId: 84532; signer: Address; startNonce: number; expiresAt: number; maxFeePerGasWei: string; l1ReservePerTxWei: string; maxTotalWei: string; steps: Step[] };
+type Campaign = { chainId: 84532; signer: Address; token: Address; startNonce: number; expiresAt: number; maxFeePerGasWei: string; l1ReservePerTxWei: string; maxTotalWei: string; steps: Step[]; forms: {
+  creator: { name: string; symbol: string; supply: string; recipient: Address };
+  multisender: { token: Address; csv: string };
+  lock: { token: Address; amount: string; beneficiary: Address; unlock: string; address: Address };
+  vest: { token: Address; amount: string; beneficiary: Address; start: string; cliff: string; minutes: string; address: Address };
+} };
 declare const __PIT_SEPOLIA_CONFIG__: Config;
 declare const __PIT4B_CAMPAIGN__: Campaign | null;
 const deployment = __PIT_SEPOLIA_CONFIG__;
@@ -51,7 +56,7 @@ const fields: Record<OperationId, string> = {
 };
 
 if (root && kind && fields[kind]) {
-  root.innerHTML = `<section class="panel"><h2>Select a browser wallet</h2><p>Only a dedicated Base Sepolia test wallet. Connection is not SIWE login or a transaction.</p><label>Provider<select id="provider"><option value="">Select a wallet</option></select></label><button type="button" id="connect">Connect wallet</button><p id="wallet-state" role="status">Wallet not connected</p></section><form id="operation-form" class="panel"><h2>Configure and review</h2>${fields[kind]}<div class="actions"><button type="submit">Validate and review</button><button type="button" id="simulate" disabled>Simulate next step</button><button type="button" id="execute" disabled>Confirm in wallet</button></div></form><section class="panel"><h2>Transaction state</h2><p id="lifecycle" role="status" aria-live="polite">Idle</p><pre id="result" aria-live="polite">No transaction has been sent.</pre></section>${kind === "token-locker" || kind === "token-vesting" ? '<section class="panel"><h2>Release an existing reviewed schedule</h2><label>Schedule address<input id="release-address" autocomplete="off" /></label><button id="release-simulate" type="button">Simulate release</button><button id="release-execute" type="button" disabled>Confirm release in wallet</button><p class="muted">Only the immutable beneficiary may release a positive amount after the real chain time reaches the schedule.</p></section>' : ""}`;
+  root.innerHTML = `<section class="panel"><h2>Select a browser wallet</h2><p>Only a dedicated Base Sepolia test wallet. Connection is not SIWE login or a transaction.</p><label>Provider<select id="provider"><option value="">Select a wallet</option></select></label><button type="button" id="connect">Connect wallet</button><p id="wallet-state" role="status">Wallet not connected</p></section><form id="operation-form" class="panel"><h2>Configure and review</h2>${fields[kind]}<div class="actions"><button type="submit">Validate and review</button><button type="button" id="simulate" disabled>Simulate next step</button><button type="button" id="execute" disabled>Confirm in wallet</button></div></form><section class="panel"><h2>Transaction state</h2><p id="lifecycle" role="status" aria-live="polite">Idle</p><pre id="result" aria-live="polite">No transaction has been sent.</pre>${campaign ? '<button type="button" id="download-receipts">Download public receipt list</button><p class="muted">Contains only the campaign signer and public transaction hashes. Keep the file local until you choose to share it for verification.</p>' : ""}</section>${kind === "token-locker" || kind === "token-vesting" ? '<section class="panel"><h2>Release an existing reviewed schedule</h2><label>Schedule address<input id="release-address" autocomplete="off" /></label><button id="release-simulate" type="button">Simulate release</button><button id="release-execute" type="button" disabled>Confirm release in wallet</button><p class="muted">Only the immutable beneficiary may release a positive amount after the real chain time reaches the schedule.</p></section>' : ""}`;
   boot(kind);
 }
 
@@ -63,6 +68,26 @@ function boot(operation: OperationId) {
   const result = document.querySelector<HTMLElement>("#result")!;
   const simulateButton = document.querySelector<HTMLButtonElement>("#simulate")!;
   const executeButton = document.querySelector<HTMLButtonElement>("#execute")!;
+  document.querySelector<HTMLButtonElement>("#download-receipts")?.addEventListener("click", () => {
+    if (!campaign || !account) { set("Receipt export unavailable", "Connect the approved campaign wallet first.", true); return; }
+    try {
+      const hashes = JSON.parse(sessionStorage.getItem("pit4b-receipts") ?? "[]") as unknown;
+      if (!Array.isArray(hashes) || hashes.length > campaign.steps.length || !hashes.every((hash) => typeof hash === "string" && /^0x[0-9a-fA-F]{64}$/.test(hash))) throw Error("Stored public receipt list is invalid.");
+      const body = JSON.stringify({ schema: "pit4b.public-receipts.v1", chainId: 84532, signer: account, token: campaign.token, hashes }, null, 2);
+      const url = URL.createObjectURL(new Blob([body], { type: "application/json" }));
+      const link = document.createElement("a"); link.href = url; link.download = "pit4b-public-receipts.json"; link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) { set("Receipt export unavailable", String(error), true); }
+  });
+  if (campaign) {
+    const fields = operation === "token-creator" ? { name: campaign.forms.creator.name, symbol: campaign.forms.creator.symbol, supply: campaign.forms.creator.supply, recipient: campaign.forms.creator.recipient }
+      : operation === "multisender" ? { token: campaign.forms.multisender.token, recipients: campaign.forms.multisender.csv }
+      : operation === "token-locker" ? { token: campaign.forms.lock.token, amount: campaign.forms.lock.amount, beneficiary: campaign.forms.lock.beneficiary, unlock: campaign.forms.lock.unlock }
+      : { token: campaign.forms.vest.token, amount: campaign.forms.vest.amount, beneficiary: campaign.forms.vest.beneficiary, start: campaign.forms.vest.start, durationMinutes: campaign.forms.vest.minutes, cliff: campaign.forms.vest.cliff };
+    for (const [name, value] of Object.entries(fields)) (form.elements.namedItem(name) as HTMLInputElement | HTMLTextAreaElement).value = value;
+    const releaseInput = document.querySelector<HTMLInputElement>("#release-address");
+    if (releaseInput) releaseInput.value = operation === "token-locker" ? campaign.forms.lock.address : campaign.forms.vest.address;
+  }
   const candidates: Candidate[] = [];
   let provider: Provider | undefined, account: Address | undefined, prepared: Prepared | undefined;
   let currentPlan: Plan | undefined, releasePlan: Plan | undefined, created: Address | undefined;
@@ -100,8 +125,13 @@ function boot(operation: OperationId) {
   }
   async function tokenBalance(token: Address, owner: Address) { return await client.readContract({ address: token, abi: tokenAbi, functionName: "balanceOf", args: [owner] }) as bigint; }
   async function reviewedToken(token: Address) {
-    if (token.toLowerCase() !== deployment.standard.address.toLowerCase()) throw Error("Only the reviewed standard demonstration token is supported in this campaign.");
-    await codeMatches(deployment.standard);
+    const expected = campaign?.token ?? deployment.standard.address;
+    if (token.toLowerCase() !== expected.toLowerCase()) throw Error("Only the reviewed demonstration token is supported in this campaign.");
+    if (campaign) {
+      const code = await client.getCode({ address: expected });
+      const reference = await client.getCode({ address: deployment.standard.address });
+      if (!code || !reference || keccak256(code) !== keccak256(reference)) throw Error("Campaign-created token code differs from the reviewed standard token.");
+    } else await codeMatches(deployment.standard);
     const decimals = Number(await client.readContract({ address: token, abi: tokenAbi, functionName: "decimals" }));
     if (decimals !== 18) throw Error("Unexpected token decimals.");
     return decimals;
@@ -110,6 +140,7 @@ function boot(operation: OperationId) {
     await assertChainAndAccount();
     if (operation === "token-creator") {
       const preset = value(data, "preset") === "advanced" ? "advanced" : "standard";
+      if (campaign && preset !== "standard") throw Error("The approved campaign creates one fixed-supply standard token only.");
       const name = value(data, "name"), symbol = value(data, "symbol");
       if (!name || !symbol || name.length > 60 || symbol.length > 16 || /[\u0000-\u001f]/.test(name + symbol)) throw Error("Name and symbol must be short printable text.");
       const supply = positiveUnits(value(data, "supply"), 18), cap = preset === "advanced" ? positiveUnits(value(data, "cap"), 18) : supply;
@@ -207,7 +238,7 @@ function boot(operation: OperationId) {
         step.calldataKeccak.toLowerCase() !== keccak256(plan.data).slice(2).toLowerCase()) throw Error("This transaction is not an approved exact campaign step.");
     if (plan.to === deployment.factory.address) await codeMatches(deployment.factory);
     else if (plan.to === deployment.sender.address) await codeMatches(deployment.sender);
-    else if (plan.to === deployment.standard.address) await codeMatches(deployment.standard);
+    else if (plan.to?.toLowerCase() === campaign!.token.toLowerCase()) await reviewedToken(campaign!.token);
     else if (plan.label === "fund-schedule" || plan.label === "release-schedule") {
       const vesting = nonce - campaign!.startNonce >= 9;
       const abi = vesting ? vestAbi : lockAbi;
@@ -217,7 +248,7 @@ function boot(operation: OperationId) {
         client.readContract({ address: plan.to, abi, functionName: "beneficiary" }) as Promise<Address>,
         client.readContract({ address: plan.to, abi, functionName: "token" }) as Promise<Address>,
       ]);
-      if (beneficiary.toLowerCase() !== account!.toLowerCase() || token.toLowerCase() !== deployment.standard.address.toLowerCase()) throw Error("Schedule beneficiary or token changed before the wallet write.");
+      if (beneficiary.toLowerCase() !== account!.toLowerCase() || token.toLowerCase() !== campaign!.token.toLowerCase()) throw Error("Schedule beneficiary or token changed before the wallet write.");
     }
     const estimate = await simulate(plan);
     if (estimate > BigInt(step.gasLimit)) throw Error("Current gas estimate exceeds the approved transaction cap.");
@@ -291,6 +322,7 @@ function boot(operation: OperationId) {
         const event = receipt.logs.map((log) => { try { return decodeEventLog({ abi: factoryAbi, data: log.data, topics: log.topics }); } catch { return undefined; } }).find((entry) => entry?.eventName === "TokenCreated");
         const token = (event?.args as { token?: Address; creator?: Address } | undefined)?.token;
         if (!token || (event?.args as { creator?: Address }).creator?.toLowerCase() !== account!.toLowerCase()) throw Error("TokenCreated receipt is missing or has the wrong creator.");
+        if (campaign && token.toLowerCase() !== campaign.token.toLowerCase()) throw Error("Created token address differs from the approved campaign.");
         const code = await client.getCode({ address: token });
         if (!code || (p.preset === "standard" && keccak256(code) !== keccak256((await client.getCode({ address: deployment.standard.address }))!)) ||
             (p.preset === "advanced" && !matchesReviewedRuntime(code, scheduleRuntime.PitAdvancedToken))) throw Error("Created token runtime differs from reviewed implementation.");
@@ -347,7 +379,7 @@ function boot(operation: OperationId) {
       if (!matchesReviewedRuntime(await client.getCode({ address }), reviewed)) throw Error("Schedule runtime is not the reviewed contract.");
       const beneficiary = await client.readContract({ address, abi, functionName: "beneficiary" }) as Address;
       const token = await client.readContract({ address, abi, functionName: "token" }) as Address;
-      if (beneficiary.toLowerCase() !== account!.toLowerCase() || token.toLowerCase() !== deployment.standard.address.toLowerCase()) throw Error("Wrong beneficiary or token.");
+      if (beneficiary.toLowerCase() !== account!.toLowerCase() || token.toLowerCase() !== (campaign?.token ?? deployment.standard.address).toLowerCase()) throw Error("Wrong beneficiary or token.");
       const amount = operation === "token-locker"
         ? (await client.readContract({ address, abi, functionName: "deposited" }) as bigint) - (await client.readContract({ address, abi, functionName: "released" }) as bigint)
         : await client.readContract({ address, abi, functionName: "releasable" }) as bigint;
