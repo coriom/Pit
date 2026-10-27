@@ -1,8 +1,8 @@
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-const names = ["PitTokenFactory", "PitStandardToken", "PitAdvancedToken", "PitMultiSender", "PitTokenLock", "PitTokenVesting"];
-const source = { PitTokenFactory: "PitTokens.sol", PitStandardToken: "PitTokens.sol", PitAdvancedToken: "PitTokens.sol", PitMultiSender: "PitMultiSender.sol", PitTokenLock: "PitSchedules.sol", PitTokenVesting: "PitSchedules.sol" };
+const names = ["PitTokenFactory", "PitStandardToken", "PitAdvancedToken", "PitMultiSender", "PitTokenLock", "PitTokenVesting", "PitNativeMultiSender", "PitNftCollection", "PitNftBatchSender"];
+const source = { PitTokenFactory: "PitTokens.sol", PitStandardToken: "PitTokens.sol", PitAdvancedToken: "PitTokens.sol", PitMultiSender: "PitMultiSender.sol", PitTokenLock: "PitSchedules.sol", PitTokenVesting: "PitSchedules.sol", PitNativeMultiSender: "PitNativeMultiSender.sol", PitNftCollection: "PitNfts.sol", PitNftBatchSender: "PitNfts.sol" };
 const data = Object.fromEntries(names.map((name) => {
   const artifact = JSON.parse(readFileSync(join("out", source[name], `${name}.json`), "utf8"));
   if (!Array.isArray(artifact.abi) || !/^0x[0-9a-f]+$/i.test(artifact.bytecode?.object ?? "")) throw Error(`Invalid Forge artifact: ${name}`);
@@ -15,4 +15,13 @@ const scheduleRuntime = Object.fromEntries(["PitTokenLock", "PitTokenVesting", "
 }));
 mkdirSync("src/operations/generated", { recursive: true });
 writeFileSync("src/operations/generated/contracts.ts", `// Generated from Forge 0.8.24 artifacts; do not edit by hand.\nexport const contracts = ${JSON.stringify(data)} as const;\n`);
-writeFileSync("src/operations/generated/schedule-runtime.ts", `// Generated from reviewed Forge 0.8.24 artifacts; do not edit by hand.\nexport const scheduleRuntime = ${JSON.stringify(scheduleRuntime)} as const;\n`);
+const schedulePath = "src/operations/generated/schedule-runtime.ts";
+let unchangedRuntime = false;
+try {
+  const previous = JSON.parse(readFileSync(schedulePath, "utf8").split("export const scheduleRuntime = ")[1].split(" as const;")[0]);
+  // Forge can renumber immutable AST identifiers when unrelated contracts are
+  // added. Their byte ranges, rather than those identifiers, define the guard.
+  unchangedRuntime = Object.keys(scheduleRuntime).every((name) => previous[name]?.code === scheduleRuntime[name].code
+    && JSON.stringify(Object.values(previous[name].immutableReferences)) === JSON.stringify(Object.values(scheduleRuntime[name].immutableReferences)));
+} catch { /* First generation or changed file format. */ }
+if (!unchangedRuntime) writeFileSync(schedulePath, `// Generated from reviewed Forge 0.8.24 artifacts; do not edit by hand.\nexport const scheduleRuntime = ${JSON.stringify(scheduleRuntime)} as const;\n`);

@@ -1,4 +1,4 @@
-import type { OperationId } from "../operations/lib/catalog";
+import type { LegacyOperationId as OperationId } from "../operations/lib/catalog";
 
 export const previewDescriptions: Record<OperationId, string> = {
   "token-creator": "Inspect the standard and advanced ERC-20 demonstration tokens created on Base Sepolia.",

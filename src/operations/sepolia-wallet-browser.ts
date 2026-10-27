@@ -9,7 +9,7 @@ import { contracts } from "./generated/contracts";
 import { scheduleRuntime } from "./generated/schedule-runtime";
 import { matchesReviewedRuntime } from "./lib/reviewed-runtime";
 import { positiveUnits, requiredAddress, utcSeconds, parseRecipientsCsv } from "./lib/inputs";
-import type { OperationId } from "./lib/catalog";
+import type { LegacyOperationId as OperationId } from "./lib/catalog";
 
 type Deployment = { address: Address; runtimeKeccak: string };
 type Config = { chainId: 84532; rpc: "https://sepolia.base.org"; signer: Address; factory: Deployment; sender: Deployment; standard: Deployment; advanced: Deployment };

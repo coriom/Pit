@@ -5,7 +5,7 @@ import {
 import { foundry } from "viem/chains";
 import { contracts } from "./generated/contracts";
 import { positiveUnits, requiredAddress, utcSeconds, parseRecipientsCsv } from "./lib/inputs";
-import type { OperationId } from "./lib/catalog";
+import type { LegacyOperationId as OperationId } from "./lib/catalog";
 
 const RPC = "http://127.0.0.1:8545";
 const publicClient = createPublicClient({ chain: foundry, transport: http(RPC, { timeout: 10_000 }) });

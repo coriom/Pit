@@ -1,6 +1,6 @@
 ---
 import Layout from "../../../components/Layout.astro";
-import { operationCatalog } from "../../../../operations/lib/catalog";
+import { legacyOperationCatalog as operationCatalog } from "../../../../operations/lib/catalog";
 import { previewDescriptions } from "../../../preview-copy";
 export function getStaticPaths(){return operationCatalog.map((item)=>({params:{id:item.id},props:{item}}));}
 const { item } = Astro.props;
