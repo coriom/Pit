@@ -7,21 +7,21 @@ import { V2_LOCAL_TASKS, V2_LOCAL_WORKSPACES } from "../../src/lib/v2-local-cata
 import { V2_EXPLORER_TASKS } from "../../src/lib/v2-explorer-catalog";
 
 describe("PIT V2 catalogue adapters", () => {
-  it("keeps the 151 local and 27 Explorer experiences on their original routes", () => {
+  it("keeps the original 151 local and 27 Explorer experiences on their routes and adds the batch read", () => {
     expect(V2_LOCAL_TASKS).toHaveLength(151);
-    expect(V2_EXPLORER_TASKS).toHaveLength(27);
+    expect(V2_EXPLORER_TASKS).toHaveLength(28);
     expect(V2_LOCAL_WORKSPACES).toHaveLength(20);
     expect(V2_LOCAL_TASKS.map((entry) => entry.path)).toEqual(LOCAL_TASK_INVENTORY.map((entry) => entry.path));
     expect(V2_EXPLORER_TASKS.map((entry) => entry.path)).toEqual(EXPLORER_TOOLS.map((entry) => `/inspect/${entry.id}/`));
     expect(V2_LOCAL_WORKSPACES.map((entry) => entry.path)).toEqual(LOCAL_TOOLS.map((entry) => entry.path));
-    expect(new Set([...V2_LOCAL_TASKS, ...V2_EXPLORER_TASKS].map((entry) => `${entry.execution}:${entry.path}`)).size).toBe(178);
+    expect(new Set([...V2_LOCAL_TASKS, ...V2_EXPLORER_TASKS].map((entry) => `${entry.execution}:${entry.path}`)).size).toBe(179);
   });
 
   it("maps every working experience to one of nine user categories and keeps it free", () => {
     expect(V2_CATEGORIES).toHaveLength(9);
     const categoryIds = new Set(V2_CATEGORIES.map((entry) => entry.id));
     expect(V2_CATEGORIES.reduce((sum, category) => sum + V2_LOCAL_TASKS.filter((entry) => entry.category === category.id).length, 0)).toBe(151);
-    expect(V2_CATEGORIES.reduce((sum, category) => sum + V2_EXPLORER_TASKS.filter((entry) => entry.category === category.id).length, 0)).toBe(27);
+    expect(V2_CATEGORIES.reduce((sum, category) => sum + V2_EXPLORER_TASKS.filter((entry) => entry.category === category.id).length, 0)).toBe(28);
     for (const entry of [...V2_LOCAL_TASKS, ...V2_EXPLORER_TASKS]) {
       expect(categoryIds.has(entry.category)).toBe(true);
       expect(entry.availability).toBe("available");

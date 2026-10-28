@@ -1,0 +1,25 @@
+{
+  "phase": "PIT-V2-6",
+  "sourceBaseline": "ee620ebfe41b53b2b09cf88f497b9685b5f46f69",
+  "deployment": "NONE",
+  "freeToolboxOriginalTasks": 151,
+  "explorerOriginalTasks": 27,
+  "explorerNewRoutes": ["/inspect/batch-balances/"],
+  "operationsOriginalRoutes": 12,
+  "operationsNewRoutes": [
+    "/operations/nft-manager/",
+    "/operations/erc1155-creator/",
+    "/operations/erc1155-manager/",
+    "/operations/erc1155-multisender/",
+    "/operations/metadata-studio/",
+    "/operations/airdrop-composer/"
+  ],
+  "routeCountIfAccepted": { "toolbox": 151, "explorer": 28, "operationsLocal": 18 },
+  "deduplicationNote": "The public batch-balance route extends the same task already present as a local Anvil operations route; do not count it as a separate unique calculation capability.",
+  "newContracts": ["Pit1155Collection", "Pit1155BatchSender"],
+  "optionalAdvancedErc721Preset": "NOT_IMPLEMENTED",
+  "manualMetaMaskAcceptance": "DEFERRED_FINAL_PRELAUNCH",
+  "externalWriteTransactions": 0,
+  "sourcifySubmissions": 0,
+  "payments": "DISABLED"
+}

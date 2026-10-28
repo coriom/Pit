@@ -3,9 +3,10 @@ import { decodeFunctionResult, encodeFunctionData, getAddress, keccak256, nameha
 export const EXPLORER_CHAINS = {
   ethereum: { id: 1, label: "Ethereum mainnet", rpc: "https://eth.drpc.org/" },
   base: { id: 8453, label: "Base mainnet", rpc: "https://base.drpc.org/" },
+  "base-sepolia": { id: 84532, label: "Base Sepolia", rpc: "https://sepolia.base.org" },
 } as const;
 export type ExplorerChain = keyof typeof EXPLORER_CHAINS;
-export type ExplorerField = { id: string; label: string; example: string; kind?: "textarea" | "select"; options?: readonly string[] };
+export type ExplorerField = { id: string; label: string; example: string; kind?: "textarea" | "select"; options?: readonly string[]; maxLength?: number; required?: boolean };
 export type ExplorerTool = { id: string; title: string; question: string; limitation: string; fields: readonly ExplorerField[]; chains: readonly ExplorerChain[] };
 const address = (label: string): ExplorerField => ({ id: label, label: label.replace(/[A-Z]/g, (letter) => ` ${letter.toLowerCase()}`), example: "0x0000000000000000000000000000000000000000" });
 export const BN_TOOLS: readonly ExplorerTool[] = [

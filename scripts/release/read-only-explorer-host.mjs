@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = "dist-read-only-explorer";
 const HOST = "dist-read-only-explorer-host";
-const IDS = ["native-balance", "selected-erc20-balances", "selected-erc20-allowances", "nft-approval", "ens-resolver", "nft-ownership", "account-code", "wallet-nonce", "transaction-detail", "network-gas", "blob-activity", "tx-transfer-events", "base-transaction-cost", "multicall-static-reads", "proxy-storage", "bytecode-compare", "ownership-role", "erc20-contract", "permit-signals", "erc165-interface", "timelock-standard", "safe-multisig", "uniswap-v3-pool", "uniswap-v3-position", "aave-reserve-index", "erc4626-vault-state", "chainlink-feed"];
+const IDS = ["batch-balances", "native-balance", "selected-erc20-balances", "selected-erc20-allowances", "nft-approval", "ens-resolver", "nft-ownership", "account-code", "wallet-nonce", "transaction-detail", "network-gas", "blob-activity", "tx-transfer-events", "base-transaction-cost", "multicall-static-reads", "proxy-storage", "bytecode-compare", "ownership-role", "erc20-contract", "permit-signals", "erc165-interface", "timelock-standard", "safe-multisig", "uniswap-v3-pool", "uniswap-v3-position", "aave-reserve-index", "erc4626-vault-state", "chainlink-feed"];
 const PAGES = ["index.html", "404.html", ...IDS.map((id) => `inspect/${id}/index.html`)].sort();
 const HEADERS = {
   "Strict-Transport-Security": "max-age=86400",
@@ -50,7 +50,7 @@ function policy(htmlByPage, jsAssets) {
     }
   }
   return [
-    "default-src 'none'", "connect-src https://eth.drpc.org https://base.drpc.org",
+    "default-src 'none'", "connect-src https://eth.drpc.org https://base.drpc.org https://sepolia.base.org",
     "script-src 'self'", `style-src 'self' ${[...styleHashes].sort().join(" ")}`,
     "font-src 'self'", "img-src 'self'", "object-src 'none'", "base-uri 'self'",
     "form-action 'none'", "frame-ancestors 'none'",
@@ -65,7 +65,7 @@ export async function prepareExplorerHost(root = ROOT, host = HOST) {
   const js = (await Promise.all(assets.map((asset) => readFile(join(root, asset), "utf8")))).join("\n");
   if (/eth_send(?:Raw)?Transaction|eth_requestAccounts|personal_sign|eth_signTypedData|walletClient|window\.ethereum|indexedDB|localStorage|sessionStorage|WebSocket|XMLHttpRequest|sendBeacon|cowprotocol|hyperliquid|taxlot/i.test(js))
     throw Error("Execution, wallet, accounting or storage code in Explorer bundle");
-  if (!js.includes("https://eth.drpc.org/") || !js.includes("https://base.drpc.org/") || js.includes("eval(")) throw Error("Unexpected Explorer endpoint or executable code");
+  if (!js.includes("https://eth.drpc.org/") || !js.includes("https://base.drpc.org/") || !js.includes("https://sepolia.base.org") || js.includes("eval(")) throw Error("Unexpected Explorer endpoint or executable code");
   const htmlByPage = await Promise.all(PAGES.map(async (page) => [page, await readFile(join(root, page), "utf8")]));
   const csp = policy(htmlByPage, assets);
   const meta = /<meta\s+http-equiv="content-security-policy"\s+content="[^"]+"\s*\/?\s*>/i;

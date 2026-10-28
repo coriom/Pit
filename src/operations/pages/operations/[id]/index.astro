@@ -1,7 +1,8 @@
 ---
 import Layout from "../../../components/Layout.astro";
+import FeeQuote from "../../../components/FeeQuote.astro";
 import { operationCatalog } from "../../../lib/catalog";
 export function getStaticPaths(){return operationCatalog.map((item)=>({params:{id:item.id},props:{item}}));}
 const { item } = Astro.props;
 ---
-<Layout title={item.title} description={item.description}><section class="hero"><div class="eyebrow">{item.category} · local Anvil only</div><h1>{item.title}</h1><p>{item.description}</p><p class="notice">PIT service fee: {item.fee}. All proposed fees are inactive. Deployment gas is estimated locally where available; no remote cost is quoted.</p></section><div class="panel"><ol class="steps" aria-label="Workflow"><li>Configure</li><li>Validate</li><li>Review</li><li>Simulate</li><li>Execute locally</li><li>Inspect result</li></ol><p class="muted">Use disposable Anvil accounts only. Public transactions eventually reveal addresses and amounts; this local build performs no external broadcast.</p></div><div id="operation-root" data-operation={item.id}></div><script src="../../../bootstrap.ts"></script></Layout>
+<Layout title={item.title} description={item.description}><section class="hero"><div class="eyebrow">{item.category} · local Anvil only</div><h1>{item.title}</h1><p>{item.description}</p></section><FeeQuote fee={item.fee} pricing={item.pricing} /><div class="panel"><ol class="steps" aria-label="Workflow"><li>Configure</li><li>Validate</li><li>Review</li><li>Simulate</li><li>Execute locally</li><li>Inspect result</li></ol><p class="muted">Use disposable Anvil accounts only. Public transactions eventually reveal addresses and amounts; this local build performs no external broadcast.</p></div><div id="operation-root" data-operation={item.id}></div><script src="../../../bootstrap.ts"></script></Layout>

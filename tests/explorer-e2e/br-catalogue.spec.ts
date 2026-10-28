@@ -17,7 +17,7 @@ test("Explorer search and categories expose only registered direct routes withou
   const external: string[] = [];
   page.on("request", (request) => { if (request.url().startsWith("https://")) external.push(request.url()); });
   await page.goto("/");
-  await expect(page.locator("#explorer-catalogue .card:visible")).toHaveCount(27);
+  await expect(page.locator("#explorer-catalogue .card:visible")).toHaveCount(28);
   await page.getByLabel("Category").selectOption("DeFi protocol state");
   await expect(page.locator("#explorer-catalogue .card:visible")).toHaveCount(5);
   await page.getByLabel("Search inspections").fill("chainlink");
@@ -37,7 +37,7 @@ test("Explorer search and categories expose only registered direct routes withou
   expect(external).toEqual([]);
 });
 
-test("27-card catalogue filters promptly on a throttled mobile Chromium page", async ({ page, browserName }) => {
+test("28-card catalogue filters promptly on a throttled mobile Chromium page", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "CPU throttling measurement uses Chromium CDP");
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
@@ -50,7 +50,29 @@ test("27-card catalogue filters promptly on a throttled mobile Chromium page", a
     input.dispatchEvent(new Event("input", { bubbles: true }));
     return { milliseconds: performance.now() - start, visible: document.querySelectorAll("#explorer-catalogue .card:not([hidden])").length };
   });
-  console.log(`EXPLORER_CATALOGUE_PERF ${JSON.stringify({ cpuThrottle: 4, viewport: "390x780", cards: 27, ...measured })}`);
+  console.log(`EXPLORER_CATALOGUE_PERF ${JSON.stringify({ cpuThrottle: 4, viewport: "390x780", cards: 28, ...measured })}`);
   expect(measured.visible).toBe(1);
   expect(measured.milliseconds).toBeLessThan(500);
+});
+
+test("batch balance read shows sampled block and exports only explicit addresses", async ({ page }) => {
+  const wallet = "0x1111111111111111111111111111111111111111";
+  const methods: string[] = [];
+  await page.route("https://base.drpc.org/", async (route) => {
+    const request = route.request().postDataJSON();
+    methods.push(request.method);
+    const values: Record<string, string> = { eth_chainId: "0x2105", eth_blockNumber: "0x64", eth_getBalance: "0xde0b6b3a7640000" };
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ jsonrpc: "2.0", id: request.id, result: values[request.method] }) });
+  });
+  await page.goto("/inspect/batch-balances/");
+  expect(methods).toEqual([]);
+  await page.getByLabel("Network").selectOption("base");
+  await page.locator("#batch-address-file").setInputFiles({ name: "wallets.csv", mimeType: "text/csv", buffer: Buffer.from(`address\n${wallet}`) });
+  await page.getByRole("button", { name: "Query public chain" }).click();
+  await expect(page.locator("#explorer-output")).toContainText("1 ETH (1000000000000000000 wei)");
+  await expect(page.locator("#explorer-output")).toContainText("block 100");
+  expect(methods).toEqual(["eth_chainId", "eth_blockNumber", "eth_getBalance"]);
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download balance CSV" }).click();
+  expect((await download).suggestedFilename()).toBe("pit-batch-balances.csv");
 });

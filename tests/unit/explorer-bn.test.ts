@@ -38,7 +38,7 @@ describe("bounded read-only Explorer BN", () => {
   it("has eight unique reviewed routes and two fixed HTTPS endpoints", () => {
     expect(new Set(BN_IDS).size).toBe(8);
     expect(BN_TOOLS).toHaveLength(8);
-    expect(Object.values(EXPLORER_CHAINS).map((chain) => chain.rpc)).toEqual(["https://eth.drpc.org/", "https://base.drpc.org/"]);
+    expect(Object.values(EXPLORER_CHAINS).map((chain) => chain.rpc)).toEqual(["https://eth.drpc.org/", "https://base.drpc.org/", "https://sepolia.base.org"]);
   });
   it("uses explicit user action and distinct sampled blocks for native balances", async () => {
     const log: { url: string; method: string; params: unknown[] }[] = [];

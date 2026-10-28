@@ -4,7 +4,7 @@ test("reviewed routes are usable and no request occurs before explicit action", 
   const network: string[] = [];
   page.on("request", (request) => { if (request.url().startsWith("https://")) network.push(request.url()); });
   await page.goto("/");
-  await expect(page.locator(".card")).toHaveCount(27);
+  await expect(page.locator(".card")).toHaveCount(28);
   for (const href of await page.locator(".card").evaluateAll((cards) => cards.map((card) => card.getAttribute("href")!))) {
     const response = await page.goto(href);
     expect(response?.status()).toBe(200);
@@ -31,7 +31,7 @@ test("reviewed routes are usable and no request occurs before explicit action", 
 test("public RPC CORS serves chain IDs from the Explorer origin", async ({ page }) => {
   test.skip(process.env.PIT_EXPLORER_LIVE_RPC !== "1", "Explicit live read-only provider probe only");
   await page.goto("/");
-  for (const [url, expected] of [["https://eth.drpc.org/", "0x1"], ["https://base.drpc.org/", "0x2105"]]) {
+  for (const [url, expected] of [["https://eth.drpc.org/", "0x1"], ["https://base.drpc.org/", "0x2105"], ["https://sepolia.base.org", "0x14a34"]]) {
     const result = await page.evaluate(async ({ url }) => {
       const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_chainId", params: [] }) });
       if (!response.ok) throw Error(`HTTP ${response.status}`);

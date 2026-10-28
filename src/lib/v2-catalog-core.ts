@@ -21,7 +21,7 @@ export type V2CatalogueEntry = Readonly<{
   description: string;
   category: V2CategoryId;
   tags: readonly string[];
-  networks: readonly ("ethereum" | "base")[];
+  networks: readonly ("ethereum" | "base" | "base-sepolia")[];
   execution: V2Execution;
   pricing: V2Pricing;
   availability: V2Availability;

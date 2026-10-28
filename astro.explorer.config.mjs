@@ -13,7 +13,7 @@ export default defineConfig({
     styleDirective: { resources: ["'self'"] },
     directives: [
       "default-src 'none'",
-      "connect-src https://eth.drpc.org https://base.drpc.org",
+      "connect-src https://eth.drpc.org https://base.drpc.org https://sepolia.base.org",
       "font-src 'self'", "img-src 'self'", "object-src 'none'",
       "base-uri 'self'", "form-action 'none'",
     ],

@@ -1,0 +1,4 @@
+---
+const { fee, pricing } = Astro.props as { fee: string; pricing: "FREE" | "FIXED_FEE" | "VARIABLE_FEE" | "PLANNED" };
+---
+<aside class="panel" aria-label="Indicative fee quote"><h2>Cost and permissions</h2><dl class="fee-grid"><div><dt>PIT service fee</dt><dd>{pricing === "FREE" ? "Free" : fee}</dd></div><div><dt>Network gas</dt><dd>Estimated only during local simulation · ETH</dd></div><div><dt>Required assets and approvals</dt><dd>Shown during operation review; contract dependent</dd></div><div><dt>Total</dt><dd>Not quoted across USDC and ETH</dd></div></dl><p class="muted">Network: local Anvil 31337. Proposed service fees are inactive; no quote expiry or payment authorization exists.</p></aside>
