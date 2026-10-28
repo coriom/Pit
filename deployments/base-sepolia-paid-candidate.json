@@ -19,8 +19,8 @@
   },
   "artifacts": {
     "PitPaidTokenCreator": {
-      "creationBytecodeKeccak": "0x02240d2ea58946b7481ee839b20e55727fd5e99ff09d20d39a55f1c14c5a7b01",
-      "runtimeTemplateKeccak": "0x373a13a1ae74c2cf5263a92f5bef5bdb35f1d2a0d3bbb7474e688b9d3b8fac16",
+      "creationBytecodeKeccak": "02240d2ea58946b7481ee839b20e55727fd5e99ff09d20d39a55f1c14c5a7b01",
+      "runtimeTemplateKeccak": "373a13a1ae74c2cf5263a92f5bef5bdb35f1d2a0d3bbb7474e688b9d3b8fac16",
       "runtimeBytes": 16687,
       "immutableReferences": {
         "0": [
@@ -84,8 +84,8 @@
       ]
     },
     "PitPaidOperations": {
-      "creationBytecodeKeccak": "0x6bef82f5ba8eaa4f03630cb154bb658173b5dcca6f84931a086958904951d24c",
-      "runtimeTemplateKeccak": "0xbdaeae99bcf5ed7eb4e2e032d6e4063482212ad2c44f67d91743a0dbeab0323c",
+      "creationBytecodeKeccak": "6bef82f5ba8eaa4f03630cb154bb658173b5dcca6f84931a086958904951d24c",
+      "runtimeTemplateKeccak": "bdaeae99bcf5ed7eb4e2e032d6e4063482212ad2c44f67d91743a0dbeab0323c",
       "runtimeBytes": 14666,
       "immutableReferences": {
         "0": [

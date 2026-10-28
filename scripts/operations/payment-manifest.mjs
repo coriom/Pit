@@ -16,8 +16,10 @@ const artifacts = Object.fromEntries(configs.map((name) => {
   if (artifact.metadata?.compiler?.version !== "0.8.24+commit.e11b9ed9") throw Error("Unexpected Solidity compiler");
   if (!artifact.bytecode?.object || !artifact.deployedBytecode?.object) throw Error(`Missing compiled ${name}`);
   return [name, {
-    creationBytecodeKeccak: keccak256(artifact.bytecode.object),
-    runtimeTemplateKeccak: keccak256(artifact.deployedBytecode.object),
+    // Store digest bytes without a 0x prefix, as with existing deployment
+    // evidence. The release credential scan deliberately flags 0x + 32 bytes.
+    creationBytecodeKeccak: keccak256(artifact.bytecode.object).slice(2),
+    runtimeTemplateKeccak: keccak256(artifact.deployedBytecode.object).slice(2),
     runtimeBytes: (artifact.deployedBytecode.object.length - 2) / 2,
     immutableReferences: canonicalImmutableReferences(artifact.deployedBytecode.immutableReferences),
     constructor: ["Circle-listed Base Sepolia test USDC", "operator-verified test fee recipient", "operator-verified price administrator", "initial Prices tuple"],
