@@ -8,6 +8,7 @@ import { paidLocalArtifacts } from "./generated/paid-local";
 import { matchesReviewedRuntime } from "./lib/reviewed-runtime";
 import { parseRecipientsCsv, positiveUnits, requiredAddress, utcSeconds } from "./lib/inputs";
 import { formatLocalQuote, newIntentId, priceForPaidOperation, type LocalQuote, type PaidKind } from "./lib/paid-local";
+import { assessPaidReceipt, mergePaidRecord, type PaidRecord } from "./lib/payment-reconciliation";
 import { PIT_PRICES } from "../lib/pit-pricing";
 
 // This entire module is imported only by the local operations build and requires loopback + Anvil.
@@ -55,6 +56,7 @@ function boot() {
   let account: Address | undefined, router: Address | undefined, paymentToken: Address | undefined;
   let prepared: Prepared | undefined, quote: LocalQuote | undefined, simulated = false, busy = false;
   let inMemoryPending: Pending | undefined;
+  let reconciledRecords: readonly PaidRecord[] = [];
   let receiptExport: Record<string, string | number> | undefined;
   const value = (data: FormData, key: string) => String(data.get(key) ?? "").trim();
   const set = (label: string, detail: string, error = false) => { state.textContent = label; output.textContent = detail; output.className = error ? "danger" : ""; };
@@ -201,19 +203,46 @@ function boot() {
     if (canonical.hash?.toLowerCase() !== receipt.blockHash.toLowerCase()) throw Error("Receipt block is no longer canonical. Payment outcome is uncertain; do not resubmit.");
     if (receipt.status === "success") {
       const routerLogs = receipt.logs.filter((log) => log.address.toLowerCase() === item.router.toLowerCase());
-      const fee = routerLogs.map((log) => { try { return decodeEventLog({ abi: activeAbi, data: log.data, topics: log.topics }); } catch { return undefined; } }).find((event) => event?.eventName === "FeePaid");
-      const operation = routerLogs.map((log) => { try { return decodeEventLog({ abi: activeAbi, data: log.data, topics: log.topics }); } catch { return undefined; } }).find((event) => event?.eventName === "OperationExecuted");
+      const decodedRouter = routerLogs.flatMap((log) => { try { return [{ log, event: decodeEventLog({ abi: activeAbi, data: log.data, topics: log.topics }) }]; } catch { return []; } });
+      const fee = decodedRouter.find(({ event }) => event.eventName === "FeePaid")?.event;
+      const operation = decodedRouter.find(({ event }) => event.eventName === "OperationExecuted")?.event;
       const paid = fee?.args as { payer?: Address; intentId?: Hex; amount?: bigint; recipient?: Address; operation?: Hex } | undefined;
       const done = operation?.args as { payer?: Address; intentId?: Hex; result?: Address; operation?: Hex; requestHash?: Hex } | undefined;
-      const paymentTransfer = receipt.logs.filter((log) => log.address.toLowerCase() === paymentToken?.toLowerCase())
-        .map((log) => { try { return decodeEventLog({ abi: mockAbi, data: log.data, topics: log.topics }); } catch { return undefined; } })
-        .find((event) => event?.eventName === "Transfer" && (event.args as { from?: Address; to?: Address; value?: bigint }).from?.toLowerCase() === item.payer.toLowerCase()
+      const decodedTransfers = receipt.logs.filter((log) => log.address.toLowerCase() === paymentToken?.toLowerCase())
+        .flatMap((log) => { try { return [{ log, event: decodeEventLog({ abi: mockAbi, data: log.data, topics: log.topics }) }]; } catch { return []; } });
+      const paymentTransfer = decodedTransfers.map(({ event }) => event)
+        .find((event) => event.eventName === "Transfer" && (event.args as { from?: Address; to?: Address; value?: bigint }).from?.toLowerCase() === item.payer.toLowerCase()
           && (event.args as { to?: Address }).to?.toLowerCase() === merchant.toLowerCase()
           && (event.args as { value?: bigint }).value === BigInt(item.fee));
       if (receipt.to?.toLowerCase() !== item.router.toLowerCase() || paid?.payer?.toLowerCase() !== item.payer.toLowerCase()
         || paid?.intentId !== item.intentId || paid?.amount !== BigInt(item.fee) || paid?.recipient?.toLowerCase() !== merchant.toLowerCase()
         || paid?.operation !== item.operationCode || done?.operation !== item.operationCode || done?.requestHash !== item.requestHash
         || done?.intentId !== item.intentId || done?.payer?.toLowerCase() !== item.payer.toLowerCase() || !paymentTransfer) throw Error("Receipt is confirmed but fee/operation/token-transfer events do not match. Inspect chain manually.");
+      const assessment = assessPaidReceipt({ chainId: 31337, transactionHash: item.hash, router: item.router, payer: item.payer,
+        paymentToken: paymentToken!, feeRecipient: merchant, intentId: item.intentId, operationCode: item.operationCode,
+        requestHash: item.requestHash, expectedFee: BigInt(item.fee) }, {
+        chainId: 31337, transactionHash: receipt.transactionHash, to: receipt.to, status: receipt.status,
+        blockHash: receipt.blockHash, blockNumber: receipt.blockNumber, canonicalBlockHash: canonical.hash,
+        latestBlockNumber: await publicClient.getBlockNumber(),
+        feeLogs: decodedRouter.filter(({ event }) => event.eventName === "FeePaid").map(({ log, event }) => {
+          const args = event.args as { payer?: Address; recipient?: Address; intentId?: Hex; operation?: Hex; amount?: bigint };
+          return { address: log.address, logIndex: Number(log.logIndex ?? -1), payer: args.payer, recipient: args.recipient,
+            intentId: args.intentId, operationCode: args.operation, amount: args.amount };
+        }),
+        operationLogs: decodedRouter.filter(({ event }) => event.eventName === "OperationExecuted").map(({ log, event }) => {
+          const args = event.args as { payer?: Address; intentId?: Hex; operation?: Hex; requestHash?: Hex; result?: Address };
+          return { address: log.address, logIndex: Number(log.logIndex ?? -1), payer: args.payer, intentId: args.intentId,
+            operationCode: args.operation, requestHash: args.requestHash, result: args.result };
+        }),
+        transferLogs: decodedTransfers.filter(({ event }) => event.eventName === "Transfer").map(({ log, event }) => {
+          const args = event.args as { from?: Address; to?: Address; value?: bigint };
+          return { address: log.address, logIndex: Number(log.logIndex ?? -1), payer: args.from, recipient: args.to, amount: args.value };
+        }),
+      });
+      if (assessment.status !== "CONFIRMED") throw Error(`Payment evidence ${assessment.status}: ${assessment.reason ?? "pending"}. Do not resubmit.`);
+      reconciledRecords = mergePaidRecord(reconciledRecords, { chainId: 31337,
+        evidenceKey: assessment.evidenceKey!, blockHash: receipt.blockHash,
+        transactionHash: item.hash, intentId: item.intentId, status: "CONFIRMED" });
       let result = done.result ?? "0x0000000000000000000000000000000000000000";
       if (item.operation === "token-creator") {
         const abi = prepared?.advanced ? advancedAbi : tokenAbi;
@@ -240,9 +269,10 @@ function boot() {
           || await read(result, vestAbi, "start") !== config.start || await read(result, vestAbi, "duration") !== config.duration || await read(result, vestAbi, "cliff") !== config.cliff
           || await read(prepared.token!, tokenAbi, "balanceOf", [result]) !== prepared.amount) throw Error("Vesting state differs from reviewed funding.");
       }
-      receiptExport = { chainId: 31337, operation: item.operation, payer: item.payer, intentId: item.intentId, requestHash: item.requestHash,
-        transactionHash: item.hash, blockNumber: Number(receipt.blockNumber), status: "CONFIRMED", stateReadback: prepared ? "VERIFIED" : "NOT_VERIFIED_AFTER_REFRESH", feeToken: paymentToken ?? "local fixture",
-        feeRaw: item.fee, feeRecipient: merchant, result, gasUsed: receipt.gasUsed.toString(), effectiveGasPriceWei: receipt.effectiveGasPrice.toString() };
+      receiptExport = { schema: "pit.paid-receipt.v2", chainId: 31337, operation: item.operation, payer: item.payer, intentId: item.intentId, requestHash: item.requestHash,
+        transactionHash: item.hash, blockHash: receipt.blockHash, blockNumber: Number(receipt.blockNumber), confirmations: assessment.confirmations.toString(),
+        evidenceKey: assessment.evidenceKey!, status: "CONFIRMED", stateReadback: prepared ? "VERIFIED" : "NOT_VERIFIED_AFTER_REFRESH", feeToken: paymentToken ?? "local fixture",
+        expectedFeeRaw: item.fee, actualFeeRaw: paid.amount!.toString(), feeRecipient: merchant, result, gasUsed: receipt.gasUsed.toString(), effectiveGasPriceWei: receipt.effectiveGasPrice.toString() };
       downloadButton.hidden = false;
       set(prepared ? "Success · receipt and state verified" : "Receipt confirmed · state readback needs revalidation", `Transaction ${item.hash}\nBlock ${receipt.blockNumber}\nPIT local mock-USDC fee ${formatUnits(BigInt(item.fee), 6)}\nResult ${result}\nGas ${receipt.gasUsed} units at ${receipt.effectiveGasPrice} wei. Existing claims remain free.`);
     } else set("Reverted · service fee rolled back", `Transaction ${item.hash} reverted. Network gas is not refunded.`, true);

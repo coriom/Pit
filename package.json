@@ -26,6 +26,7 @@
     "product:preview:build": "pnpm toolbox:check && pnpm explorer:check && PIT_UNIFIED_PREVIEW=1 pnpm operations:check",
     "product:preview:serve": "node scripts/product/unified-preview.mjs",
     "product:preview:e2e": "pnpm product:preview:build && playwright test --config playwright.product.config.ts",
+    "product:staging:build": "pnpm product:preview:build && node scripts/product/staging-package.mjs && node scripts/product/check-staging-package.mjs",
     "operations:manifest": "forge build --offline && node scripts/operations/deployment-manifest.mjs",
     "operations:deployment:dry-run": "node --test tests/operations-deployment-rehearsal.test.mjs",
     "billing:test": "node billing/billing.test.mjs",

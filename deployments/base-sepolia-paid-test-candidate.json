@@ -1,0 +1,142 @@
+{
+  "schema": "pit9a.paid-testnet-candidate.v1",
+  "status": "NOT_AUTHORIZED_NO_BROADCAST",
+  "sourceCommit": "52612c0033703388fc76c03b10bbdc135fb4b46c",
+  "chainId": 84532,
+  "paymentToken": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+  "deployer": "0xCb8c794c7B33FeC20C30D970725933bE1fc656C6",
+  "testPayer": "0xCb8c794c7B33FeC20C30D970725933bE1fc656C6",
+  "testFeeRecipient": "0xA945c984d4cD94528D0Ee3eCEe540EE66F1843B0",
+  "priceAdministrator": "0xCb8c794c7B33FeC20C30D970725933bE1fc656C6",
+  "expectedRouterAddresses": {
+    "creator": "0xF2c716A5EA0240C3D3A49cA1aad81d98e2947475",
+    "operations": "0xf042b36A01C3C4d74f29f570E03138C4E4e99817"
+  },
+  "existingInfrastructure": {
+    "factory": "0xE861d10ab302B66f619b15323C96d9F3BbfDc230",
+    "multiSender": "0xf1c076cDF4A3C0bbBc491cF3578CA2F3d99424eA"
+  },
+  "testRecipients": [
+    "0xA945c984d4cD94528D0Ee3eCEe540EE66F1843B0",
+    "0xf938C5E7D1e6bf62a2399aE6b14ca13708478ab7"
+  ],
+  "testPricesMicro": {
+    "standard": "100000",
+    "advanced": "200000",
+    "multiBase": "10000",
+    "multiPerRecipient": "5000",
+    "multiCap": "50000",
+    "lockFee": "50000",
+    "vestingFee": "50000"
+  },
+  "commercialPricesActive": false,
+  "requiredTestUsdcMicro": "420000",
+  "initialNonce": "19",
+  "maximumTransactionCount": 15,
+  "maximumFeePerGasWei": "50000000",
+  "l1ReservePerTxWei": "20000000000000",
+  "worstCaseWei": "1049500000000000",
+  "maximumTotalSpendWei": "1100000000000000",
+  "actions": [
+    {
+      "id": "deploy-paid-creator",
+      "to": null,
+      "gasCap": "4800000"
+    },
+    {
+      "id": "deploy-paid-operations",
+      "to": null,
+      "gasCap": "4300000"
+    },
+    {
+      "id": "approve-usdc-standard",
+      "to": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      "gasCap": "80000",
+      "amount": "100000"
+    },
+    {
+      "id": "create-standard",
+      "to": "0xF2c716A5EA0240C3D3A49cA1aad81d98e2947475",
+      "gasCap": "750000",
+      "amount": "10000000000000000000"
+    },
+    {
+      "id": "approve-usdc-advanced",
+      "to": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      "gasCap": "80000",
+      "amount": "200000"
+    },
+    {
+      "id": "create-advanced",
+      "to": "0xF2c716A5EA0240C3D3A49cA1aad81d98e2947475",
+      "gasCap": "2100000",
+      "amount": "10000000000000000000"
+    },
+    {
+      "id": "approve-usdc-multisend",
+      "to": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      "gasCap": "80000",
+      "amount": "20000"
+    },
+    {
+      "id": "approve-asset-multisend",
+      "to": "CREATED_STANDARD",
+      "gasCap": "80000",
+      "amount": "2000000000000000000"
+    },
+    {
+      "id": "multisend-two",
+      "to": "0xf042b36A01C3C4d74f29f570E03138C4E4e99817",
+      "gasCap": "250000",
+      "amount": "2000000000000000000"
+    },
+    {
+      "id": "approve-usdc-lock",
+      "to": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      "gasCap": "80000",
+      "amount": "50000"
+    },
+    {
+      "id": "approve-asset-lock",
+      "to": "CREATED_STANDARD",
+      "gasCap": "80000",
+      "amount": "1000000000000000000"
+    },
+    {
+      "id": "create-lock",
+      "to": "0xf042b36A01C3C4d74f29f570E03138C4E4e99817",
+      "gasCap": "950000",
+      "amount": "1000000000000000000"
+    },
+    {
+      "id": "approve-usdc-vesting",
+      "to": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      "gasCap": "80000",
+      "amount": "50000"
+    },
+    {
+      "id": "approve-asset-vesting",
+      "to": "CREATED_STANDARD",
+      "gasCap": "80000",
+      "amount": "1000000000000000000"
+    },
+    {
+      "id": "create-vesting",
+      "to": "0xf042b36A01C3C4d74f29f570E03138C4E4e99817",
+      "gasCap": "1200000",
+      "amount": "1000000000000000000"
+    }
+  ],
+  "schedule": {
+    "standardSupplyRaw": "10000000000000000000",
+    "distributionRaw": "2000000000000000000",
+    "lockRaw": "1000000000000000000",
+    "vestingRaw": "1000000000000000000",
+    "lockUnlock": "execution block time + 10 minutes",
+    "vestingStart": "execution block time + 2 minutes",
+    "vestingCliff": "start + 2 minutes",
+    "vestingDuration": "10 minutes"
+  },
+  "sourceVerification": "PENDING_SEPARATE_SOURCIFY_APPROVAL",
+  "staging": "PENDING_SEPARATE_HOSTING_APPROVAL"
+}
