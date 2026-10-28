@@ -1,5 +1,22 @@
 ---
 import Layout from "../components/Layout.astro";
-import { operationCatalog } from "../lib/catalog";
+import ProductDirectory from "../components/ProductDirectory.astro";
+const unified = process.env.PIT_UNIFIED_PREVIEW === "1";
 ---
-<Layout title="PIT operations" description="Local token, NFT and distribution operations for Anvil."><section class="hero"><div class="eyebrow">PIT V2 · local operations</div><h1>Prepare, simulate and inspect Web3 operations.</h1><p>Token, NFT, distribution and schedule workflows execute only against local Anvil chain 31337. Read-only tools do not require a wallet.</p><p class="notice">Commercial fees are indicative proposals and inactive. Local gas measurements are not remote quotes.</p><label>Search operations<input id="operation-search" type="search" autocomplete="off" placeholder="Token, NFT, allowance…" /></label><p id="search-count" role="status" aria-live="polite">{operationCatalog.length} local operations</p></section>{[...new Set(operationCatalog.map((item)=>item.category))].map((category)=><section data-category><h2>{category} · {operationCatalog.filter((item)=>item.category===category).length}</h2><div class="grid">{operationCatalog.filter((item)=>item.category===category).map((item)=><a class="panel" data-tool data-search={`${item.title} ${item.description} ${item.category}`.toLowerCase()} href={`/operations/${item.id}/`}><small class="eyebrow">{item.category}</small><h3>{item.title}</h3><p>{item.description}</p><small>PIT fee: {item.fee}</small></a>)}</div></section>)}<script src="../bootstrap.ts"></script></Layout>
+<Layout title="PIT Web3 tools" description="Free local analysis, read-only blockchain inspections and separately isolated local operations.">
+  <section class="hero product-hero">
+    <div class="eyebrow">PIT · Web3 tools with clear boundaries</div>
+    <h1>Understand the data. Review the risk. Then choose an operation.</h1>
+    <p>Explore free financial tools, public-chain inspections and locally tested token operations. Calculations need no wallet or account. Transaction tools require explicit wallet approval and remain restricted to local Anvil.</p>
+    <div class="actions"><a class="button-link" href="#directory">Find a tool</a><a class="button-link secondary" href="/guide/">How PIT works</a>{unified && <><a class="button-link secondary" href="/toolbox/">Open offline Toolbox</a><a class="button-link secondary" href="/explorer/">Open read-only Explorer</a></>}</div>
+    <p class="notice">PIT fees are proposed, not live. The local payment demonstration uses MOCK-USDC only; Base Sepolia and mainnet payment execution are disabled.</p>
+  </section>
+  <section aria-label="Ways to use PIT" class="product-lanes">
+    <article class="panel"><small class="eyebrow">01 · Free</small><h2>Work privately in your browser</h2><p>151 offline task experiences use manual inputs. No wallet, account, subscription or background RPC.</p></article>
+    <article class="panel"><small class="eyebrow">02 · Free</small><h2>Inspect public chains</h2><p>28 bounded read-only inspections. The selected public RPC provider can see addresses you submit.</p></article>
+    <article class="panel"><small class="eyebrow">03 · Local prototype</small><h2>Prepare on-chain actions</h2><p>18 operational routes. Five creation and funding workflows also have an atomic mock-USDC payment path on Anvil.</p></article>
+  </section>
+  <ProductDirectory />
+  <section class="panel"><h2>Fees, gas and permissions stay separate</h2><p>A proposed PIT fee is denominated in USDC. Network gas is paid in ETH. Token transfers and approvals are additional actions shown before signing; no exchange rate or combined currency total is invented.</p><p>Atomic local payment and operation either both succeed or both revert. Approval gas and reverted transaction gas are not automatically refunded. A confirmed transfer or token creation is generally irreversible.</p><a href="/operations/token-creator/">Review token creation →</a></section>
+  <script src="../bootstrap.ts"></script>
+</Layout>

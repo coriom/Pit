@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { canonicalImmutableReferences } from "./immutable-references.mjs";
 
 // Separate local-only bundle. Never import this file from Toolbox, Explorer or testnet previews.
 const names = ["PitPaidOperations", "PitPaidTokenCreator", "PitMockUSDC"];
@@ -16,7 +17,7 @@ const artifacts = Object.fromEntries(names.map((name) => {
     abi: artifact.abi,
     bytecode: artifact.bytecode.object,
     runtime: artifact.deployedBytecode.object,
-    immutableReferences: artifact.deployedBytecode.immutableReferences ?? {},
+    immutableReferences: canonicalImmutableReferences(artifact.deployedBytecode.immutableReferences),
   }];
 }));
 writeFileSync("src/operations/generated/paid-local.ts", `// Generated from local Forge artifacts. Never configure a real USDC address here.\nexport const paidLocalArtifacts = ${JSON.stringify(artifacts)} as const;\n`);

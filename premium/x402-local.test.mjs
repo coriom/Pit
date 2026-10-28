@@ -1,9 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { portfolioExample } from "./examples.mjs";
-import { LocalReportPaymentService, SimulatedFacilitator } from "./x402-local.mjs";
+import { LocalReportPaymentService, SimulatedFacilitator, X402_SETTLEMENT } from "./x402-local.mjs";
 
 test("local x402-shaped exact flow requires fixture verification and settlement before result delivery", () => {
+  assert.equal(X402_SETTLEMENT, "SIMULATED");
   const facilitator = new SimulatedFacilitator(), service = new LocalReportPaymentService(facilitator);
   const requestId = "portfolio-001";
   const unpaid = service.handle({ requestId, input: portfolioExample });

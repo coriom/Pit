@@ -15,7 +15,7 @@ function walk(dir) {
   }
 }
 walk(root);
-const expected = ["index.html", "404.html", "operations/token-creator/index.html", "operations/multisender/index.html", "operations/token-locker/index.html", "operations/token-vesting/index.html",
+const expected = ["index.html", "404.html", ...(!testnet ? ["guide/index.html"] : []), "operations/token-creator/index.html", "operations/multisender/index.html", "operations/token-locker/index.html", "operations/token-vesting/index.html",
   ...(!testnet ? ["token-management", "allowance-manager", "batch-balance-checker", "native-multisender", "nft-creator", "nft-batch-sender", "locker-manager", "vesting-manager", "nft-manager", "erc1155-creator", "erc1155-manager", "erc1155-multisender", "metadata-studio", "airdrop-composer"].map((id) => `operations/${id}/index.html`) : [])].sort();
 const html = files.filter((name) => name.endsWith(".html")).sort();
 if (JSON.stringify(html) !== JSON.stringify(expected)) throw Error(`Unexpected operation routes: ${html.join(", ")}`);

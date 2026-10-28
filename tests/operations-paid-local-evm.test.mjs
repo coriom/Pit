@@ -29,16 +29,17 @@ test("five local paid paths execute atomically with exact mock-USDC receipts and
   const wallet = createWalletClient({ account: payer, chain: foundry, transport: http(url) });
   const recipientWallet = createWalletClient({ account: beneficiary, chain: foundry, transport: http(url) });
   const wait = async (hash) => { const receipt = await publicClient.waitForTransactionReceipt({ hash }); assert.equal(receipt.status, "success"); return receipt; };
-  const deploy = async (a, args) => { const receipt = await wait(await wallet.deployContract({ abi: a.abi, bytecode: a.bytecode.object, args })); assert.ok(receipt.contractAddress); return receipt.contractAddress; };
+  const deploymentGas = {};
+  const deploy = async (a, args, label) => { const receipt = await wait(await wallet.deployContract({ abi: a.abi, bytecode: a.bytecode.object, args })); assert.ok(receipt.contractAddress); deploymentGas[label] = receipt.gasUsed.toString(); return receipt.contractAddress; };
   const write = async (address, abi, functionName, args) => wait(await wallet.writeContract({ address, abi, functionName, args }));
   const read = (address, abi, functionName, args = []) => publicClient.readContract({ address, abi, functionName, args });
   const sameAddress = (actual, expected) => assert.equal(actual.toLowerCase(), expected.toLowerCase());
   const decode = (receipt, abi, eventName) => receipt.logs.map((log) => { try { return decodeEventLog({ abi, data: log.data, topics: log.topics }); } catch { return undefined; } }).find((e) => e?.eventName === eventName);
-  const mock = await deploy(mockA, [payer]);
+  const mock = await deploy(mockA, [payer], "localMockUSDC");
   assert.equal(await read(mock, mockA.abi, "decimals"), 6);
   const prices = { standard: 49_000_000n, advanced: 149_000_000n, multiBase: 3_000_000n, multiPerRecipient: 100_000n, multiCap: 49_000_000n, lockFee: 39_000_000n, vestingFee: 79_000_000n };
-  const paid = await deploy(paidA, [mock, merchant, payer, prices]);
-  const creator = await deploy(creatorA, [mock, merchant, payer, prices]);
+  const paid = await deploy(paidA, [mock, merchant, payer, prices], "paidOperations");
+  const creator = await deploy(creatorA, [mock, merchant, payer, prices], "paidTokenCreator");
   sameAddress(await read(paid, paidA.abi, "feeRecipient"), merchant);
   sameAddress(await read(paid, paidA.abi, "paymentToken"), mock);
   const quote = (n, fee) => ({ intentId: `0x${n.toString(16).padStart(64, "0")}`, version: 1n, maxFee: fee, deadline: BigInt(Math.floor(Date.now() / 1000)) + 900n });
@@ -106,5 +107,5 @@ test("five local paid paths execute atomically with exact mock-USDC receipts and
   assert.equal(failedReceipt.status, "reverted");
   assert.equal(await read(mock, mockA.abi, "balanceOf", [merchant]), merchantBefore);
   assert.equal(await read(creator, creatorA.abi, "usedIntent", [payer, badQuote.intentId]), false);
-  console.log(JSON.stringify({ localChainId: 31337, mockPaymentToken: mock, paidAssetRouter: paid, paidCreatorRouter: creator, paidReceipts: [standard, advanced, multisend, lock, vest].map((x) => ({ hash: x.receipt.transactionHash, gasUsed: x.receipt.gasUsed.toString() })), revertedHash: failedHash, merchantMockMicro: merchantBefore.toString(), realUSDC: false, externalWrites: 0 }));
+  console.log(JSON.stringify({ localChainId: 31337, mockPaymentToken: mock, paidAssetRouter: paid, paidCreatorRouter: creator, deploymentGas, paidReceipts: [standard, advanced, multisend, lock, vest].map((x) => ({ hash: x.receipt.transactionHash, gasUsed: x.receipt.gasUsed.toString() })), revertedHash: failedHash, merchantMockMicro: merchantBefore.toString(), realUSDC: false, externalWrites: 0 }));
 });

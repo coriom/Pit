@@ -116,6 +116,7 @@ function boot() {
   async function prepare(data: FormData): Promise<Prepared> {
     await verifyFixture();
     const token = kind === "token-creator" ? undefined : requiredAddress(value(data, "token"));
+    if (token && token.toLowerCase() === paymentToken?.toLowerCase()) throw Error("The local mock payment token cannot also be the distributed or locked asset. Use a separate test ERC-20.");
     if (kind === "token-creator") {
       const name = value(data, "name"), symbol = value(data, "symbol");
       if (!name || !symbol || name.length > 60 || symbol.length > 16 || /[\u0000-\u001f]/.test(name + symbol)) throw Error("Invalid token name or symbol.");
@@ -193,8 +194,11 @@ function boot() {
   }
   async function reconcile() {
     const item = pending(); if (!item) { reconcileButton.hidden = true; return; }
+    if (item.operation !== kind) throw Error("This pending transaction belongs to another operation page. Return there to reconcile it before another payment.");
     if (item.payer.toLowerCase() !== account?.toLowerCase()) throw Error("Pending transaction belongs to another account.");
     const receipt = await publicClient.getTransactionReceipt({ hash: item.hash });
+    const canonical = await publicClient.getBlock({ blockNumber: receipt.blockNumber });
+    if (canonical.hash?.toLowerCase() !== receipt.blockHash.toLowerCase()) throw Error("Receipt block is no longer canonical. Payment outcome is uncertain; do not resubmit.");
     if (receipt.status === "success") {
       const routerLogs = receipt.logs.filter((log) => log.address.toLowerCase() === item.router.toLowerCase());
       const fee = routerLogs.map((log) => { try { return decodeEventLog({ abi: activeAbi, data: log.data, topics: log.topics }); } catch { return undefined; } }).find((event) => event?.eventName === "FeePaid");
@@ -248,6 +252,8 @@ function boot() {
   }
 
   $<HTMLButtonElement>("#paid-connect").addEventListener("click", async () => {
+    walletState.textContent = "Checking local wallet and chain…";
+    set("Connecting", "Verifying Anvil chain ID, account and local block before any operation.");
     try {
       if (!window.ethereum) throw Error("No injected local wallet.");
       if (await window.ethereum.request({ method: "eth_chainId" }) !== "0x7a69") throw Error("Select Anvil chain 31337. Remote chains cannot execute here.");
@@ -260,7 +266,7 @@ function boot() {
       setupButton.disabled = Boolean(router);
       reconcileButton.hidden = !pending();
       set("Connected", router ? "Local payment fixture verified. Configure an operation." : "Deploy the two local test fixtures before quoting.");
-    } catch (error) { account = undefined; invalidate(); set("Connection failed", String(error), true); }
+    } catch (error) { account = undefined; invalidate(); walletState.textContent = "Disconnected"; set("Connection failed", String(error), true); }
   });
   window.ethereum?.on?.("accountsChanged", () => { account = undefined; invalidate(); walletState.textContent = "Wallet changed. Connect and review again."; });
   window.ethereum?.on?.("chainChanged", () => { account = undefined; invalidate(); walletState.textContent = "Network changed. Connect and review again."; });
@@ -326,7 +332,9 @@ function boot() {
       const gas = await publicClient.estimateContractGas({ address: router!, abi: activeAbi, functionName: prepared.functionName, args, account: account! });
       const block = await publicClient.getBlock();
       if (gas >= block.gasLimit / 2n) throw Error("Estimated gas exceeds the conservative half-block budget.");
-      quote = { ...quote, gasUnits: gas, gasWei: await publicClient.getGasPrice() };
+      const gasWei = await publicClient.getGasPrice();
+      if (await publicClient.getBalance({ address: account! }) < gas * gasWei) throw Error("Insufficient local ETH for estimated gas.");
+      quote = { ...quote, gasUnits: gas, gasWei };
       simulated = true; executeButton.disabled = false;
       set("Ready for wallet confirmation", formatLocalQuote(quote, operationSummary(prepared)));
     } catch (error) { simulated = false; executeButton.disabled = true; set("Simulation failed", String(error), true); }
@@ -336,6 +344,8 @@ function boot() {
     if (!prepared || !quote || !simulated || busy) return; busy = true; executeButton.disabled = true;
     try {
       pendingBlock(); await fresh(prepared, quote); await guard();
+      if (quote.gasUnits === null || quote.gasWei === null || await publicClient.getBalance({ address: account! }) < quote.gasUnits * await publicClient.getGasPrice())
+        throw Error("Insufficient local ETH or stale gas estimate. Simulate again before signing.");
       const args = argsWithQuote(prepared, quote);
       await publicClient.simulateContract({ address: router!, abi: activeAbi, functionName: prepared.functionName, args, account: account! });
       set("Awaiting wallet confirmation", formatLocalQuote(quote, operationSummary(prepared)));

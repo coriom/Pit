@@ -4,6 +4,7 @@ import { portfolioBatchRisk } from "../dist-premium-local/reports.mjs";
 // Test-only state machine shaped like x402 v2's exact authorization flow.
 // It does not sign EIP-3009 authorizations, contact a facilitator, or settle real assets.
 export const LOCAL_REPORT_PRICE_MICRO = 4_900_000n;
+export const X402_SETTLEMENT = "SIMULATED";
 const asset = "LOCAL_MOCK_USDC_ONLY";
 const network = "eip155:31337";
 const encode = (value) => Buffer.from(JSON.stringify(value)).toString("base64");

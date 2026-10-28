@@ -1,0 +1,182 @@
+{
+  "schema": "pit.base-sepolia.paid-candidate.v1",
+  "status": "PREPARED_NOT_DEPLOYED",
+  "chainId": 84532,
+  "rpcReadOnly": "https://sepolia.base.org",
+  "circleListedTestUSDC": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+  "compiler": "0.8.24+commit.e11b9ed9",
+  "optimizer": {
+    "enabled": true,
+    "runs": 200
+  },
+  "openZeppelin": "5.5.0",
+  "sourceSha256": {
+    "contracts/src/PitPaidBase.sol": "a50d5c5af7139b8739a1e7f41aef37748980efa0a97cd897c340ea8ae52319f5",
+    "contracts/src/PitPaidTokenCreator.sol": "816094600e4a2854bd52cf22230a9c0728751c2840ec0043df1a94cecea82059",
+    "contracts/src/PitPaidOperations.sol": "a26f15800103e42156c2edd7afac6bc12caf591de5f57843c554f68745df2b41",
+    "contracts/src/PitTokens.sol": "61dabd14055d83c4019d85596b3ed801910c56564cd63607e3182da8c9163efe",
+    "contracts/src/PitSchedules.sol": "ba2c22871cfed45b21b3b402f8748447955cb5abcc7ba37ca76d1b85fbd307fb"
+  },
+  "artifacts": {
+    "PitPaidTokenCreator": {
+      "creationBytecodeKeccak": "0x02240d2ea58946b7481ee839b20e55727fd5e99ff09d20d39a55f1c14c5a7b01",
+      "runtimeTemplateKeccak": "0x373a13a1ae74c2cf5263a92f5bef5bdb35f1d2a0d3bbb7474e688b9d3b8fac16",
+      "runtimeBytes": 16687,
+      "immutableReferences": {
+        "0": [
+          {
+            "start": 450,
+            "length": 32
+          },
+          {
+            "start": 2315,
+            "length": 32
+          },
+          {
+            "start": 2499,
+            "length": 32
+          },
+          {
+            "start": 2623,
+            "length": 32
+          },
+          {
+            "start": 2729,
+            "length": 32
+          },
+          {
+            "start": 2929,
+            "length": 32
+          }
+        ],
+        "1": [
+          {
+            "start": 565,
+            "length": 32
+          },
+          {
+            "start": 2190,
+            "length": 32
+          },
+          {
+            "start": 2454,
+            "length": 32
+          },
+          {
+            "start": 2658,
+            "length": 32
+          },
+          {
+            "start": 2889,
+            "length": 32
+          },
+          {
+            "start": 3077,
+            "length": 32
+          }
+        ]
+      },
+      "constructor": [
+        "Circle-listed Base Sepolia test USDC",
+        "operator-verified test fee recipient",
+        "operator-verified price administrator",
+        "initial Prices tuple"
+      ]
+    },
+    "PitPaidOperations": {
+      "creationBytecodeKeccak": "0x6bef82f5ba8eaa4f03630cb154bb658173b5dcca6f84931a086958904951d24c",
+      "runtimeTemplateKeccak": "0xbdaeae99bcf5ed7eb4e2e032d6e4063482212ad2c44f67d91743a0dbeab0323c",
+      "runtimeBytes": 14666,
+      "immutableReferences": {
+        "0": [
+          {
+            "start": 414,
+            "length": 32
+          },
+          {
+            "start": 3198,
+            "length": 32
+          },
+          {
+            "start": 3382,
+            "length": 32
+          },
+          {
+            "start": 3506,
+            "length": 32
+          },
+          {
+            "start": 3612,
+            "length": 32
+          },
+          {
+            "start": 3812,
+            "length": 32
+          }
+        ],
+        "1": [
+          {
+            "start": 554,
+            "length": 32
+          },
+          {
+            "start": 3073,
+            "length": 32
+          },
+          {
+            "start": 3337,
+            "length": 32
+          },
+          {
+            "start": 3541,
+            "length": 32
+          },
+          {
+            "start": 3772,
+            "length": 32
+          },
+          {
+            "start": 3960,
+            "length": 32
+          }
+        ]
+      },
+      "constructor": [
+        "Circle-listed Base Sepolia test USDC",
+        "operator-verified test fee recipient",
+        "operator-verified price administrator",
+        "initial Prices tuple"
+      ]
+    }
+  },
+  "constructorArguments": {
+    "paymentToken": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    "feeRecipient": null,
+    "priceAdministrator": null,
+    "initialPricesMicro": {
+      "standard": "49000000",
+      "advanced": "149000000",
+      "multiBase": "3000000",
+      "multiPerRecipient": "100000",
+      "multiCap": "49000000",
+      "lockFee": "39000000",
+      "vestingFee": "79000000"
+    }
+  },
+  "expectedInitialPriceVersion": 1,
+  "requiredDeployments": [
+    "PitPaidTokenCreator",
+    "PitPaidOperations"
+  ],
+  "deploymentOrder": [
+    "verify chain and USDC",
+    "verify merchant and administrator control",
+    "deploy two reviewed routers",
+    "read back code, immutables, owner and prices",
+    "independently verify source"
+  ],
+  "maximumTransactionCount": null,
+  "maximumGasPriceWei": null,
+  "maximumTotalTestEthWei": null,
+  "activation": "DISABLED_PENDING_SEPARATE_TESTNET_AUTHORIZATION"
+}

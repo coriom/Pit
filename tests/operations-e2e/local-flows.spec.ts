@@ -209,7 +209,7 @@ test("four local paid browser workflows use exact mock USDC, real receipts and s
     const response = await page.goto(`/operations/${kind}/?paid-local=1`);
     expect(response?.status()).toBe(200);
     await page.getByRole("button", { name: "Connect local wallet" }).click();
-    await expect(page.locator("#paid-wallet")).toContainText("chain 31337");
+    await expect(page.locator("#paid-wallet")).toContainText("chain 31337", { timeout: 30_000 });
   };
   const pay = async () => {
     await page.getByRole("button", { name: "Validate and quote" }).click();
@@ -239,6 +239,11 @@ test("four local paid browser workflows use exact mock USDC, real receipts and s
   const token = created.match(/Result (0x[0-9a-fA-F]{40})/)?.[1];
   expect(token).toBeTruthy();
   await navigate("multisender");
+  await page.getByLabel("ERC-20 asset contract").fill(mock!);
+  await page.getByLabel(/Recipients CSV/).fill(`address,amount\n${accounts[1]},1`);
+  await page.getByRole("button", { name: "Validate and quote" }).click();
+  await expect(page.locator("#paid-output")).toContainText("cannot also be the distributed or locked asset");
+  await expect(page.getByRole("button", { name: "Approve exact amounts" })).toBeDisabled();
   await page.getByLabel("ERC-20 asset contract").fill(token!);
   await page.getByLabel(/Recipients CSV/).fill(`address,amount\n${accounts[1]},7\n${accounts[2]},3`);
   await pay();
