@@ -1,4 +1,4 @@
-/** Provisional service fees. No checkout, balance debit or fee collector exists here. */
+/** Provisional service fees. A separate local-Anvil-only mock fee collector is available; no live checkout exists. */
 export type PriceKind = "FREE" | "FIXED_FEE" | "VARIABLE_FEE" | "PLANNED";
 export type ProductPrice = Readonly<{ kind: PriceKind; label: string; asset?: "USDC"; fixedMicro?: bigint; baseMicro?: bigint; perUnitMicro?: bigint; capMicro?: bigint }>;
 export const PIT_PRICES = {

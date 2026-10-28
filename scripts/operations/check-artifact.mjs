@@ -29,10 +29,13 @@ for (const name of html) {
 }
 if (files.some((name) => /(?:premium-worker|taxlot|\.map$)/i.test(name))) throw Error("Forbidden operation artifact");
 const scripts = files.filter((name) => name.endsWith(".js"));
-if (scripts.length < 1 || scripts.length > (testnet ? 3 : 9)) throw Error(`Unexpected operations JavaScript asset count: ${scripts.length}`);
+if (scripts.length < 1 || scripts.length > (testnet ? 3 : 11)) throw Error(`Unexpected operations JavaScript asset count: ${scripts.length}`);
+if (testnet && scripts.some((name) => /LOCAL MOCK USDC|PitPaidTokenCreator|PitPaidOperations/.test(readFileSync(join(root, name), "utf8")))) {
+  throw Error("Local payment prototype leaked into a Base Sepolia bundle");
+}
 if (testnet && !walletPreview) {
   const code = scripts.map((name) => readFileSync(join(root, name), "utf8")).join("\n");
-  if (/127\.0\.0\.1:8545|eth_sendTransaction|eth_sendRawTransaction|eth_requestAccounts|walletClient|deployContract|writeContract/.test(code)) throw Error("Wallet or transaction code leaked into read-only testnet preview");
+  if (/127\.0\.0\.1:8545|eth_sendTransaction|eth_sendRawTransaction|eth_requestAccounts|walletClient|deployContract|writeContract|LOCAL MOCK USDC|PitPaidTokenCreator|PitPaidOperations/.test(code)) throw Error("Wallet, payment or transaction code leaked into read-only testnet preview");
 }
 if (walletPreview) {
   const code = scripts.map((name) => readFileSync(join(root, name), "utf8")).join("\n");
