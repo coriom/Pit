@@ -6,6 +6,7 @@ dist-operations-sepolia/
 dist-operations-sepolia-wallet/
 dist-operations-deployment/
 dist-product-staging/
+dist-product-cloudflare-staging/
 dist/
 dist-readonly-beta/
 dist-readonly-beta-host/
