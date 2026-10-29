@@ -25,9 +25,16 @@ export function validateTrackedFiles(files) {
     for (const value of executionEvidence.toString().match(/0x[0-9a-fA-F]{64}/g) ?? [])
       publicBoundHashes.add(value.toLowerCase());
   }
+  const paidSourcifyReviewFile = "deployments/base-sepolia-paid-sourcify-v2-review.json";
+  const paidSourcifyReview = files.get(paidSourcifyReviewFile);
+  if (paidSourcifyReview &&
+      createHash("sha256").update(paidSourcifyReview).digest("hex") !==
+        "e2ff65347c7b4f24efa8f1ef1e2321bddd05fae42bb16e68bad6d8811c97c397")
+    throw Error("Paid Sourcify review digest changed; review required");
   const publicBoundFiles = new Set([
     boundManifestFile,
     executionEvidenceFile,
+    paidSourcifyReviewFile,
     "scripts/operations/pit9a1-bound-plan.mjs",
     "docs/product/PIT-V2-PHASE9A1-BOUND-EXECUTION.md",
   ]);

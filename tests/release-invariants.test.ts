@@ -74,3 +74,16 @@ it("rejects a staging credential-loader or runner import from production source"
     expect(() => validateTrackedFiles(files)).toThrow("Staging runner import in production source");
   }
 });
+
+it("allows only the exact reviewed Sourcify publication hashes", () => {
+  const files = original();
+  for (const path of [
+    "deployments/base-sepolia-paid-bound-candidate.json",
+    "deployments/base-sepolia-paid-execution.json",
+    "deployments/base-sepolia-paid-sourcify-v2-review.json",
+  ]) files.set(path, readFileSync(path));
+  expect(() => validateTrackedFiles(files)).not.toThrow();
+  const path = "deployments/base-sepolia-paid-sourcify-v2-review.json";
+  files.set(path, Buffer.from(readFileSync(path, "utf8") + " "));
+  expect(() => validateTrackedFiles(files)).toThrow("Paid Sourcify review digest changed");
+});
