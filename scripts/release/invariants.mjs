@@ -4,6 +4,23 @@ const protectedFiles = JSON.parse(
   readFileSync(new URL("./protected.json", import.meta.url)),
 );
 export function validateTrackedFiles(files) {
+  // These are public on-chain code hashes and deterministic intent IDs, not signer keys.
+  // The manifest digest is fixed so this exception cannot grow without release review.
+  const boundManifestFile = "deployments/base-sepolia-paid-bound-candidate.json";
+  const boundManifest = files.get(boundManifestFile);
+  const publicBoundHashes = new Set();
+  if (boundManifest) {
+    if (createHash("sha256").update(boundManifest).digest("hex") !==
+        "685166a28447f3cfecd0a1d1bc1f1f2f3f05061ac2957eb6068a6065475f1a45")
+      throw Error("Phase 9A.1 bound manifest digest changed; review required");
+    for (const value of boundManifest.toString().match(/0x[0-9a-fA-F]{64}/g) ?? [])
+      publicBoundHashes.add(value.toLowerCase());
+  }
+  const publicBoundFiles = new Set([
+    boundManifestFile,
+    "scripts/operations/pit9a1-bound-plan.mjs",
+    "docs/product/PIT-V2-PHASE9A1-BOUND-EXECUTION.md",
+  ]);
   const uniswapSource = files.get("src/lib/uniswap-execution.ts")?.toString();
   if (!uniswapSource ||
       !/^export const UNISWAP_EXECUTION_ACCEPTED = false;$/m.test(uniswapSource) ||
@@ -42,6 +59,10 @@ export function validateTrackedFiles(files) {
     if (data.includes(0)) continue;
     const text = data.toString();
     for (const pattern of patterns) {
+      if (pattern === patterns.at(-1) && publicBoundFiles.has(file)) {
+        const values = text.match(/0x[0-9a-fA-F]{64}/g) ?? [];
+        if (values.every((value) => publicBoundHashes.has(value.toLowerCase()))) continue;
+      }
       if (pattern.test(text))
         throw Error(`Credential candidate (review required): ${file}`);
     }
