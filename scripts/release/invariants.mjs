@@ -16,8 +16,18 @@ export function validateTrackedFiles(files) {
     for (const value of boundManifest.toString().match(/0x[0-9a-fA-F]{64}/g) ?? [])
       publicBoundHashes.add(value.toLowerCase());
   }
+  const executionEvidenceFile = "deployments/base-sepolia-paid-execution.json";
+  const executionEvidence = files.get(executionEvidenceFile);
+  if (executionEvidence) {
+    if (createHash("sha256").update(executionEvidence).digest("hex") !==
+        "327705d70c0d74be416e8b741cdbf033fe5383d5bf3a3e44d3f32ba306cfe83a")
+      throw Error("Phase 9A.1 public execution evidence changed; review required");
+    for (const value of executionEvidence.toString().match(/0x[0-9a-fA-F]{64}/g) ?? [])
+      publicBoundHashes.add(value.toLowerCase());
+  }
   const publicBoundFiles = new Set([
     boundManifestFile,
+    executionEvidenceFile,
     "scripts/operations/pit9a1-bound-plan.mjs",
     "docs/product/PIT-V2-PHASE9A1-BOUND-EXECUTION.md",
   ]);
