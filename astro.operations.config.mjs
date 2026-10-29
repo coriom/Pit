@@ -21,5 +21,5 @@ export default defineConfig({
   output: "static",
   build: { inlineStylesheets: "never" },
   devToolbar: { enabled: false },
-  vite: { cacheDir: "node_modules/.vite-pit-operations", define: { __PIT_SEPOLIA_CONFIG__: JSON.stringify(deployment), __PIT4B_CAMPAIGN__: JSON.stringify(campaign) }, experimental: { renderBuiltUrl: () => ({ relative: true }) } },
+  vite: { cacheDir: "node_modules/.vite-pit-operations", define: { __PIT_HOSTED_STAGING__: JSON.stringify(process.env.PIT_HOSTED_STAGING === "1"), __PIT_SEPOLIA_CONFIG__: JSON.stringify(deployment), __PIT4B_CAMPAIGN__: JSON.stringify(campaign) }, experimental: { renderBuiltUrl: () => ({ relative: true }) } },
 });

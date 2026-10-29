@@ -7,7 +7,8 @@ const source = resolve("dist-product-staging");
 const target = resolve("dist-product-cloudflare-staging");
 const manifest = JSON.parse(readFileSync(join(source, "manifest.json"), "utf8"));
 const vercel = JSON.parse(readFileSync(join(source, "vercel.json"), "utf8"));
-if (manifest.status !== "BUILT_NOT_DEPLOYED" || Object.keys(manifest.files).length < 200)
+if (manifest.status !== "BUILT_NOT_DEPLOYED" || manifest.mode !== "hosted-read-only"
+  || !manifest.surfaces.operations.csp.includes("connect-src 'none'") || Object.keys(manifest.files).length < 200)
   throw Error("Checked static staging package missing");
 const csp = Object.fromEntries(Object.entries(manifest.surfaces).map(([name, value]) => [name, value.csp]));
 if (!csp.toolbox.includes("connect-src 'none'") || !csp.operations.includes("frame-ancestors 'none'"))

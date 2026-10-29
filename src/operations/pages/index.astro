@@ -1,15 +1,16 @@
 ---
 import Layout from "../components/Layout.astro";
 import ProductDirectory from "../components/ProductDirectory.astro";
+const hosted = process.env.PIT_HOSTED_STAGING === "1";
 const unified = process.env.PIT_UNIFIED_PREVIEW === "1";
 ---
 <Layout title="PIT Web3 tools" description="Free local analysis, read-only blockchain inspections and separately isolated local operations.">
   <section class="hero product-hero">
     <div class="eyebrow">PIT · Web3 tools with clear boundaries</div>
     <h1>Understand the data. Review the risk. Then choose an operation.</h1>
-    <p>Explore free financial tools, public-chain inspections and locally tested token operations. Calculations need no wallet or account. Transaction tools require explicit wallet approval and remain restricted to local Anvil.</p>
+    <p>Explore free financial tools, public-chain inspections and locally tested token operations. Calculations need no wallet or account. {hosted ? "This private hosted preview is read-only; transaction tools are available only in local Anvil development." : "Transaction tools require explicit wallet approval and remain restricted to local Anvil."}</p>
     <div class="actions"><a class="button-link" href="#directory">Find a tool</a><a class="button-link secondary" href="/guide/">How PIT works</a>{unified && <><a class="button-link secondary" href="/toolbox/">Open offline Toolbox</a><a class="button-link secondary" href="/explorer/">Open read-only Explorer</a></>}</div>
-    <p class="notice">PIT fees are proposed, not live. The local payment demonstration uses MOCK-USDC only; Base Sepolia and mainnet payment execution are disabled.</p>
+    <p class="notice">PIT fees are proposed, not live. The separate local payment demonstration uses MOCK-USDC only; Base Sepolia and mainnet payment execution are disabled.</p>
   </section>
   <section aria-label="Ways to use PIT" class="product-lanes">
     <article class="panel"><small class="eyebrow">01 · Free</small><h2>Work privately in your browser</h2><p>151 offline task experiences use manual inputs. No wallet, account, subscription or background RPC.</p></article>

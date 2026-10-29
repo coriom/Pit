@@ -4,6 +4,7 @@ import FeeQuote from "../../../components/FeeQuote.astro";
 import { operationCatalog } from "../../../lib/catalog";
 export function getStaticPaths() { return operationCatalog.map((item) => ({ params: { id: item.id }, props: { item } })); }
 const { item } = Astro.props;
+const hosted = process.env.PIT_HOSTED_STAGING === "1";
 const paidDemo = ["token-creator", "multisender", "token-locker", "token-vesting"].includes(item.id);
 const browserOnly = ["metadata-studio", "airdrop-composer"].includes(item.id);
 const readOnly = item.id === "batch-balance-checker";
@@ -13,15 +14,15 @@ const related = operationCatalog.filter((entry) => entry.category === item.categ
   <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">PIT</a><span aria-hidden="true">/</span><a href="/#directory">{item.category}</a><span aria-hidden="true">/</span><span aria-current="page">{item.title}</span></nav>
   <section class="hero"><div class="eyebrow">{item.category} · {browserOnly ? "browser-local" : readOnly ? "read-only" : "Anvil 31337"}</div><h1>{item.title}</h1><p>{item.description}</p></section>
   <div class="operation-facts">
-    <div><small>Availability</small><strong>Local prototype · no external write</strong></div>
+    <div><small>Availability</small><strong>{hosted ? "Private read-only preview · execution unavailable" : "Local prototype · no external write"}</strong></div>
     <div><small>Wallet</small><strong>{browserOnly || readOnly ? "Not needed for preparation or reads" : "Required for local execution"}</strong></div>
     <div><small>Network</small><strong>{browserOnly ? "Offline" : readOnly ? "Selected read-only RPC" : "Anvil chain 31337 only"}</strong></div>
     <div><small>PIT price</small><strong>{item.pricing === "FREE" ? "Free" : "Indicative, inactive outside local mock demo"}</strong></div>
   </div>
   <FeeQuote fee={item.fee} pricing={item.pricing} />
-  {paidDemo && <div class="panel"><h2>Atomic fee demonstration</h2><p>Use a six-decimal local MOCK-USDC token on Anvil. The on-chain fee and requested action succeed or revert together. Separate approvals and failed transaction gas may still cost local test ETH. No Circle USDC, merchant wallet or public-chain payment is connected.</p><a href="?paid-local=1">Open mock-USDC workflow →</a></div>}
-  <div class="panel"><ol class="steps" aria-label="Workflow"><li>Configure</li><li>Validate</li><li>Review</li><li>Simulate</li><li>Confirm locally</li><li>Verify state</li></ol><p class="muted">Use disposable Anvil accounts only. Public transactions would eventually reveal addresses and amounts; this build cannot broadcast externally. PIT does not pin NFT metadata or enumerate every token holder.</p></div>
-  <div id="operation-root" data-operation={item.id}></div>
+  {paidDemo && !hosted && <div class="panel"><h2>Atomic fee demonstration</h2><p>Use a six-decimal local MOCK-USDC token on Anvil. The on-chain fee and requested action succeed or revert together. Separate approvals and failed transaction gas may still cost local test ETH. No Circle USDC, merchant wallet or public-chain payment is connected.</p><a href="?paid-local=1">Open mock-USDC workflow →</a></div>}
+  {!hosted && <div class="panel"><ol class="steps" aria-label="Workflow"><li>Configure</li><li>Validate</li><li>Review</li><li>Simulate</li><li>Confirm locally</li><li>Verify state</li></ol><p class="muted">Use disposable Anvil accounts only. Public transactions would eventually reveal addresses and amounts; this build cannot broadcast externally. PIT does not pin NFT metadata or enumerate every token holder.</p></div>}
+  {hosted ? <div class="panel notice"><h2>Execution is unavailable in this private preview</h2><p>Review this operation and its indicative fee here. Local Anvil development supports execution; this hosted build contains no signing flow and collects no payment.</p></div> : <div id="operation-root" data-operation={item.id}></div>}
   {related.length > 0 && <aside class="related-tools"><h2>Related tools</h2><div class="grid">{related.map((entry) => <a class="panel" href={`/operations/${entry.id}/`}><strong>{entry.title}</strong><p>{entry.description}</p></a>)}</div></aside>}
-  <script src="../../../bootstrap.ts"></script>
+  {!hosted && <script src="../../../bootstrap.ts"></script>}
 </Layout>

@@ -17,7 +17,10 @@ const hostCsp = (name) => {
   return config.headers?.find((item) => item.source === "/(.*)")?.headers
     ?.find((item) => item.key === "Content-Security-Policy")?.value;
 };
-const policies = { operations: opsCsp, toolbox: hostCsp("toolbox"), explorer: hostCsp("explorer") };
+const hosted = process.env.PIT_HOSTED_STAGING === "1";
+const operationsCsp = hosted ? opsCsp?.replace("connect-src http://127.0.0.1:8545 https:", "connect-src 'none'") : opsCsp;
+if (hosted && !operationsCsp?.includes("connect-src 'none'")) throw Error("Hosted operations CSP is not read-only");
+const policies = { operations: operationsCsp, toolbox: hostCsp("toolbox"), explorer: hostCsp("explorer") };
 if (!opsCsp?.includes("frame-ancestors 'none'") || !policies.toolbox?.includes("connect-src 'none'")
   || !policies.explorer?.includes("connect-src")) throw Error("Surface security policies missing");
 const output = resolve("dist-product-staging");
@@ -70,7 +73,7 @@ for (const [surface, sources] of Object.entries({
 const vercel = { $schema: "https://openapi.vercel.sh/vercel.json", framework: null,
   outputDirectory: "public", headers };
 writeFileSync(join(output, "vercel.json"), JSON.stringify(vercel, null, 2) + "\n");
-const manifest = { schema: "pit.private-staging-static.v1", status: "BUILT_NOT_DEPLOYED",
+const manifest = { schema: "pit.private-staging-static.v1", status: "BUILT_NOT_DEPLOYED", mode: hosted ? "hosted-read-only" : "local-candidate",
   surfaces: Object.fromEntries(Object.keys(roots).map((key) => [key, { csp: policies[key] }])),
   files: Object.fromEntries([...files.entries()].sort(([a], [b]) => a.localeCompare(b))),
   protectionRequired: "Vercel Authentication on all entrypoints; confirm before and after deploy",
