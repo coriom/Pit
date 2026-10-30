@@ -1,0 +1,15 @@
+:root {
+  color-scheme: dark;
+  --pit-bg: #101317;
+  --pit-surface: #171c21;
+  --pit-surface-raised: #1d2329;
+  --pit-line: #343c43;
+  --pit-line-soft: #293138;
+  --pit-text: #f1f2ef;
+  --pit-muted: #a9b2b7;
+  --pit-accent: #d2bc88;
+  --pit-accent-strong: #e2cd9c;
+  --pit-danger: #ee9b90;
+  --pit-radius: 10px;
+  font-synthesis: none;
+}

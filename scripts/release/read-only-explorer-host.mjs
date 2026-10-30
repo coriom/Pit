@@ -33,8 +33,9 @@ async function packageHash(root, files) {
   return digest.digest("hex");
 }
 function extract(html, tag) { return [...html.matchAll(new RegExp(`<${tag}\\b([^>]*)>([\\s\\S]*?)<\\/${tag}>`, "gi"))]; }
-function policy(htmlByPage, jsAssets) {
+function policy(htmlByPage, jsAssets, cssAssets = []) {
   const styleHashes = new Set();
+  const unified = process.env.PIT_UNIFIED_PREVIEW === "1";
   for (const [page, html] of htmlByPage) {
     if (!html.includes('<meta name="robots" content="noindex,nofollow"')) throw Error(`Explorer indexing gate missing: ${page}`);
     if (/<(?:script|link)\b[^>]*(?:src|href)=["']https?:/i.test(html)) throw Error(`Remote executable resource: ${page}`);
@@ -45,7 +46,7 @@ function policy(htmlByPage, jsAssets) {
     }
     for (const [, , body] of extract(html, "style")) styleHashes.add(cspHash(body));
     for (const [, href] of html.matchAll(/\bhref="([^"]+)"/g)) {
-      if (href === "/" || href.startsWith("#")) continue;
+      if (href === "/" || href === "/#explorer-search" || href.startsWith("#") || cssAssets.some((asset) => href === `/${asset}`) || (unified && ["/explorer/", "/explorer/#explorer-search", "/toolbox/", "/#directory", "/guide/"].includes(href))) continue;
       if (!IDS.some((id) => href === `/inspect/${id}/`)) throw Error(`Explorer link leaves allowlist: ${page} -> ${href}`);
     }
   }
@@ -59,15 +60,21 @@ function policy(htmlByPage, jsAssets) {
 export async function prepareExplorerHost(root = ROOT, host = HOST) {
   const files = await walk(root);
   const assets = files.filter((file) => file.startsWith("_astro/"));
-  if (assets.length !== 2 || assets.some((asset) => !/^_astro\/[\w.-]+\.js$/.test(asset)) || JSON.stringify(files) !== JSON.stringify([...PAGES, "robots.txt", ...assets].sort()))
+  const jsAssets = assets.filter((asset) => asset.endsWith(".js"));
+  const cssAssets = assets.filter((asset) => asset.endsWith(".css"));
+  if (jsAssets.length !== 2 || cssAssets.length > 1 || assets.length !== jsAssets.length + cssAssets.length ||
+      assets.some((asset) => !/^_astro\/[\w.-]+\.(?:js|css)$/.test(asset)) ||
+      JSON.stringify(files) !== JSON.stringify([...PAGES, "robots.txt", ...assets].sort()))
     throw Error("Explorer emitted files differ from explicit read-only allowlist");
   if (await readFile(join(root, "robots.txt"), "utf8") !== "User-agent: *\nDisallow: /\n") throw Error("Explorer robots policy changed");
-  const js = (await Promise.all(assets.map((asset) => readFile(join(root, asset), "utf8")))).join("\n");
+  const js = (await Promise.all(jsAssets.map((asset) => readFile(join(root, asset), "utf8")))).join("\n");
+  for (const asset of cssAssets) if (/@import\s+(?:url\()?\s*["']?https?:\/\/|url\(\s*["']?https?:\/\//i.test(await readFile(join(root, asset), "utf8")))
+    throw Error("Remote CSS in Explorer");
   if (/eth_send(?:Raw)?Transaction|eth_requestAccounts|personal_sign|eth_signTypedData|walletClient|window\.ethereum|indexedDB|localStorage|sessionStorage|WebSocket|XMLHttpRequest|sendBeacon|cowprotocol|hyperliquid|taxlot/i.test(js))
     throw Error("Execution, wallet, accounting or storage code in Explorer bundle");
   if (!js.includes("https://eth.drpc.org/") || !js.includes("https://base.drpc.org/") || !js.includes("https://sepolia.base.org") || js.includes("eval(")) throw Error("Unexpected Explorer endpoint or executable code");
   const htmlByPage = await Promise.all(PAGES.map(async (page) => [page, await readFile(join(root, page), "utf8")]));
-  const csp = policy(htmlByPage, assets);
+  const csp = policy(htmlByPage, jsAssets, cssAssets);
   const meta = /<meta\s+http-equiv="content-security-policy"\s+content="[^"]+"\s*\/?\s*>/i;
   for (const [page, html] of htmlByPage) {
     if (!meta.test(html)) throw Error(`Missing CSP meta: ${page}`);

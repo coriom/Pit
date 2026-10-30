@@ -22,7 +22,8 @@ const expected = ["index.html", "404.html", ...(!testnet ? ["guide/index.html"] 
   ...(!testnet ? ["token-management", "allowance-manager", "batch-balance-checker", "native-multisender", "nft-creator", "nft-batch-sender", "locker-manager", "vesting-manager", "nft-manager", "erc1155-creator", "erc1155-manager", "erc1155-multisender", "metadata-studio", "airdrop-composer"].map((id) => `operations/${id}/index.html`) : [])].sort();
 const html = files.filter((name) => name.endsWith(".html")).sort();
 if (JSON.stringify(html) !== JSON.stringify(expected)) throw Error(`Unexpected operation routes: ${html.join(", ")}`);
-for (const name of files) if (!expected.includes(name) && name !== "_headers" && name !== "robots.txt" && name !== "favicon.svg" && !/^_astro\/[A-Za-z0-9_.-]+\.(?:js|css)$/.test(name)) throw Error(`Unexpected operation artifact: ${name}`);
+for (const name of files) if (!expected.includes(name) && name !== "_headers" && name !== "robots.txt" && name !== "favicon.svg" && !(name === "nav.js" && !testnet) && !/^_astro\/[A-Za-z0-9_.-]+\.(?:js|css)$/.test(name)) throw Error(`Unexpected operation artifact: ${name}`);
+if (!testnet && !files.includes("nav.js")) throw Error("Operations navigation script missing");
 const headers = readFileSync(join(root, "_headers"), "utf8");
 if (!headers.includes(`connect-src ${allowedConnect};`) || !headers.includes("X-Robots-Tag: noindex, nofollow")) throw Error("Unsafe operation headers");
 if (testnet ? /http:\/\/127\.0\.0\.1:8545|connect-src [^;]*\s/.test(headers) : /https:\/\/(?!ipfs\.io)/.test(headers)) throw Error("Unexpected operation connect origin");
@@ -32,7 +33,7 @@ for (const name of html) {
 }
 if (files.some((name) => /(?:premium-worker|taxlot|\.map$)/i.test(name))) throw Error("Forbidden operation artifact");
 const scripts = files.filter((name) => name.endsWith(".js"));
-if (scripts.length < 1 || scripts.length > (hosted ? 3 : testnet ? 3 : 11)) throw Error(`Unexpected operations JavaScript asset count: ${scripts.length}`);
+if (scripts.length < 1 || scripts.length > (hosted ? 4 : testnet ? 3 : 12)) throw Error(`Unexpected operations JavaScript asset count: ${scripts.length}`);
 if (hosted) {
   const code = scripts.map((name) => readFileSync(join(root, name), "utf8")).join("\n");
   if (/eth_sendTransaction|eth_sendRawTransaction|eth_requestAccounts|writeContract|deployContract|sendTransaction|createWalletClient|127\.0\.0\.1:8545|LOCAL MOCK USDC/.test(code))

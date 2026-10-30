@@ -1,0 +1,39 @@
+---
+import { V2_CATEGORIES } from "../../lib/v2-catalog-core";
+const unified = process.env.PIT_UNIFIED_PREVIEW === "1";
+const path = Astro.url.pathname;
+const active = path === "/" ? "home" : path.startsWith("/guide/") ? "guide" : path.startsWith("/toolbox/") ? "toolbox" : path.startsWith("/explorer/") ? "explorer" : "operations";
+const categoryHref = (id: string) => `/?category=${encodeURIComponent(id)}#directory`;
+---
+<header class="site-header">
+  <div class="nav-inner">
+    <a class="brand" href="/" aria-label="PIT home">PIT</a>
+    <nav class="desktop-nav" aria-label="Main navigation">
+      <details class="tools-menu" data-nav-disclosure>
+        <summary>Tools</summary>
+        <div class="tools-menu-panel">
+          <p class="menu-heading">Explore by purpose</p>
+          <div class="category-menu">
+            {V2_CATEGORIES.map((category) => <a href={categoryHref(category.id)}>{category.label}</a>)}
+          </div>
+          <a class="menu-all" href="/#directory">View all tools</a>
+        </div>
+      </details>
+      {unified && <><a href="/toolbox/" aria-current={active === "toolbox" ? "page" : undefined}>Toolbox</a><a href="/explorer/" aria-current={active === "explorer" ? "page" : undefined}>Explorer</a></>}
+      <a href="/#directory" aria-current={active === "operations" ? "page" : undefined}>Operations</a>
+      <a href="/guide/" aria-current={active === "guide" ? "page" : undefined}>Guide</a>
+    </nav>
+    <a class="nav-search" href="/#operation-search" data-search-shortcut>Search <kbd>/</kbd></a>
+    <details class="mobile-nav" data-nav-disclosure>
+      <summary aria-label="Open navigation menu">Menu</summary>
+      <nav aria-label="Mobile navigation">
+        <a href="/" aria-current={active === "home" ? "page" : undefined}>Home</a>
+        <a href="/#directory">All tools</a>
+        {unified && <><a href="/toolbox/" aria-current={active === "toolbox" ? "page" : undefined}>Toolbox</a><a href="/explorer/" aria-current={active === "explorer" ? "page" : undefined}>Explorer</a></>}
+        <a href="/#directory" aria-current={active === "operations" ? "page" : undefined}>Operations</a>
+        <a href="/guide/" aria-current={active === "guide" ? "page" : undefined}>Guide</a>
+        <details class="mobile-categories"><summary>Categories</summary><div>{V2_CATEGORIES.map((category) => <a href={categoryHref(category.id)}>{category.label}</a>)}</div></details>
+      </nav>
+    </details>
+  </div>
+</header>

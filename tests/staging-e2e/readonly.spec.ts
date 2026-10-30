@@ -9,7 +9,7 @@ test("hosted candidate exposes all routes but no signing journey", async ({ page
   await expect(page.locator("[data-tool]")).toHaveCount(197);
   await page.getByLabel("Search tools").fill("ERC-1155 Creator");
   await expect(page.locator("[data-tool]:visible")).toHaveCount(1);
-  await page.locator("[data-tool]:visible").click();
+  await page.locator("[data-tool]:visible .product-card-foot a").click();
   await expect(page.getByRole("heading", { name: "ERC-1155 Creator" })).toBeVisible();
   await expect(page.getByText("Execution is unavailable in this private preview")).toBeVisible();
   await expect(page.locator("#operation-root")).toHaveCount(0);
@@ -26,7 +26,7 @@ test("private package retains free deep links and mobile layout", async ({ page,
     expect((await request.get(path)).status()).toBe(200);
   }
   await page.goto("/toolbox/");
-  await expect(page.getByRole("heading", { name: /Understand Web3 positions/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Make sense of the numbers/ })).toBeVisible();
   await page.goto("/operations/token-locker/");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2)).toBe(true);
   await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toBeVisible();

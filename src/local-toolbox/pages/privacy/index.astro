@@ -1,10 +1,11 @@
 ---
 import "../../../styles/global.css";
 import "../../local.css";
+import ToolboxNav from "../../components/ToolboxNav.astro";
 const canonical = Astro.site ? new URL("/privacy/", Astro.site).href : undefined;
 ---
 <html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width" /><meta name="description" content="How the local PIT Toolbox handles calculator inputs, CSV files, downloads and ordinary hosting requests." />{canonical && <link rel="canonical" href={canonical} />}<title>Privacy · PIT Toolbox</title></head><body><a class="local-skip" href="#main-content">Skip to main content</a><main class="shell" id="main-content">
-  <header><a href="../" class="brand">pit<span>.</span></a><nav aria-label="Main navigation"><a href="../">Home</a><a href="../tools/">Toolbox</a><a href="../legal/">Site information</a></nav><span class="tag">BROWSER-LOCAL TOOLS</span></header>
+  <ToolboxNav root="../" current="privacy" />
   <article class="local-notice"><h1>Privacy</h1><p>The focused tasks in 20 tool workspaces calculate from information you enter in your browser. Portfolio and CSV files are read locally; reports are downloaded locally. The isolated toolbox does not send form values or file contents to PIT, connect a wallet, request blockchain data, or install application analytics. Calculations require JavaScript; form submission is blocked if it is unavailable.</p>
     <h2>What the host can receive</h2><p>Loading a hosted page or asset sends normal HTTP request metadata to the hosting provider, such as IP address, requested path, time and browser information. Access to a separately protected QA deployment may also involve authentication cookies. The toolbox does not control all provider logs or retention, and browser-local processing does not make hosting requests anonymous.</p>
     <h2>Storage and feedback</h2><p>The toolbox does not save holdings or CSV content in PIT accounting storage, localStorage or IndexedDB. A downloaded report is under your browser and device's control. This site has no feedback form; if you separately contact the publisher, that exchange needs its own privacy details.</p>

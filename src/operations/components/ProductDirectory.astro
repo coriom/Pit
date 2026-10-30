@@ -12,35 +12,38 @@ const cards = [
   ...(unified ? V2_LOCAL_TASKS.map((item) => ({
     id: `toolbox-${item.id}`, title: item.title, description: item.description,
     category: item.category, path: item.path!, surface: "Offline Toolbox",
-    networks: "offline", usage: "local", price: "Free", badge: "No wallet",
+    networks: "offline", usage: "local", price: "Free", fullPrice: "Free", availability: "Available", wallet: "Not required",
   })) : []),
   ...(unified ? V2_EXPLORER_TASKS.map((item) => ({
     id: `explorer-${item.id}`, title: item.title, description: item.description,
     category: item.category, path: item.path!, surface: "Read-only Explorer",
-    networks: item.networks.join(" "), usage: "read-only", price: "Free", badge: "Explicit RPC read",
+    networks: item.networks.join(" "), usage: "read-only", price: "Free", fullPrice: "Free", availability: "Available for read-only queries", wallet: "Not required",
   })) : []),
   ...operationCatalog.map((item) => ({
     id: `operation-${item.id}`, title: item.title, description: item.description,
     category: categories.find(({ label }) => label === item.category)?.id ?? "developer-tools",
     path: `/operations/${item.id}/`, surface: "Operations", networks: "anvil",
-    usage: "transaction", price: item.pricing === "FREE" ? "Free" : item.fee,
-    badge: item.pricing === "FREE" ? "Free local tool" : "Fee proposed · local only",
+    usage: "transaction", price: item.pricing === "FREE" ? "Free" : `From ${item.fee.match(/[\d.]+(?:[–-][\d.]+)? USDC/)?.[0] ?? "indicative fee"}`,
+    fullPrice: item.fee, availability: "Private preview; execution on local Anvil only", wallet: item.id === "metadata-studio" || item.id === "airdrop-composer" || item.id === "batch-balance-checker" ? "Not needed for preparation or reads" : "Required for local execution",
   })),
 ].sort((a, b) => (a.usage === "transaction" ? 0 : a.usage === "local" ? 1 : 2)
   - (b.usage === "transaction" ? 0 : b.usage === "local" ? 1 : 2));
 ---
 <section id="directory" aria-labelledby="directory-title">
-  <div class="eyebrow">Tool directory</div><h2 id="directory-title">Find the right workflow</h2>
-  <p class="muted">{unified ? "151 offline experiences · 28 read-only inspections · 18 operational routes. These are route counts, not a claim of 197 distinct tasks." : "18 local operational routes. The unified loopback preview also includes the isolated Toolbox and Explorer."}</p>
+  <div class="section-heading"><div><p class="eyebrow">Directory</p><h2 id="directory-title">All tools</h2></div><p>{unified ? "Calculators, inspections and operations." : "Explore local operations."}</p></div>
   <div class="catalogue-controls">
-    <label>Search tools<input id="operation-search" type="search" autocomplete="off" placeholder="Name, purpose, category…" /></label>
+    <label class="directory-search">Search<input id="directory-search" type="search" autocomplete="off" placeholder="Find a tool" aria-controls="product-catalogue" /></label>
     <label>Category<select id="operation-category"><option value="all">All categories</option>{categories.map(({ id, label }) => <option value={id}>{label}</option>)}</select></label>
     <label>Use<select id="operation-usage"><option value="all">All uses</option><option value="local">Offline calculation</option><option value="read-only">Read-only inspection</option><option value="transaction">Local operation</option></select></label>
     <label>Network<select id="operation-network"><option value="all">All networks</option><option value="offline">Offline</option><option value="ethereum">Ethereum</option><option value="base">Base</option><option value="base-sepolia">Base Sepolia</option><option value="anvil">Anvil only</option></select></label>
     <label>Price<select id="operation-price"><option value="all">All prices</option><option value="free">Free</option><option value="indicative">Indicative fee, inactive</option></select></label>
   </div>
-  <p id="search-count" role="status" aria-live="polite">{cards.length} routes shown</p>
-  <div class="grid product-grid" id="product-catalogue">{cards.map((item) => <a class="panel product-card" data-tool data-search={`${item.title} ${item.description} ${item.category} ${item.id}`.toLowerCase()} data-category={item.category} data-usage={item.usage} data-networks={item.networks} data-price={item.price === "Free" ? "free" : "indicative"} href={item.path}><small class="eyebrow">{item.surface} · {item.badge}</small><h3>{item.title}</h3><p>{item.description}</p><span class="product-card-foot"><span>{item.price}</span><span>Open →</span></span></a>)}</div>
-  <button id="show-all-tools" type="button">Show all routes</button>
-  <p id="empty-results" class="notice" hidden>No tools match those filters. Clear a filter or try another search.</p>
+  <div class="directory-status"><p id="search-count" role="status" aria-live="polite">{cards.length} results</p><button id="reset-filters" type="button" class="text-button" hidden>Clear filters</button></div>
+  <div class="product-grid" id="product-catalogue">{cards.map((item) => <article class="product-card" data-tool data-search={`${item.title} ${item.description} ${item.category} ${item.id}`.toLowerCase()} data-category={item.category} data-usage={item.usage} data-networks={item.networks} data-price={item.price === "Free" ? "free" : "indicative"}>
+    <div class="product-card-body"><p class="product-card-surface">{item.surface}</p><h3><a href={item.path}>{item.title}</a></h3><p class="product-card-description">{item.description}</p></div>
+    <div class="product-card-foot"><span>{item.price}{item.usage === "transaction" && " · Preview"}</span><a href={item.path} aria-label={`Open ${item.title}`}>Open</a></div>
+    <details class="product-card-details"><summary>Details</summary><p>{item.description}</p><dl><div><dt>Availability</dt><dd>{item.availability}</dd></div><div><dt>Network</dt><dd>{item.networks === "offline" ? "Offline" : item.networks === "anvil" ? "Anvil for local execution" : item.networks.split(" ").join(", ")}</dd></div><div><dt>Wallet</dt><dd>{item.wallet}</dd></div><div><dt>Price</dt><dd>{item.fullPrice}</dd></div></dl></details>
+  </article>)}</div>
+  <button id="show-all-tools" type="button" class="show-more">Show all tools</button>
+  <p id="empty-results" class="empty-results" hidden>No tools match. Try another search or clear the filters.</p>
 </section>

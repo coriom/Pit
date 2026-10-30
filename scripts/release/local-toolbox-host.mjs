@@ -125,6 +125,7 @@ function assertLinks(html, page, allowed) {
     const linkPath = href.split(/[?#]/)[0];
     const target = linkPath.startsWith("/") ? posix.normalize(linkPath) : posix.normalize(posix.join("/", posix.dirname(page), linkPath));
     const file = target.endsWith("/") ? `${target}index.html` : target;
+    if (process.env.PIT_UNIFIED_PREVIEW === "1" && file === "/toolbox/index.html") continue;
     if (!allowed.has(file.slice(1))) throw Error(`Link leaves local toolbox: ${page} -> ${href}`);
   }
 }
@@ -149,16 +150,18 @@ function validatePolicy(htmlByPage, policy) {
 async function candidateInventory(root, publicOrigin = null) {
   const files = await walk(root);
   const assets = files.filter((file) => file.startsWith("_astro/"));
-  if (assets.length !== 1 || !/^_astro\/[\w.-]+\.css$/.test(assets[0]) || forbiddenAssets.test(assets[0]) ||
+  if (assets.length < 1 || assets.length > 2 || assets.some((asset) => !/^_astro\/[\w.-]+\.css$/.test(asset) || forbiddenAssets.test(asset)) ||
       JSON.stringify(files) !== JSON.stringify([...LOCAL_PAGES, "robots.txt", ...(publicOrigin ? ["sitemap.xml"] : []), ...assets].sort()))
     throw Error("Local toolbox file or route inventory differs from explicit allowlist");
   if (await readFile(join(root, "robots.txt"), "utf8") !== (publicOrigin ? publicRobots(publicOrigin) : "User-agent: *\nDisallow: /\n"))
     throw Error("Local toolbox robots policy changed");
   if (publicOrigin && await readFile(join(root, "sitemap.xml"), "utf8") !== publicSitemap(publicOrigin, LOCAL_IDS, LOCAL_TASK_IDS))
     throw Error("Local toolbox sitemap differs from approved routes");
-  const css = await readFile(join(root, assets[0]), "utf8");
-  if (/@import\s+(?:url\()?\s*["']?https?:\/\/|url\(\s*["']?https?:\/\//i.test(css))
-    throw Error("Remote CSS in local toolbox");
+  for (const asset of assets) {
+    const css = await readFile(join(root, asset), "utf8");
+    if (/@import\s+(?:url\()?\s*["']?https?:\/\/|url\(\s*["']?https?:\/\//i.test(css))
+      throw Error("Remote CSS in local toolbox");
+  }
   return { files, assets };
 }
 

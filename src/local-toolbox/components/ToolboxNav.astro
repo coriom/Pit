@@ -1,0 +1,22 @@
+---
+import { V2_CATEGORIES } from "../../lib/v2-catalog-core";
+const { root, current = "" } = Astro.props as { root: string; current?: "home" | "tools" | "privacy" | "legal" | "" };
+const categories = V2_CATEGORIES.filter((category) => category.id !== "blockchain-explorer");
+const unified = process.env.PIT_UNIFIED_PREVIEW === "1";
+const homeHref = unified ? "/toolbox/" : root;
+const toolsHref = unified ? "/tools/" : `${root}tools/`;
+const privacyHref = unified ? "/privacy/" : `${root}privacy/`;
+const legalHref = unified ? "/legal/" : `${root}legal/`;
+---
+<header class="local-site-header">
+  <a href={homeHref} class="brand" aria-label="PIT Toolbox home">PIT</a>
+  <nav class="local-desktop-nav" aria-label="Main navigation">
+    <a href={homeHref} aria-current={current === "home" ? "page" : undefined}>Home</a>
+    <details><summary>Tools</summary><div class="local-nav-panel"><a href={toolsHref}>All tools</a>{categories.map((category) => <a href={`${toolsHref}#category-${category.id}`}>{category.label}</a>)}</div></details>
+    <a href={toolsHref} aria-current={current === "tools" ? "page" : undefined}>Toolbox</a>
+    <a href={privacyHref} aria-current={current === "privacy" ? "page" : undefined}>Privacy</a>
+    <a href={legalHref} aria-current={current === "legal" ? "page" : undefined}>Site information</a>
+  </nav>
+  <a class="local-nav-search" href={`${toolsHref}#tool-search`}>Search</a>
+  <details class="local-mobile-nav"><summary aria-label="Open navigation menu">Menu</summary><nav aria-label="Mobile navigation"><a href={homeHref}>Home</a><a href={toolsHref}>Toolbox</a><a href={`${toolsHref}#tool-search`}>Search tools</a><details><summary>Categories</summary><div>{categories.map((category) => <a href={`${toolsHref}#category-${category.id}`}>{category.label}</a>)}</div></details><a href={privacyHref}>Privacy</a><a href={legalHref}>Site information</a></nav></details>
+</header>

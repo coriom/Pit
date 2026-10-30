@@ -6,15 +6,15 @@ test("unified loopback directory links all three isolated products", async ({ pa
   page.on("request", (request) => { if (!request.url().startsWith("http://127.0.0.1:4414/")) external.push(request.url()); });
   const home = await page.goto("/");
   expect(home?.status()).toBe(200);
-  await expect(page.getByRole("heading", { name: /Understand the data/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Web3 work, made clearer/ })).toBeVisible();
   await expect(page.locator("[data-tool]")).toHaveCount(197);
-  const hrefs = await page.locator("[data-tool]").evaluateAll((nodes) => nodes.map((node) => (node as HTMLAnchorElement).getAttribute("href")!));
+  const hrefs = await page.locator("[data-tool]").evaluateAll((nodes) => nodes.map((node) => (node.querySelector(".product-card-foot a") as HTMLAnchorElement).getAttribute("href")!));
   for (let offset = 0; offset < hrefs.length; offset += 12) {
     const checked = await Promise.all(hrefs.slice(offset, offset + 12).map(async (href) => ({ href, status: (await request.get(href)).status() })));
     expect(checked.filter(({ status }) => status !== 200)).toEqual([]);
   }
-  await expect(page.locator("[data-tool]:visible")).toHaveCount(24);
-  await page.getByRole("button", { name: "Show all routes" }).click();
+  await expect(page.locator("[data-tool]:visible")).toHaveCount(12);
+  await page.getByRole("button", { name: "Show all tools" }).click();
   await expect(page.locator("[data-tool]:visible")).toHaveCount(197);
   await page.locator("#operation-usage").selectOption("read-only");
   await expect(page.locator("[data-tool]:visible")).toHaveCount(28);
@@ -29,7 +29,7 @@ test("unified loopback directory links all three isolated products", async ({ pa
   expect(await page.locator("[data-tool]:visible").count()).toBeGreaterThan(0);
   await page.getByLabel("Search tools").fill("ERC-1155 Creator");
   await expect(page.locator("[data-tool]:visible")).toHaveCount(1);
-  await page.locator("[data-tool]:visible").click();
+  await page.locator("[data-tool]:visible .product-card-foot a").click();
   await expect(page.getByRole("heading", { name: "ERC-1155 Creator" })).toBeVisible();
   await expect(page.getByRole("link", { name: "All tools" })).toBeVisible();
   expect(external).toEqual([]);
@@ -46,9 +46,9 @@ test("free deep links keep their own CSP and mobile navigation", async ({ page, 
   expect(operation.status()).toBe(200);
   expect(operation.headers()["x-robots-tag"]).toBe("noindex, nofollow");
   await page.goto("/toolbox/");
-  await expect(page.getByRole("heading", { name: /Understand Web3 positions/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Make sense of the numbers/ })).toBeVisible();
   await page.goto("/explorer/");
-  await expect(page.getByRole("heading", { name: /Read public-chain facts/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Inspect the chain/ })).toBeVisible();
   await page.goto("/operations/token-creator/");
   await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2)).toBe(true);
