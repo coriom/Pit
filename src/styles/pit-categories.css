@@ -1,0 +1,10 @@
+/* One shared palette for the nine catalogue categories. Neutral surfaces remain primary. */
+[data-category="trading-risk"] { --category-accent: #f3a48f; --category-wash: #f3a48f19; --category-glow: #f3a48f30; }
+[data-category="blockchain-explorer"] { --category-accent: #94c5f5; --category-wash: #94c5f519; --category-glow: #94c5f530; }
+[data-category="token-creator"] { --category-accent: #efc57f; --category-wash: #efc57f19; --category-glow: #efc57f30; }
+[data-category="token-management"] { --category-accent: #c0aff4; --category-wash: #c0aff419; --category-glow: #c0aff430; }
+[data-category="transfers-airdrops"] { --category-accent: #8eddd0; --category-wash: #8eddd019; --category-glow: #8eddd030; }
+[data-category="vesting-locking"] { --category-accent: #eca9ca; --category-wash: #eca9ca19; --category-glow: #eca9ca30; }
+[data-category="defi-liquidity"] { --category-accent: #b6d888; --category-wash: #b6d88819; --category-glow: #b6d88830; }
+[data-category="portfolio-analytics"] { --category-accent: #f0b68c; --category-wash: #f0b68c19; --category-glow: #f0b68c30; }
+[data-category="developer-tools"] { --category-accent: #a5b3f9; --category-wash: #a5b3f919; --category-glow: #a5b3f930; }

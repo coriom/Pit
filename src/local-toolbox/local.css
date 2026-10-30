@@ -1,4 +1,5 @@
 @import "../styles/pit-product-tokens.css";
+@import "../styles/pit-categories.css";
 /* Fixed local-toolbox styles: no Tailwind source scan or remote imports. */
 .local-intro { max-width: 780px; }
 .local-intro p { font-size: 18px; }
@@ -127,3 +128,26 @@ body { background: var(--pit-bg); color: var(--pit-text); }
 }
 @media (max-width: 550px) { .tool-grid, .local-task-grid { grid-template-columns: 1fr; } .local-task-card { min-height: 0; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+/* Shared category cues; this stylesheet stays entirely static in the Toolbox. */
+body { background: radial-gradient(ellipse 60% 25% at 12% 0%,#26385066,transparent 85%),var(--pit-bg); }
+.shell > .local-site-header { background: #0c121bef; border-bottom-color: #3b4958; }
+.local-nav-panel { width: min(680px,calc(100vw - 64px)); grid-template-columns: repeat(3,minmax(0,1fr)); gap: 5px; padding: 18px; background: #192431; border-color: #526171; box-shadow: 0 24px 50px #02060ccc; }
+.local-nav-panel a { display: flex; align-items: center; gap: 9px; min-height: 40px; background: linear-gradient(90deg,var(--category-wash,transparent),transparent); }
+.local-nav-panel a:hover { color: var(--category-accent,var(--pit-accent)); background: var(--category-wash,#ffffff0d); }
+.local-nav-panel .local-menu-all { grid-column: 1/-1; color: var(--pit-accent); border-bottom: 1px solid var(--pit-line); border-radius: 0; }
+.category-mark { display: inline-block; flex: 0 0 auto; width: 9px; height: 9px; border-radius: 3px; transform: rotate(-16deg); background: var(--category-accent,var(--pit-accent)); box-shadow: 0 0 0 3px var(--category-wash,#e5c68c19); }
+.local-mobile-nav nav details div a { display: flex; align-items: center; gap: 10px; }
+.local-intro { position: relative; overflow: hidden; max-width: none; margin: 25px 0 35px; padding: 60px; border: 1px solid #46576a; border-radius: 18px; background: radial-gradient(circle at 78% 45%,#59708c66,transparent 30%),linear-gradient(110deg,#1b2a3a,#162330 70%); }
+.local-intro::after { content: ""; position: absolute; width: 240px; height: 240px; top: 20px; right: 10%; border: 1px solid #d9c58d59; border-radius: 35%; transform: rotate(25deg); pointer-events: none; }
+.local-intro p:not(.eyebrow) { position: relative; max-width: 590px; color: #d0dce3; }
+.local-task-card[data-category] { position: relative; overflow: hidden; border-color: var(--pit-line); background: linear-gradient(145deg,var(--category-wash),#18212c 65%); }
+.local-task-card[data-category]::before { content: ""; position: absolute; top: -36px; right: -26px; width: 100px; height: 100px; border: 1px solid var(--category-glow); border-radius: 31%; transform: rotate(20deg); }
+.local-task-card[data-category]:hover, .local-task-card[data-category]:focus-visible { border-color: var(--category-accent); background: linear-gradient(145deg,var(--category-glow),#1d2731 65%); }
+.local-task-card .category-symbol { display: block; width: 24px; height: 24px; margin-bottom: 20px; border: 1px solid var(--category-accent); border-radius: 7px 2px 7px 2px; transform: rotate(-14deg); background: var(--category-wash); }
+.local-task-card[data-category] small { color: var(--category-accent); }
+.local-card[data-category] { position: relative; overflow: hidden; background: linear-gradient(145deg,var(--category-wash),var(--pit-surface) 48%); }
+.local-card[data-category]::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--category-accent); }
+.local-card[data-category]:hover, .local-card[data-category]:focus-visible { border-color: var(--category-accent); background: linear-gradient(145deg,var(--category-glow),var(--pit-surface-raised) 48%); }
+.local-card[data-category] .local-card-category, .local-card[data-category] .local-card-foot { color: var(--category-accent); }
+.v2-category-filters button[data-category-filter]:not([data-category-filter="all"])[aria-pressed="true"] { color: var(--category-accent); border-color: var(--category-accent); background: var(--category-wash); }
+@media(max-width:760px) { .local-intro { margin: 16px 0 28px; padding: 40px 24px; }.local-intro::after { opacity: .3; }.local-nav-panel { width: auto; } }

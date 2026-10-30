@@ -2,6 +2,7 @@
 import Layout from "../../../components/Layout.astro";
 import FeeQuote from "../../../components/FeeQuote.astro";
 import { operationCatalog } from "../../../lib/catalog";
+import { V2_CATEGORIES } from "../../../../lib/v2-catalog-core";
 export function getStaticPaths() { return operationCatalog.map((item) => ({ params: { id: item.id }, props: { item } })); }
 const { item } = Astro.props;
 const hosted = process.env.PIT_HOSTED_STAGING === "1";
@@ -9,10 +10,11 @@ const paidDemo = ["token-creator", "multisender", "token-locker", "token-vesting
 const browserOnly = ["metadata-studio", "airdrop-composer"].includes(item.id);
 const readOnly = item.id === "batch-balance-checker";
 const related = operationCatalog.filter((entry) => entry.category === item.category && entry.id !== item.id).slice(0, 3);
+const categoryId = V2_CATEGORIES.find((category) => category.label === item.category)?.id ?? "developer-tools";
 ---
 <Layout title={item.title} description={item.description}>
   <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">PIT</a><span aria-hidden="true">/</span><a href="/#directory">{item.category}</a><span aria-hidden="true">/</span><span aria-current="page">{item.title}</span></nav>
-  <section class="detail-intro"><p class="eyebrow">{item.category}</p><h1>{item.title}</h1><p>{item.description}</p><div class="detail-meta"><span>{item.pricing === "FREE" ? "Free" : "Indicative PIT fee"}</span><span aria-hidden="true">·</span><span>{hosted ? "Read-only preview" : browserOnly ? "Browser-local" : readOnly ? "Read-only" : "Local Anvil"}</span></div></section>
+  <section class="detail-intro" data-category={categoryId}><p class="eyebrow"><span class="category-mark" aria-hidden="true"></span>{item.category}</p><h1>{item.title}</h1><p>{item.description}</p><div class="detail-meta"><span>{item.pricing === "FREE" ? "Free" : "Indicative PIT fee"}</span><span aria-hidden="true">·</span><span>{hosted ? "Read-only preview" : browserOnly ? "Browser-local" : readOnly ? "Read-only" : "Local Anvil"}</span></div></section>
   {hosted ? <div class="preview-state" role="status"><strong>Preview only</strong><p>Execution is unavailable in this private preview. No wallet connection, transaction or PIT payment is available here.</p></div> : <div id="operation-root" data-operation={item.id}></div>}
   {paidDemo && !hosted && <div class="decision-note"><div><strong>Local mock-USDC payment</strong><p>Payment and operation are atomic on Anvil. Approval and reverted transaction gas remain separate; no real USDC is used.</p></div><a class="button-link secondary" href="?paid-local=1">Open paid demo</a></div>}
   <details class="technical-details"><summary>Networks, fees and permissions</summary><div class="technical-details-inner"><dl class="operation-facts">

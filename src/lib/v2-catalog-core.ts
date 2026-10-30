@@ -1,15 +1,15 @@
 // Presentation metadata only. Execution remains governed by each isolated
 // product's existing allowlist and runner; catalogue entries grant no capability.
 export const V2_CATEGORIES = [
-  { id: "trading-risk", label: "Trading & Risk", description: "Model trades, derivatives and execution costs." },
-  { id: "blockchain-explorer", label: "Blockchain Explorer", description: "Inspect selected public-chain facts on demand." },
-  { id: "token-creator", label: "Token Creator", description: "Model token supply and review locally tested creation flows." },
-  { id: "token-management", label: "Token Management", description: "Inspect token units, supply, permissions and local administration." },
-  { id: "transfers-airdrops", label: "Transfers & Airdrops", description: "Plan allocations and review bounded local distributions." },
-  { id: "vesting-locking", label: "Vesting & Locking", description: "Explore schedules and locally tested locking operations." },
-  { id: "defi-liquidity", label: "DeFi & Liquidity", description: "Explore pools, lending, staking and yield." },
-  { id: "portfolio-analytics", label: "Portfolio & Analytics", description: "Analyze holdings, performance and imported data." },
-  { id: "developer-tools", label: "Developer Tools", description: "Inspect EVM data, encodings and proofs." },
+  { id: "trading-risk", label: "Trading & Risk", description: "Plan trades and understand risk." },
+  { id: "blockchain-explorer", label: "Blockchain Explorer", description: "Look up public blockchain activity." },
+  { id: "token-creator", label: "Token Creator", description: "Explore token and NFT creation." },
+  { id: "token-management", label: "Token Management", description: "Review supply and permissions." },
+  { id: "transfers-airdrops", label: "Transfers & Airdrops", description: "Prepare token distributions." },
+  { id: "vesting-locking", label: "Vesting & Locking", description: "Plan time-based token releases." },
+  { id: "defi-liquidity", label: "DeFi & Liquidity", description: "Compare pools, lending and yield." },
+  { id: "portfolio-analytics", label: "Portfolio & Analytics", description: "Explore holdings and performance." },
+  { id: "developer-tools", label: "Developer Tools", description: "Decode and inspect on-chain data." },
 ] as const;
 export type V2CategoryId = (typeof V2_CATEGORIES)[number]["id"];
 export type V2Execution = "local" | "read-only blockchain" | "planned";

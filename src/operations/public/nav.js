@@ -21,6 +21,9 @@ document.addEventListener("keydown", (event) => {
 document.addEventListener("click", (event) => {
   for (const disclosure of disclosures) if (disclosure.open && !disclosure.contains(event.target)) disclosure.open = false;
 });
+document.addEventListener("focusin", (event) => {
+  for (const disclosure of disclosures) if (disclosure.open && !disclosure.contains(event.target)) disclosure.open = false;
+});
 document.querySelector("[data-search-shortcut]")?.addEventListener("click", (event) => {
   if (!search) return;
   event.preventDefault();

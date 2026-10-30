@@ -2,18 +2,31 @@
 import Layout from "../components/Layout.astro";
 import ProductDirectory from "../components/ProductDirectory.astro";
 import { V2_CATEGORIES } from "../../lib/v2-catalog-core";
+import { V2_LOCAL_TASKS, V2_LOCAL_WORKSPACES } from "../../lib/v2-local-catalog";
+import { V2_EXPLORER_TASKS } from "../../lib/v2-explorer-catalog";
+import { operationCatalog } from "../lib/catalog";
 const hosted = process.env.PIT_HOSTED_STAGING === "1";
 const unified = process.env.PIT_UNIFIED_PREVIEW === "1";
+const categoryCount = (id: string) => (unified ? V2_LOCAL_TASKS.filter((item) => item.category === id).length + V2_EXPLORER_TASKS.filter((item) => item.category === id).length : 0)
+  + operationCatalog.filter((item) => V2_CATEGORIES.find((category) => category.id === id)?.label === item.category).length;
+const featureOperation = (id: string) => { const item = operationCatalog.find((entry) => entry.id === id)!; return { title: item.title, description: item.description, category: V2_CATEGORIES.find((entry) => entry.label === item.category)!.id, path: `/operations/${item.id}/`, availability: "Preview" }; };
+const featured = unified ? [
+  ...["portfolio-exposure", "swap-cost"].map((id) => { const item = V2_LOCAL_WORKSPACES.find((entry) => entry.id === id)!; return { title: item.title, description: item.description, category: item.category, path: item.path!, availability: "Free" }; }),
+  (() => { const item = V2_EXPLORER_TASKS.find((entry) => entry.id === "erc20-contract")!; return { title: item.title, description: item.description, category: item.category, path: item.path!, availability: "Free · Read-only" }; })(),
+  featureOperation("token-creator"),
+] : ["token-creator", "multisender", "nft-creator", "metadata-studio"].map(featureOperation);
 ---
 <Layout title="PIT Web3 tools" description="Free local analysis, read-only blockchain inspections and separately isolated local operations.">
   <section class="hero product-hero">
-    <p class="hero-kicker">Financial tools · On-chain insight · Token workflows</p>
-    <h1>Web3 work, made clearer.</h1>
-    <p class="hero-copy">Analyze risk, inspect public chains and prepare token operations in one place.</p>
-    <label class="hero-search" for="operation-search"><span>Search tools</span><input id="operation-search" type="search" autocomplete="off" placeholder="Search tools, tasks or categories" aria-controls="product-catalogue" /></label>
-    <div class="hero-meta"><a href="#directory">Browse all tools</a><span aria-hidden="true">·</span><a href="/guide/">How PIT works</a></div>
+    <div class="hero-content"><p class="hero-kicker">PIT / YOUR WEB3 WORKSPACE</p>
+      <h1>Make more of <em>what’s on-chain.</em></h1>
+      <p class="hero-copy">Explore, understand and manage tokens with tools that keep every step clear.</p>
+      <label class="hero-search" for="operation-search"><span>Find a tool</span><span class="hero-search-field"><span class="search-glyph" aria-hidden="true"></span><input id="operation-search" type="search" autocomplete="off" placeholder="Try token, wallet, risk or NFT" aria-controls="product-catalogue" /><kbd>/</kbd></span></label>
+      <div class="hero-meta"><a href="#categories">Explore categories</a><span aria-hidden="true">·</span><a href="/guide/">How PIT works</a></div>
+    </div><div class="hero-art" aria-hidden="true"><span class="hero-art-core"></span><span class="hero-art-orbit hero-art-orbit-one"></span><span class="hero-art-orbit hero-art-orbit-two"></span><span class="hero-art-node hero-art-node-one"></span><span class="hero-art-node hero-art-node-two"></span><span class="hero-art-node hero-art-node-three"></span></div>
   </section>
-  <section class="category-section" aria-labelledby="category-title"><div class="section-heading"><h2 id="category-title">Explore by category</h2><span>Nine ways to get started</span></div><div class="category-rail">{V2_CATEGORIES.map((category) => <a href={`/?category=${encodeURIComponent(category.id)}#directory`}>{category.label}</a>)}</div></section>
+  <section class="category-section" id="categories" aria-labelledby="category-title"><div class="section-heading"><div><p class="eyebrow">Explore PIT</p><h2 id="category-title">What are you working on?</h2></div><a href="#directory">View all tools</a></div><div class="category-rail">{V2_CATEGORIES.map((category, index) => <a class="category-tile" data-category={category.id} href={`/?category=${encodeURIComponent(category.id)}#directory`}><span class="category-tile-top"><span class="category-tile-number">{String(index + 1).padStart(2, "0")}</span><span class="category-symbol" aria-hidden="true"></span></span><strong>{category.label}</strong><span class="category-tile-description">{category.description}</span><span class="category-tile-footer">{categoryCount(category.id)} tools <span>Explore</span></span></a>)}</div></section>
+  <section class="featured-section" aria-labelledby="featured-title"><div class="section-heading"><div><p class="eyebrow">A good place to start</p><h2 id="featured-title">Tools for the task at hand</h2></div></div><div class="featured-grid">{featured.map((item) => <a data-category={item.category} href={item.path}><span class="category-mark" aria-hidden="true"></span><span><strong>{item.title}</strong><small>{item.description}</small></span><span class="featured-open">{item.availability}</span></a>)}</div></section>
   <section aria-label="Product areas" class="product-lanes">
     {unified && <><a href="/toolbox/"><span>01 / FREE</span><strong>Toolbox</strong><small>Calculators and local data tools</small></a><a href="/explorer/"><span>02 / FREE</span><strong>Explorer</strong><small>Read public blockchain data</small></a></>}
     <a href="#directory"><span>{unified ? "03" : "01"} / PREVIEW</span><strong>Operations</strong><small>Token creation, distribution and management</small></a>

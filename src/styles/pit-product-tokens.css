@@ -1,14 +1,14 @@
 :root {
   color-scheme: dark;
-  --pit-bg: #101317;
-  --pit-surface: #171c21;
-  --pit-surface-raised: #1d2329;
-  --pit-line: #343c43;
-  --pit-line-soft: #293138;
-  --pit-text: #f1f2ef;
-  --pit-muted: #a9b2b7;
-  --pit-accent: #d2bc88;
-  --pit-accent-strong: #e2cd9c;
+  --pit-bg: #0c1119;
+  --pit-surface: #151c26;
+  --pit-surface-raised: #1c2530;
+  --pit-line: #384451;
+  --pit-line-soft: #2a3541;
+  --pit-text: #f2f5f5;
+  --pit-muted: #b5c0c9;
+  --pit-accent: #e5c68c;
+  --pit-accent-strong: #f2d9a7;
   --pit-danger: #ee9b90;
   --pit-radius: 10px;
   font-synthesis: none;

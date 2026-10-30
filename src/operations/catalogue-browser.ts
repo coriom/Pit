@@ -13,6 +13,7 @@ let expanded = false;
 const requestedCategory = new URLSearchParams(location.search).get("category");
 if (category && requestedCategory && [...category.options].some((option) => option.value === requestedCategory)) category.value = requestedCategory;
 function update() {
+  if (category) category.dataset.category = category.value;
   const query = (directorySearch?.value || search?.value || "").trim().toLocaleLowerCase();
   const filtered = Boolean(query || category?.value !== "all" || usage?.value !== "all" || network?.value !== "all" || price?.value !== "all");
   let matched = 0;
