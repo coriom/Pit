@@ -1,0 +1,34 @@
+{
+  "chainId": 84532,
+  "contracts": [
+    {
+      "address": "0xF2c716A5EA0240C3D3A49cA1aad81d98e2947475",
+      "apiUrl": "https://sourcify.dev/server/v2/contract/84532/0xF2c716A5EA0240C3D3A49cA1aad81d98e2947475",
+      "contractIdentifier": "contracts/src/PitPaidTokenCreator.sol:PitPaidTokenCreator",
+      "creationMatch": "exact_match",
+      "match": "exact_match",
+      "matchId": "57625382",
+      "payloadSha256": "ada0f9d18c2a8adcd4e0f8b33151702fd0c44ac54cceab2376d0baf602c0b3e2",
+      "publicUrl": "https://repo.sourcify.dev/84532/0xF2c716A5EA0240C3D3A49cA1aad81d98e2947475",
+      "runtimeMatch": "exact_match",
+      "verificationId": "0d11720b-6499-4357-b7af-8d6ef2234e92",
+      "verifiedAt": "2026-10-30T03:13:11Z"
+    },
+    {
+      "address": "0xf042b36A01C3C4d74f29f570E03138C4E4e99817",
+      "apiUrl": "https://sourcify.dev/server/v2/contract/84532/0xf042b36A01C3C4d74f29f570E03138C4E4e99817",
+      "contractIdentifier": "contracts/src/PitPaidOperations.sol:PitPaidOperations",
+      "creationMatch": "exact_match",
+      "match": "exact_match",
+      "matchId": "57625394",
+      "payloadSha256": "fd054099bfbc6fd33a2ecc5920bfbae7c498c46d06fe81ced27c197e5ee405d7",
+      "publicUrl": "https://repo.sourcify.dev/84532/0xf042b36A01C3C4d74f29f570E03138C4E4e99817",
+      "runtimeMatch": "exact_match",
+      "verificationId": "a4594800-86b2-47aa-976c-916912e288e9",
+      "verifiedAt": "2026-10-30T03:13:15Z"
+    }
+  ],
+  "reviewManifestSha256": "e2ff65347c7b4f24efa8f1ef1e2321bddd05fae42bb16e68bad6d8811c97c397",
+  "schema": "pit9b.sourcify-result.v1",
+  "status": "VERIFIED"
+}
