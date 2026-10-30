@@ -33,7 +33,11 @@ const localCategory = categoryLabel(categoryForLocal(tool.id, tool.category));
   </head>
   <body>
     <main class="shell" id={localOnly ? "main-content" : undefined}>
-      {localOnly ? <ToolboxNav root="../../" current="tools" /> : <header><a href="../../" class="brand">PIT</a><nav><a href="../">Toolbox</a><a href="../../">Home</a>{!betaOnly && <><a href="../../tools/swap/">Trading lab</a><a href="../../fees/">Fees</a><a href="../../legal/">Legal</a></>}</nav><span class="tag">{betaOnly ? "READ-ONLY CANDIDATE" : "TESTNET PREVIEW"}</span></header>}
+      {localOnly ? <ToolboxNav root="../../" current="tools" /> : <header>
+        <a href="../../" class="brand">pit<span>.</span></a>
+        <nav><a href="../">Toolbox</a><a href="../../">Home</a>{!betaOnly && <><a href="../../tools/swap/">Trading lab</a><a href="../../fees/">Fees</a><a href="../../legal/">Legal</a></>}</nav>
+        <span class="tag">{betaOnly ? "READ-ONLY CANDIDATE" : "TESTNET PREVIEW"}</span>
+      </header>}
       <section class="hero">
         <div class="eyebrow">{localOnly ? localCategory : tool.category} / {tool.status}</div>
         <h1>{tool.title}</h1>
