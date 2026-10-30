@@ -220,8 +220,8 @@ test("V2 search and categories keep the twenty free workspaces reachable on mobi
   const report = await guard(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${origin}/`);
-  await page.getByRole("link", { name: "Explore free tools" }).click();
-  await expect(page.getByRole("heading", { name: "Find the right tool." })).toBeVisible();
+  await page.getByRole("link", { name: "Explore tools" }).click();
+  await expect(page.getByRole("heading", { name: "Find a tool." })).toBeVisible();
   await expect(page.locator("[data-tool]:visible")).toHaveCount(20);
   await page.getByLabel("Search tools by name or purpose").fill("Vesting & Unlock Planner");
   await expect(page.locator("[data-tool]:visible")).toHaveCount(1);
