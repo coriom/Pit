@@ -1,0 +1,8 @@
+{
+  "name": "pit-v2-private-staging",
+  "account_id": "77dc4e907cd36ee29964c8aff47f7c38",
+  "compatibility_date": "2026-10-29",
+  "main": "./pit9b1-staging-deny-all.mjs",
+  "workers_dev": true,
+  "preview_urls": false
+}
