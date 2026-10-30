@@ -1,0 +1,53 @@
+{
+  "schema": "pit9b1.cloudflare-staging-result.v1",
+  "status": "DEPLOYED_ACCESS_PROTECTED_AUTHENTICATED_UI_PENDING",
+  "authorizationManifestSha256": "9f4891ba3775f026af936bac26669aeccaf2bd999004d9d9d17427acf4e37f49",
+  "sourceCommit": "0411ab393dee86d10cea759ad4a3491bbdbc38e6",
+  "accountId": "77dc4e907cd36ee29964c8aff47f7c38",
+  "worker": {
+    "name": "pit-v2-private-staging",
+    "id": "18d2ab8c00114236856e4524d090f437",
+    "url": "https://pit-v2-private-staging.coriolanmorel.workers.dev",
+    "deploymentId": "8f8184b7-3b4c-4f2e-b452-62d08b24c769",
+    "versionId": "04d5fed7-ac28-4b2f-a7d9-8112b1885ccc",
+    "deployedAt": "2026-10-30T03:37:50.33387Z",
+    "workersDevEnabled": true,
+    "previewUrlsEnabled": false,
+    "packageAssetManifestSha256": "50782ada0bbbb8a4f59c678feac7e19c238d722fe89c8a19a83cfeaddffe4a98",
+    "packageAssetCountIncludingHeaders": 229,
+    "packageBytes": 9776152,
+    "mode": "hosted-read-only"
+  },
+  "access": {
+    "applicationId": "e0e7911e-aca1-407b-bb3b-20d9a2e858ea",
+    "type": "self_hosted",
+    "destination": { "type": "worker", "workerId": "18d2ab8c00114236856e4524d090f437" },
+    "decision": "allow",
+    "include": [{ "email": "coriolanmorel@gmail.com" }],
+    "exclude": [],
+    "require": [],
+    "bypassPolicies": []
+  },
+  "billing": {
+    "workersPlan": "Free",
+    "zeroTrustPlan": "Free",
+    "evidence": "operator-confirmed-in-Cloudflare-dashboard; API subscription read returned 403",
+    "expectedIncrementalFixedCostUsdPerMonth": "0.00 subject to Free limits"
+  },
+  "checks": {
+    "authorizationManifest": "PASS",
+    "accessPolicyReadback": "PASS",
+    "anonymousRoot": "ACCESS_LOGIN",
+    "anonymousToolbox": "ACCESS_LOGIN",
+    "anonymousExplorer": "ACCESS_LOGIN",
+    "anonymousOperations": "ACCESS_LOGIN",
+    "anonymousStaticAsset": "ACCESS_LOGIN",
+    "anonymous404": "ACCESS_LOGIN",
+    "anonymousChromium": "PASS",
+    "anonymousFirefox": "PASS",
+    "versionPreviewUrl": "NOT_FOUND",
+    "authenticatedProductUi": "PENDING_OPERATOR_BROWSER_CONFIRMATION"
+  },
+  "rollback": "Replace product with the reviewed deny-all placeholder, preserve Worker-level Access, disable workers.dev and preview URLs, verify anonymous denial; do not touch pit-premium-cb-sandbox.",
+  "externalBlockchainTransactions": 0
+}
