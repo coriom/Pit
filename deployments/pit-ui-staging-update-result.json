@@ -1,0 +1,38 @@
+{
+  "schema": "pit-ui-private-staging-update-result-v1",
+  "status": "DEPLOYED_ACCESS_PROTECTED_AUTHENTICATED_UI_PENDING",
+  "authorizationManifestSha256": "e9dd065b40b65ae2dc0d163445cb2df9ac1bf0367cf15c183266091ed3f31178",
+  "sourceCommit": "07066c5bdb9021e9b83166d4903885976bb6ba1b",
+  "accountId": "77dc4e907cd36ee29964c8aff47f7c38",
+  "workerName": "pit-v2-private-staging",
+  "hostname": "pit-v2-private-staging.coriolanmorel.workers.dev",
+  "previousVersionId": "04d5fed7-ac28-4b2f-a7d9-8112b1885ccc",
+  "deploymentId": "237e22fb-b1d1-41d9-9790-29bda56ba260",
+  "versionId": "36f32ca9-5400-4dde-af84-9a37d81bfa31",
+  "package": {
+    "assetManifestSha256": "30b01890837992ec0d32982aa6a4b8283b9412154490910c011d9a199874cf9e",
+    "headersSha256": "2335441ec9a8c54fe67be7fe3eb0aeb3e61e1e34b3fb5d99b85933209adc4df3",
+    "uploadedStaticAssets": 231,
+    "mode": "hosted-read-only"
+  },
+  "access": {
+    "applicationId": "e0e7911e-aca1-407b-bb3b-20d9a2e858ea",
+    "destinationWorkerId": "18d2ab8c00114236856e4524d090f437",
+    "allowPolicyId": "8ea75407-050c-45fe-be38-2403c482c972",
+    "allowedEmail": "coriolanmorel@gmail.com",
+    "bypassPolicies": 0,
+    "previewUrlsEnabled": false,
+    "anonymousHttpAccess": "ACCESS_LOGIN_FOR_ROOT_TOOLBOX_EXPLORER_OPERATION_AND_STATIC_ASSET",
+    "anonymousChromium": "ACCESS_LOGIN_FOR_FOUR_PATHS",
+    "anonymousFirefox": "ACCESS_LOGIN_FOR_FOUR_PATHS",
+    "authenticatedProductUi": "NOT_VERIFIED"
+  },
+  "billing": {
+    "workersPlan": "Free, operator-confirmed",
+    "zeroTrustPlan": "Free, operator-confirmed",
+    "apiBillingReadback": "UNAVAILABLE_WITH_CURRENT_TOKEN",
+    "expectedIncrementalFixedCostUsdPerMonth": "0.00 subject to Free limits"
+  },
+  "externalBlockchainTransactions": 0,
+  "rollback": "Restore the prior protected version or the reviewed deny-all placeholder; preserve Access and verify anonymous denial."
+}
