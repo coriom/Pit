@@ -1,5 +1,6 @@
 @import "../styles/pit-product-tokens.css";
 @import "../styles/pit-categories.css";
+@import "../styles/pit-motion.css";
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body { margin: 0; background: var(--pit-bg); color: var(--pit-text); font: 16px/1.5 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
@@ -302,3 +303,60 @@ body { background: radial-gradient(ellipse 65% 27% at 16% 3%, #28324465, transpa
   .detail-intro { margin-top: 15px; padding: 28px 22px; }
 }
 @media (max-width: 420px) { .brand small { display: none; }.product-hero { padding: 36px 20px; }.hero-kicker { font-size: 9px; }.category-rail .category-tile { min-height: 151px; padding: 13px; }.category-tile-description { display: none; }.category-tile strong { font-size: 15px; }.category-tile-footer { margin-top: 12px; } }
+
+/* Third pass: ambient colour and motion keep the information hierarchy still. */
+body { background: radial-gradient(ellipse 48% 24% at 5% 2%,#38487d55,transparent 82%),radial-gradient(ellipse 44% 23% at 97% 32%,#17676535,transparent 80%),radial-gradient(ellipse 42% 24% at 12% 78%,#84516d28,transparent 82%),var(--pit-bg); }
+.site-header { transition: border-color var(--pit-motion-quick) ease,box-shadow var(--pit-motion-composed) ease; }
+.site-header:focus-within { box-shadow: 0 12px 36px #02060d66; }
+.desktop-nav > a,.desktop-nav .tools-menu > summary,.nav-search,.mobile-nav > summary { transition: color var(--pit-motion-quick) ease,background var(--pit-motion-quick) ease,border-color var(--pit-motion-quick) ease,transform var(--pit-motion-quick) var(--pit-motion-ease); }
+.desktop-nav > a:hover,.desktop-nav .tools-menu > summary:hover { transform: translate3d(0,-1px,0); }
+.nav-search:hover,.nav-search:focus-visible { transform: translate3d(0,-2px,0); }
+.tools-menu[open] .tools-menu-panel,.mobile-nav[open] > nav { animation: pit-menu-enter var(--pit-motion-composed) var(--pit-motion-ease) both; }
+.tools-menu[open] .menu-category { animation: pit-enter var(--pit-motion-composed) var(--pit-motion-ease) both; }
+.tools-menu[open] .menu-category:nth-child(3n+2) { animation-delay: 35ms; }
+.tools-menu[open] .menu-category:nth-child(3n+3) { animation-delay: 70ms; }
+.menu-category:hover,.menu-category:focus-within { transform: translate3d(0,-2px,0); }
+.product-hero { background: radial-gradient(circle at 78% 48%,#667bc36b,transparent 31%),radial-gradient(circle at 9% 98%,#91556a46,transparent 39%),radial-gradient(circle at 53% 12%,#29778338,transparent 44%),linear-gradient(115deg,#1b2537 5%,#111d2d 58%,#1a2639 100%); }
+.product-hero::before { animation: pit-grid-drift 18s ease-in-out infinite alternate; }
+.product-hero::after { animation: pit-node-float 22s ease-in-out infinite alternate; }
+.hero-content { animation: pit-enter 700ms var(--pit-motion-ease) both; }
+.hero-art-halo { position: absolute; border-radius: 50%; pointer-events: none; filter: blur(8px); animation: pit-halo-drift 17s ease-in-out infinite alternate; }
+.hero-art-halo-one { inset: 10% 5% 13% 9%; background: radial-gradient(ellipse,#689bd342,transparent 66%); }
+.hero-art-halo-two { inset: 27% 12% 2% 2%; background: radial-gradient(ellipse,#d985aa28,transparent 67%); animation-delay: -8s; animation-duration: 21s; }
+.hero-art-core { animation: pit-core-float 9s ease-in-out infinite alternate; }
+.hero-art-orbit-one { animation: pit-orbit-one 18s ease-in-out infinite alternate; }
+.hero-art-orbit-two { animation: pit-orbit-two 24s ease-in-out infinite alternate; }
+.hero-art-node { animation: pit-node-float 8s ease-in-out infinite alternate; }
+.hero-art-node-two { animation-delay: -3s; }.hero-art-node-three { animation-delay: -5s; }
+.hero-search-field { transition: box-shadow var(--pit-motion-composed) ease,transform var(--pit-motion-composed) var(--pit-motion-ease); }
+.hero-search-field:focus-within { transform: translate3d(0,-2px,0); box-shadow: 0 17px 35px #02060d55; }
+.category-section,.featured-section { position: relative; isolation: isolate; }
+.category-section::before,.featured-section::before { content: ""; position: absolute; z-index: -1; pointer-events: none; inset: -24px -25px; border-radius: 28px; background: radial-gradient(ellipse at 18% 20%,#446b9950,transparent 54%),radial-gradient(ellipse at 88% 80%,#8556772a,transparent 45%); opacity: .48; }
+.featured-section::before { background: radial-gradient(ellipse at 85% 25%,#2b837b30,transparent 60%); }
+.category-rail .category-tile { animation: pit-enter var(--pit-motion-enter) var(--pit-motion-ease) both; transition: border-color var(--pit-motion-composed) ease,transform var(--pit-motion-composed) var(--pit-motion-ease),box-shadow var(--pit-motion-composed) ease,background var(--pit-motion-composed) ease; }
+.category-rail .category-tile:nth-child(3n+2) { animation-delay: 80ms; }.category-rail .category-tile:nth-child(3n+3) { animation-delay: 160ms; }
+.category-rail .category-tile::after { transition: transform 550ms var(--pit-motion-ease),opacity 550ms ease; }
+.category-rail .category-tile:hover,.category-rail .category-tile:focus-visible { transform: translate3d(0,var(--pit-motion-lift),0); box-shadow: 0 22px 43px #02070e70,0 0 25px var(--category-glow); }
+.category-rail .category-tile:hover::after,.category-rail .category-tile:focus-visible::after { transform: rotate(45deg) translate3d(-12px,13px,0) scale(1.12); }
+.category-symbol,.category-tile-footer { transition: transform var(--pit-motion-composed) var(--pit-motion-ease),color var(--pit-motion-quick) ease; }
+.category-tile:hover .category-symbol,.category-tile:focus-visible .category-symbol { transform: rotate(-7deg) translate3d(2px,-4px,0); }
+.category-tile:hover .category-tile-footer,.category-tile:focus-visible .category-tile-footer { transform: translate3d(3px,0,0); }
+.featured-grid > a,.product-card { transition: transform var(--pit-motion-composed) var(--pit-motion-ease),box-shadow var(--pit-motion-composed) ease,border-color var(--pit-motion-quick) ease,background var(--pit-motion-composed) ease; }
+.featured-grid > a:hover,.featured-grid > a:focus-visible { transform: translate3d(0,-4px,0); box-shadow: 0 14px 28px #02070e52; }
+.featured-grid .category-mark { transition: transform var(--pit-motion-composed) var(--pit-motion-ease); }
+.featured-grid > a:hover .category-mark { transform: rotate(12deg) scale(1.2); }
+.product-card:hover,.product-card:focus-within { transform: translate3d(0,-4px,0); box-shadow: 0 16px 34px #02070e52; }
+.product-card::before { transform-origin: left; transition: transform var(--pit-motion-composed) var(--pit-motion-ease); }
+.product-card:hover::before,.product-card:focus-within::before { transform: scaleX(.72); }
+.product-card-details[open] > :not(summary) { animation: pit-enter var(--pit-motion-composed) var(--pit-motion-ease) both; }
+.detail-intro { animation: pit-enter var(--pit-motion-enter) var(--pit-motion-ease) both; }
+.detail-intro::after { transition: transform 700ms var(--pit-motion-ease); }.detail-intro:hover::after { transform: rotate(36deg) translate3d(-8px,6px,0); }
+.operation-filters button,.product-card-foot a,.featured-open { transition: transform var(--pit-motion-quick) var(--pit-motion-ease),border-color var(--pit-motion-quick) ease,color var(--pit-motion-quick) ease; }
+.operation-filters button:hover,.product-card-foot a:hover { transform: translate3d(0,-2px,0); }.operation-filters button:active,.product-card-foot a:active { transform: translate3d(0,1px,0); }
+@media (max-width:700px) { .hero-art-halo { filter: none; }.category-section::before,.featured-section::before { inset: -12px 0; }.product-hero::before { animation-duration: 26s; } }
+@media (prefers-reduced-motion:reduce) {
+  *,*::before,*::after { animation: none !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  .desktop-nav > a:hover,.desktop-nav .tools-menu > summary:hover,.nav-search:hover,.nav-search:focus-visible,.hero-search-field:focus-within,
+  .category-rail .category-tile:hover,.category-rail .category-tile:focus-visible,.featured-grid > a:hover,.featured-grid > a:focus-visible,
+  .product-card:hover,.product-card:focus-within,.operation-filters button:hover,.product-card-foot a:hover { transform: none !important; }
+}

@@ -86,3 +86,44 @@ test("offline Toolbox keeps category cues and existing discovery", async ({ page
   await expect(page.locator("[data-category-filter='portfolio-analytics']")).toBeVisible();
   await expect(page.locator("[data-card]:visible").first()).toHaveCSS("background-image", /linear-gradient/);
 });
+
+test("motion adds card response and ambient hero without changing navigation", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await openStatic(page);
+  const tile = page.locator(".category-tile").first();
+  await expect(tile).toBeVisible();
+  await expect.poll(() => tile.evaluate((node) => getComputedStyle(node).animationName)).toContain("pit-enter");
+  await expect.poll(() => page.locator(".product-hero").evaluate((node) => getComputedStyle(node, "::before").animationName)).toContain("pit-grid-drift");
+  await tile.hover();
+  await expect.poll(() => tile.evaluate((node) => getComputedStyle(node).transform)).not.toBe("none");
+  await page.locator(".tools-menu summary").click();
+  await expect(page.locator(".tools-menu-panel")).toBeVisible();
+  await expect(page.locator(".tools-menu-panel")).toHaveCSS("animation-name", "pit-menu-enter");
+});
+
+test("reduced motion keeps the same controls usable and removes decorative loops", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await openStatic(page);
+  const tile = page.locator(".category-tile").first();
+  await expect(tile).toBeVisible();
+  await expect(tile).toHaveCSS("animation-name", "none");
+  await expect.poll(() => page.locator(".product-hero").evaluate((node) => getComputedStyle(node, "::before").animationName)).toBe("none");
+  await tile.hover();
+  await expect(tile).toHaveCSS("transform", "none");
+  await page.locator(".mobile-nav > summary").click();
+  await expect(page.locator(".mobile-nav > nav")).toBeVisible();
+  await page.locator(".mobile-categories > summary").click();
+  await expect(page.locator(".mobile-categories a")).toHaveCount(9);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2)).toBe(true);
+});
+
+test("tablet category cards and menu remain within the viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 820, height: 1180 });
+  await openStatic(page);
+  await expect(page.locator(".category-tile")).toHaveCount(9);
+  await page.locator(".tools-menu summary").click();
+  await expect(page.locator(".tools-menu-panel")).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2)).toBe(true);
+});

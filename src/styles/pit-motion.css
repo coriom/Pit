@@ -1,0 +1,44 @@
+/* Shared motion language. Decorative loops stay on a few layers, never on every card. */
+:root {
+  --pit-motion-quick: 160ms;
+  --pit-motion-composed: 320ms;
+  --pit-motion-enter: 540ms;
+  --pit-motion-ease: cubic-bezier(.22, 1, .36, 1);
+  --pit-motion-reveal: 14px;
+  --pit-motion-lift: -6px;
+}
+@keyframes pit-enter {
+  from { opacity: 0; transform: translate3d(0, var(--pit-motion-reveal), 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes pit-menu-enter {
+  from { opacity: 0; transform: translate3d(0, -8px, 0) scale(.985); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+@keyframes pit-halo-drift {
+  from { opacity: .53; transform: translate3d(-2%, 1%, 0) scale(.98); }
+  to { opacity: .8; transform: translate3d(3%, -2%, 0) scale(1.04); }
+}
+@keyframes pit-grid-drift {
+  from { opacity: .15; transform: translate3d(-10px, 4px, 0); }
+  to { opacity: .23; transform: translate3d(10px, -7px, 0); }
+}
+@keyframes pit-core-float {
+  from { transform: translate3d(-50%, -48%, 0) rotate(16deg); }
+  to { transform: translate3d(-50%, -54%, 0) rotate(22deg); }
+}
+@keyframes pit-orbit-one {
+  from { transform: translate3d(-50%, -50%, 0) rotate(-24deg) scaleY(.72); }
+  to { transform: translate3d(-50%, -50%, 0) rotate(-12deg) scaleY(.75); }
+}
+@keyframes pit-orbit-two {
+  from { transform: translate3d(-50%, -50%, 0) rotate(29deg) scaleY(.74); }
+  to { transform: translate3d(-50%, -50%, 0) rotate(39deg) scaleY(.72); }
+}
+@keyframes pit-node-float {
+  from { transform: translate3d(0, -5px, 0); }
+  to { transform: translate3d(0, 6px, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --pit-motion-reveal: 0px; --pit-motion-lift: 0px; }
+}

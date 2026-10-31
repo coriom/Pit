@@ -1,5 +1,6 @@
 @import "../styles/pit-product-tokens.css";
 @import "../styles/pit-categories.css";
+@import "../styles/pit-motion.css";
 /* Fixed local-toolbox styles: no Tailwind source scan or remote imports. */
 .local-intro { max-width: 780px; }
 .local-intro p { font-size: 18px; }
@@ -151,3 +152,30 @@ body { background: radial-gradient(ellipse 60% 25% at 12% 0%,#26385066,transpare
 .local-card[data-category] .local-card-category, .local-card[data-category] .local-card-foot { color: var(--category-accent); }
 .v2-category-filters button[data-category-filter]:not([data-category-filter="all"])[aria-pressed="true"] { color: var(--category-accent); border-color: var(--category-accent); background: var(--category-wash); }
 @media(max-width:760px) { .local-intro { margin: 16px 0 28px; padding: 40px 24px; }.local-intro::after { opacity: .3; }.local-nav-panel { width: auto; } }
+
+/* Offline Toolbox uses the same motion tokens and no runtime scripts. */
+body { background: radial-gradient(ellipse 52% 28% at 11% 2%,#394b7954,transparent 80%),radial-gradient(ellipse 48% 28% at 94% 44%,#226b6b2e,transparent 82%),var(--pit-bg); }
+.local-intro { isolation: isolate; background: radial-gradient(circle at 81% 40%,#707dcc68,transparent 32%),radial-gradient(circle at 10% 85%,#7951743b,transparent 46%),linear-gradient(110deg,#1b2a3a,#162330 70%); }
+.local-intro::before { content: ""; position: absolute; z-index: -1; inset: 0; pointer-events: none; opacity: .2; background-image: linear-gradient(#a4b6d01e 1px,transparent 1px),linear-gradient(90deg,#a4b6d01e 1px,transparent 1px); background-size: 40px 40px; mask-image: linear-gradient(90deg,transparent 5%,#000 90%); animation: pit-grid-drift 21s ease-in-out infinite alternate; }
+.local-intro::after { animation: pit-node-float 14s ease-in-out infinite alternate; }
+.local-intro h1,.local-intro p,.local-actions { position: relative; z-index: 1; animation: pit-enter 650ms var(--pit-motion-ease) both; }
+.local-intro p { animation-delay: 70ms; }.local-actions { animation-delay: 120ms; }
+.local-nav-panel,.local-mobile-nav[open] > nav { animation: pit-menu-enter var(--pit-motion-composed) var(--pit-motion-ease) both; }
+.local-nav-panel a,.local-mobile-nav nav a,.local-mobile-nav nav summary,.local-nav-search { transition: color var(--pit-motion-quick) ease,background var(--pit-motion-quick) ease,transform var(--pit-motion-quick) var(--pit-motion-ease); }
+.local-nav-panel a:hover,.local-nav-panel a:focus-visible { transform: translate3d(2px,0,0); }
+.local-nav-search:hover,.local-nav-search:focus-visible { transform: translate3d(0,-2px,0); }
+.local-task-card[data-category],.local-card[data-category],.feature-card { transition: transform var(--pit-motion-composed) var(--pit-motion-ease),box-shadow var(--pit-motion-composed) ease,border-color var(--pit-motion-quick) ease,background var(--pit-motion-composed) ease; }
+.local-task-card[data-category] { animation: pit-enter var(--pit-motion-enter) var(--pit-motion-ease) both; }
+.local-task-grid .local-task-card:nth-child(3n+2) { animation-delay: 80ms; }.local-task-grid .local-task-card:nth-child(3n+3) { animation-delay: 160ms; }
+.local-task-card[data-category]:hover,.local-task-card[data-category]:focus-visible,.local-card[data-category]:hover,.local-card[data-category]:focus-visible,.feature-card:hover,.feature-card:focus-within { transform: translate3d(0,var(--pit-motion-lift),0); box-shadow: 0 18px 38px #03080e5e; }
+.local-task-card[data-category]::before,.local-task-card .category-symbol { transition: transform 500ms var(--pit-motion-ease); }
+.local-task-card[data-category]:hover::before { transform: rotate(34deg) translate3d(-8px,6px,0) scale(1.1); }
+.local-task-card[data-category]:hover .category-symbol { transform: rotate(-4deg) translate3d(2px,-3px,0); }
+.v2-category-filters button { transition: transform var(--pit-motion-quick) var(--pit-motion-ease),border-color var(--pit-motion-quick) ease,background var(--pit-motion-quick) ease; }
+.v2-category-filters button:hover { transform: translate3d(0,-2px,0); }.v2-category-filters button:active { transform: translate3d(0,1px,0); }
+@media (prefers-reduced-motion:reduce) {
+  *,*::before,*::after { animation: none !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  .local-nav-panel a:hover,.local-nav-panel a:focus-visible,.local-nav-search:hover,.local-nav-search:focus-visible,
+  .local-task-card[data-category]:hover,.local-task-card[data-category]:focus-visible,.local-card[data-category]:hover,.local-card[data-category]:focus-visible,
+  .feature-card:hover,.feature-card:focus-within,.v2-category-filters button:hover { transform: none !important; }
+}
