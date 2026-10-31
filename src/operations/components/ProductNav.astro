@@ -4,6 +4,7 @@ import { V2_LOCAL_TASKS } from "../../lib/v2-local-catalog";
 import { V2_EXPLORER_TASKS } from "../../lib/v2-explorer-catalog";
 import { operationCatalog } from "../lib/catalog";
 const unified = process.env.PIT_UNIFIED_PREVIEW === "1";
+const hosted = process.env.PIT_HOSTED_STAGING === "1";
 const path = Astro.url.pathname;
 const active = path === "/" ? "home" : path.startsWith("/guide/") ? "guide" : path.startsWith("/toolbox/") ? "toolbox" : path.startsWith("/explorer/") ? "explorer" : "operations";
 const categoryHref = (id: string) => `/?category=${encodeURIComponent(id)}#directory`;
@@ -24,7 +25,7 @@ const featured = (id: string) => {
         <div class="tools-menu-panel" id="tools-mega-panel">
           <div class="menu-intro"><p class="menu-heading">Explore PIT</p><strong>Find your next tool.</strong><p>Move from an idea to the right workflow.</p><a class="menu-all" href="/#directory">Browse the complete directory</a></div>
           <div class="category-menu" aria-label="Tool categories">
-            {V2_CATEGORIES.map((category) => { const item = featured(category.id); return <div class="menu-category" data-category={category.id}><a class="menu-category-main" href={categoryHref(category.id)}><span class="category-mark" aria-hidden="true"></span><span>{category.label}</span></a>{item && <a class="menu-feature" href={item.path}>{item.title}</a>}</div>; })}
+            {V2_CATEGORIES.map((category) => { const item = featured(category.id); return <div class="menu-category" data-category={category.id}><a class="menu-category-main" href={categoryHref(category.id)}>{category.label}</a>{item && <a class="menu-feature" href={item.path}>{item.title}</a>}</div>; })}
           </div>
         </div>
       </details>
@@ -32,7 +33,15 @@ const featured = (id: string) => {
       <a href="/#directory" aria-current={active === "operations" ? "page" : undefined}>Operations</a>
       <a href="/guide/" aria-current={active === "guide" ? "page" : undefined}>Guide</a>
     </nav>
-    <a class="nav-search" href="/#operation-search" data-search-shortcut><span class="search-glyph" aria-hidden="true"></span> Search <kbd>/</kbd></a>
+    <a class="nav-search" href="/#operation-search" data-search-shortcut aria-label="Search tools"><span class="search-glyph" aria-hidden="true"></span><span class="nav-search-label">Search</span><kbd>/</kbd></a>
+    <details class="wallet-entry" data-nav-disclosure>
+      <summary aria-controls="wallet-entry-panel"><span class="wallet-entry-label">Connect wallet</span><span class="wallet-entry-label-short">Wallet</span></summary>
+      <div class="wallet-entry-panel" id="wallet-entry-panel">
+        <strong>{hosted ? "Wallet unavailable in preview" : "Connect inside an operation"}</strong>
+        <p>{hosted ? "This private preview is read-only. It cannot connect a wallet, request a signature or send a transaction." : "Open an operation to connect a wallet for local Anvil testing. No connection is made from this menu."}</p>
+        <a href={hosted ? "/guide/" : "/#directory"}>{hosted ? "How PIT works" : "Browse operations"}</a>
+      </div>
+    </details>
     <details class="mobile-nav" data-nav-disclosure>
       <summary aria-label="Navigation menu"><span>Menu</span><span class="mobile-menu-glyph" aria-hidden="true"></span></summary>
       <nav aria-label="Mobile navigation">
@@ -42,7 +51,7 @@ const featured = (id: string) => {
         {unified && <><a href="/toolbox/" aria-current={active === "toolbox" ? "page" : undefined}>Toolbox</a><a href="/explorer/" aria-current={active === "explorer" ? "page" : undefined}>Explorer</a></>}
         <a href="/#directory" aria-current={active === "operations" ? "page" : undefined}>Operations</a>
         <a href="/guide/" aria-current={active === "guide" ? "page" : undefined}>Guide</a>
-        <details class="mobile-categories"><summary>Categories</summary><div>{V2_CATEGORIES.map((category) => <a data-category={category.id} href={categoryHref(category.id)}><span class="category-mark" aria-hidden="true"></span>{category.label}</a>)}</div></details>
+        <details class="mobile-categories"><summary>Categories</summary><div>{V2_CATEGORIES.map((category) => <a data-category={category.id} href={categoryHref(category.id)}>{category.label}</a>)}</div></details>
       </nav>
     </details>
   </div>

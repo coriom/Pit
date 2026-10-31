@@ -26,7 +26,8 @@ test("desktop identity, keyboard menu and discovery", async ({ page }) => {
   await expect(page.locator('.featured-grid a[href="/operations/token-creator/"]')).toContainText("Preview");
   const colors = await page.locator(".category-tile").evaluateAll((nodes) => nodes.map((node) => getComputedStyle(node).getPropertyValue("--category-accent").trim()));
   expect(new Set(colors).size).toBe(9);
-  await expect(page.locator(".product-hero")).toHaveCSS("background-image", /radial-gradient/);
+  await expect(page.locator(".product-hero")).toHaveCSS("background-image", "none");
+  expect(await page.locator(".product-hero").evaluate((node) => getComputedStyle(node, "::before").backgroundImage)).toContain("radial-gradient");
   await page.locator(".tools-menu summary").click();
   await expect(page.locator(".tools-menu-panel")).toBeVisible();
   await expect(page.locator(".menu-category")).toHaveCount(9);
@@ -125,5 +126,51 @@ test("tablet category cards and menu remain within the viewport", async ({ page 
   await expect(page.locator(".category-tile")).toHaveCount(9);
   await page.locator(".tools-menu summary").click();
   await expect(page.locator(".tools-menu-panel")).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2)).toBe(true);
+});
+
+test("open hero and wallet entry stay read-only in the hosted package", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.addInitScript(() => {
+    const state = window as Window & { __walletRequestCount?: number };
+    state.__walletRequestCount = 0;
+    Object.defineProperty(window, "ethereum", { configurable: true, value: { request: () => { state.__walletRequestCount = (state.__walletRequestCount ?? 0) + 1; throw Error("Unexpected wallet request"); } } });
+  });
+  await openStatic(page);
+  await expect(page.locator(".product-hero")).toHaveCSS("border-top-width", "0px");
+  await expect(page.locator(".product-hero")).toHaveCSS("box-shadow", "none");
+  const core = page.locator(".hero-art-core");
+  const resting = await core.evaluate((node) => getComputedStyle(node).transform);
+  await page.locator(".product-hero").hover();
+  await expect.poll(() => core.evaluate((node) => getComputedStyle(node).transform)).not.toBe(resting);
+  const wallet = page.locator(".wallet-entry");
+  await expect(wallet).toBeVisible();
+  await wallet.locator("summary").click();
+  await expect(wallet.getByText("Wallet unavailable in preview")).toBeVisible();
+  await expect(wallet.getByText(/cannot connect a wallet, request a signature or send a transaction/)).toBeVisible();
+  expect(await page.evaluate(() => (window as Window & { __walletRequestCount?: number }).__walletRequestCount)).toBe(0);
+  await page.keyboard.press("Escape");
+  await expect(wallet).not.toHaveAttribute("open");
+  await page.locator(".tools-menu summary").click();
+  await expect(page.locator(".tools-menu-panel .menu-category")).toHaveCount(9);
+  await expect(page.locator(".tools-menu-panel .category-mark")).toHaveCount(0);
+});
+
+test("compact header and wallet disclosure work on narrow screens without decorative motion", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 720 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await openStatic(page);
+  const core = page.locator(".hero-art-core");
+  const resting = await core.evaluate((node) => getComputedStyle(node).transform);
+  await page.locator(".product-hero").hover();
+  await expect(core).toHaveCSS("animation-name", "none");
+  expect(await core.evaluate((node) => getComputedStyle(node).transform)).toBe(resting);
+  await page.locator(".wallet-entry summary").click();
+  await expect(page.getByText("Wallet unavailable in preview")).toBeVisible();
+  await page.locator(".mobile-nav > summary").click();
+  await expect(page.locator(".wallet-entry")).not.toHaveAttribute("open");
+  await expect(page.locator(".mobile-nav > nav")).toBeVisible();
+  await page.locator(".mobile-categories > summary").click();
+  await expect(page.locator(".mobile-categories .category-mark")).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2)).toBe(true);
 });

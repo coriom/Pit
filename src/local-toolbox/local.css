@@ -179,3 +179,8 @@ body { background: radial-gradient(ellipse 52% 28% at 11% 2%,#394b7954,transpare
   .local-task-card[data-category]:hover,.local-task-card[data-category]:focus-visible,.local-card[data-category]:hover,.local-card[data-category]:focus-visible,
   .feature-card:hover,.feature-card:focus-within,.v2-category-filters button:hover { transform: none !important; }
 }
+
+/* Keep the offline Toolbox menu calm after removing decorative category squares. */
+.local-nav-panel a[data-category] { gap: 0; background: transparent; }
+.local-nav-panel a[data-category]:hover, .local-nav-panel a[data-category]:focus-visible { background: var(--category-wash); color: var(--category-accent); }
+.local-mobile-nav nav details div a { gap: 0; }
