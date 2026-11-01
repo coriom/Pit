@@ -3,6 +3,12 @@ import { join, resolve, sep } from "node:path";
 import { stat } from "node:fs/promises";
 
 const root = resolve("dist-product-cloudflare-staging/public");
+const evidence = process.env.PIT_UI_EVIDENCE_DIR;
+async function capture(page: Page, name: string, selector?: string) {
+  if (!evidence || test.info().project.name !== "chromium") return;
+  const subject = selector ? page.locator(selector) : page;
+  await subject.screenshot({ path: join(evidence, name) });
+}
 async function openStatic(page: Page) {
   await page.route("**/*", async (route) => {
     const url = new URL(route.request().url());
@@ -21,6 +27,11 @@ test("desktop identity, keyboard menu and discovery", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openStatic(page);
   await expect(page.getByRole("heading", { name: /Make more of what’s on-chain/ })).toBeVisible();
+  await expect(page.getByText("PIT / YOUR WEB3 WORKSPACE")).toHaveCount(0);
+  await expect(page.locator(".product-lanes")).toHaveCount(0);
+  await expect(page.locator(".category-topbar a")).toHaveCount(9);
+  await capture(page, "hero-and-categories.png", ".product-hero");
+  await capture(page, "navbar-categories.png", ".site-header");
   await expect(page.locator(".category-tile")).toHaveCount(9);
   await expect(page.locator('.featured-grid a[href="/tools/portfolio-exposure/"]')).toContainText("Free");
   await expect(page.locator('.featured-grid a[href="/operations/token-creator/"]')).toContainText("Preview");
@@ -30,6 +41,7 @@ test("desktop identity, keyboard menu and discovery", async ({ page }) => {
   expect(await page.locator(".product-hero").evaluate((node) => getComputedStyle(node, "::before").backgroundImage)).toContain("radial-gradient");
   await page.locator(".tools-menu summary").click();
   await expect(page.locator(".tools-menu-panel")).toBeVisible();
+  await capture(page, "navbar-megamenu.png", ".site-header");
   await expect(page.locator(".menu-category")).toHaveCount(9);
   await page.locator(".hero-search").click();
   await expect(page.locator(".tools-menu")).not.toHaveAttribute("open");
@@ -60,6 +72,8 @@ test("category links, mobile menu, search and no overflow", async ({ page }) => 
   await expect(page.locator(".mobile-nav > nav")).toBeVisible();
   await page.locator(".mobile-categories > summary").click();
   await expect(page.locator(".mobile-categories a")).toHaveCount(9);
+  await capture(page, "mobile-navigation.png");
+  await expect(page.locator(".category-topbar")).toBeHidden();
   await page.keyboard.press("Escape");
   await expect(page.locator(".mobile-nav")).not.toHaveAttribute("open");
   await page.locator(".nav-search").click();
@@ -96,6 +110,7 @@ test("motion adds card response and ambient hero without changing navigation", a
   await expect(tile).toBeVisible();
   await expect.poll(() => tile.evaluate((node) => getComputedStyle(node).animationName)).toContain("pit-enter");
   await expect.poll(() => page.locator(".product-hero").evaluate((node) => getComputedStyle(node, "::before").animationName)).toContain("pit-grid-drift");
+  await expect(page.locator(".hero-art")).toHaveCSS("animation-name", "pit-hero-art-drift");
   await tile.hover();
   await expect.poll(() => tile.evaluate((node) => getComputedStyle(node).transform)).not.toBe("none");
   await page.locator(".tools-menu summary").click();
@@ -111,6 +126,8 @@ test("reduced motion keeps the same controls usable and removes decorative loops
   await expect(tile).toBeVisible();
   await expect(tile).toHaveCSS("animation-name", "none");
   await expect.poll(() => page.locator(".product-hero").evaluate((node) => getComputedStyle(node, "::before").animationName)).toBe("none");
+  await expect(page.locator(".hero-art")).toHaveCSS("animation-name", "none");
+  await capture(page, "reduced-motion.png", ".product-hero");
   await tile.hover();
   await expect(tile).toHaveCSS("transform", "none");
   await page.locator(".mobile-nav > summary").click();
@@ -124,8 +141,51 @@ test("tablet category cards and menu remain within the viewport", async ({ page 
   await page.setViewportSize({ width: 820, height: 1180 });
   await openStatic(page);
   await expect(page.locator(".category-tile")).toHaveCount(9);
+  await expect(page.locator(".category-topbar a")).toHaveCount(9);
   await page.locator(".tools-menu summary").click();
   await expect(page.locator(".tools-menu-panel")).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2)).toBe(true);
+});
+
+test("direct category navigation and native filters stay keyboard accessible", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStatic(page);
+  const direct = page.locator('.category-topbar a[data-category="token-creator"]');
+  await expect(direct).toBeVisible();
+  await direct.focus();
+  await expect(direct).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#operation-category")).toHaveValue("token-creator");
+  await expect(page.locator('.category-topbar a[data-category="token-creator"]')).toHaveAttribute("aria-current", "true");
+  const category = page.locator("#operation-category");
+  await category.focus();
+  await expect(category).toBeFocused();
+  await expect(category).toHaveCSS("appearance", "none");
+  await expect(category.locator("..")).toHaveCSS("border-top-color", "rgb(229, 198, 140)");
+  await expect(category.locator("option")).toHaveCount(10);
+  await page.locator("#operation-usage").selectOption("transaction");
+  await page.locator("#operation-network").selectOption("anvil");
+  await page.locator("#operation-price").selectOption("indicative");
+  await expect(page.locator("[data-tool]:visible").first()).toHaveAttribute("data-category", "token-creator");
+  await capture(page, "catalogue-filters.png", ".catalogue-controls");
+  await page.locator("#reset-filters").click();
+  await expect(category).toHaveValue("all");
+  await expect(page.locator("#operation-usage")).toHaveValue("all");
+  await expect(page.locator('.category-topbar a[aria-current="true"]')).toHaveCount(0);
+});
+
+test("guide presents product boundaries as a handbook", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await openStatic(page);
+  await page.goto("http://pit.local/guide/", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: /Start with the task/ })).toBeVisible();
+  await expect(page.locator(".guide-section")).toHaveCount(3);
+  await expect(page.locator(".guide-paths article")).toHaveCount(3);
+  await expect(page.locator(".guide-section .panel")).toHaveCount(0);
+  await expect(page.getByText(/reverted operation does not retain the service fee/)).toBeVisible();
+  await expect(page.getByText(/hosted preview cannot connect or send/)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Explore Toolbox" })).toHaveAttribute("href", "/toolbox/");
+  await capture(page, "guide.png");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2)).toBe(true);
 });
 

@@ -36,7 +36,7 @@ const cards = [
     <label>Category<select id="operation-category"><option value="all">All categories</option>{categories.map(({ id, label }) => <option value={id}>{label}</option>)}</select></label>
     <label>Use<select id="operation-usage"><option value="all">All uses</option><option value="local">Offline calculation</option><option value="read-only">Read-only inspection</option><option value="transaction">Local operation</option></select></label>
     <label>Network<select id="operation-network"><option value="all">All networks</option><option value="offline">Offline</option><option value="ethereum">Ethereum</option><option value="base">Base</option><option value="base-sepolia">Base Sepolia</option><option value="anvil">Anvil only</option></select></label>
-    <label>Price<select id="operation-price"><option value="all">All prices</option><option value="free">Free</option><option value="indicative">Indicative fee, inactive</option></select></label>
+    <label>Price<select id="operation-price"><option value="all">All prices</option><option value="free">Free</option><option value="indicative">Indicative fee</option></select></label>
   </div>
   <div class="directory-status"><p id="search-count" role="status" aria-live="polite">{cards.length} results</p><button id="reset-filters" type="button" class="text-button" hidden>Clear filters</button></div>
   <div class="product-grid" id="product-catalogue">{cards.map((item) => <article class="product-card" data-tool data-search={`${item.title} ${item.description} ${item.category} ${item.id}`.toLowerCase()} data-category={item.category} data-usage={item.usage} data-networks={item.networks} data-price={item.price === "Free" ? "free" : "indicative"}>

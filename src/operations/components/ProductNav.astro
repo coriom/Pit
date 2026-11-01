@@ -55,4 +55,9 @@ const featured = (id: string) => {
       </nav>
     </details>
   </div>
+  <nav class="category-topbar" aria-label="Tool categories">
+    <div class="category-topbar-inner">
+      {V2_CATEGORIES.map((category) => <a data-category={category.id} href={categoryHref(category.id)}>{category.label}</a>)}
+    </div>
+  </nav>
 </header>

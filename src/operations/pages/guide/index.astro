@@ -1,17 +1,39 @@
 ---
 import Layout from "../../components/Layout.astro";
 const unified = process.env.PIT_UNIFIED_PREVIEW === "1";
+const hosted = process.env.PIT_HOSTED_STAGING === "1";
 ---
-<Layout title="How PIT works" description="Understand free tools, local operations, wallet permissions, fees and privacy before using PIT.">
+<Layout title="Guide" description="A practical guide to PIT's free tools, blockchain reads, local operations, fees and privacy.">
   <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">PIT</a><span aria-hidden="true">/</span><span aria-current="page">Guide</span></nav>
-  <section class="hero"><div class="eyebrow">Getting started</div><h1>Use the right PIT surface for your task.</h1><p>PIT separates browser-local analysis, explicit public-chain reads and wallet-confirmed operations. Each has a different privacy and risk boundary.</p></section>
-  <section class="product-lanes">
-    <article class="panel"><h2>1. Free Toolbox</h2><p>Enter assumptions and calculate locally. No wallet or PIT account. Its isolated build blocks network connections. Downloaded files stay under your control.</p>{unified && <a href="/toolbox/">Open Toolbox →</a>}</article>
-    <article class="panel"><h2>2. Read-only Explorer</h2><p>Start bounded blockchain queries yourself. Public RPC providers can observe submitted addresses. Results are snapshots, not complete ownership or security audits.</p>{unified && <a href="/explorer/">Open Explorer →</a>}</article>
-    <article class="panel"><h2>3. Operations</h2><p>Configure an action, review exact values, simulate, approve in a wallet and verify its receipt. Current execution is confined to local Anvil chain 31337.</p><a href="/#directory">Browse operations →</a></article>
+  <header class="guide-intro">
+    <p class="guide-overline">The PIT handbook</p>
+    <h1>Start with the task.<br /><span>Know the boundary.</span></h1>
+    <p>Use a calculator, inspect a chain or prepare an operation. This guide explains what each step does before you act.</p>
+  </header>
+
+  <section class="guide-section" aria-labelledby="guide-start">
+    <div class="guide-section-heading"><span>01</span><h2 id="guide-start">Choose your starting point</h2></div>
+    <div class="guide-paths">
+      <article><div><span class="guide-path-number">01</span><h3>Toolbox</h3><p>Run calculations and work with local data. No wallet, account or network request is needed in the isolated Toolbox build.</p></div>{unified && <a href="/toolbox/">Explore Toolbox</a>}</article>
+      <article><div><span class="guide-path-number">02</span><h3>Explorer</h3><p>Inspect public chain data without signing. The public RPC provider can see the addresses you query; results are snapshots, not a full ownership inventory.</p></div>{unified && <a href="/explorer/">Explore Explorer</a>}</article>
+      <article><div><span class="guide-path-number">03</span><h3>Operations</h3><p>Configure, review and simulate a transaction before signing. Execution is currently limited to local Anvil chain 31337. {hosted && "This hosted preview cannot connect or send."}</p></div><a href="/#directory">Browse operations</a></article>
+    </div>
   </section>
-  <section class="panel"><h2>Fees and gas</h2><p>Most PIT tools remain free. Some operations have proposed USDC service fees; these are inactive outside a local MOCK-USDC demonstration. Gas is paid separately in the chain's native ETH. PIT never adds ETH and USDC into a fabricated total or quotes a live exchange rate.</p><p>In the local atomic payment path, a reverted operation does not retain the service fee. A separate approval or reverted operation can still consume gas. A confirmed creation or distribution is generally irreversible. Direct calls to permissionless contracts remain possible outside PIT's guided path.</p></section>
-  <section class="panel"><h2>Wallet and contract permissions</h2><p>Never provide a seed phrase or private key. Token creation roles go to the creator, not PIT. An ERC-20 allowance authorizes a specific spender up to its stated amount; review and revoke excess allowances. ERC-721 per-token approval differs from ERC-1155 collection-wide operator approval. Lockers and vesting contracts hold tokens on-chain and release them according to their code and schedule; beneficiary and funding semantics must be reviewed before signing.</p></section>
-  <section class="panel"><h2>Data and metadata</h2><p>CSV and financial inputs remain client-side in the free tools and local operations where feasible. Public RPC queries reveal queried addresses to the selected provider. On-chain transactions reveal addresses and amounts publicly. PIT's NFT metadata studio prepares files locally; it does not host or pin images or JSON to IPFS.</p></section>
-  <section class="panel"><h2>Not yet available</h2><p>No public paid checkout, mainnet transaction execution, merchant payout wallet or live premium-report sale is active. The x402 report experiment has simulated verification and settlement only. Real browser-extension wallet acceptance, independent contract audit, consumer terms, privacy notice and commercial identity review remain prerequisites for a later launch.</p>{unified && <p><a href="/toolbox/privacy/">Toolbox privacy page</a> · <a href="/toolbox/legal/">Site information</a></p>}</section>
+
+  <section class="guide-section guide-essentials" aria-labelledby="guide-before">
+    <div class="guide-section-heading"><span>02</span><h2 id="guide-before">Before you sign</h2></div>
+    <div class="guide-essentials-grid">
+      <article><h3>Price and network cost</h3><p>Most tools are free. Proposed USDC service fees are inactive outside the local MOCK-USDC demonstration. Network gas is separate and paid in native ETH. PIT does not combine them into a made-up total.</p><p>In the local atomic payment path, a reverted operation does not retain the service fee. Its gas, and gas for a separate approval, can still be spent. A confirmed creation or distribution is generally irreversible.</p></article>
+      <article><h3>Permissions and custody</h3><p>Never provide a seed phrase or private key. Token creation roles go to the creator, not PIT. Review each ERC-20 spender and amount; revoke excess allowances when appropriate.</p><p>ERC-721 per-token approval differs from ERC-1155 collection-wide operator approval. Lockers and vesting contracts hold tokens on-chain until their release rules permit a claim. Review the beneficiary, funding and schedule before signing.</p></article>
+    </div>
+  </section>
+
+  <section class="guide-section guide-footnotes" aria-labelledby="guide-data">
+    <div class="guide-section-heading"><span>03</span><h2 id="guide-data">Data and availability</h2></div>
+    <div class="guide-footnotes-grid">
+      <div><h3>What leaves your browser?</h3><p>Free calculations and locally prepared CSV or metadata stay client-side where feasible. Public RPC queries disclose queried addresses to that provider. On-chain transactions publish addresses and amounts. The metadata studio prepares files; PIT does not host or pin them to IPFS.</p></div>
+      <div><h3>What is still a preview?</h3><p>Public paid checkout, mainnet execution, merchant payouts and live premium-report sales are unavailable. The x402 experiment uses simulated verification and settlement. Browser-extension acceptance, an independent contract audit and commercial and legal reviews remain ahead.</p><p>Permissionless contracts may also be called directly outside PIT’s guided workflow.</p></div>
+    </div>
+    {unified && <p class="guide-links"><a href="/toolbox/privacy/">Toolbox privacy</a><a href="/toolbox/legal/">Site information</a></p>}
+  </section>
 </Layout>
