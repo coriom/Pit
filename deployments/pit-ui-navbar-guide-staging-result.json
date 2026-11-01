@@ -1,0 +1,48 @@
+{
+  "schema": "pit-ui-private-staging-update-result-v1",
+  "status": "DEPLOYED_ACCESS_PROTECTED_AUTHENTICATED_UI_PENDING",
+  "authorizationManifestSha256": "e6d2907b276d777de1fdf6d7b28f024ec09647c2786794f3408fef30f65ec293",
+  "sourceCommit": "1fbcf6fed6558d7159715b2082efdee6bbde3856",
+  "accountId": "77dc4e907cd36ee29964c8aff47f7c38",
+  "workerName": "pit-v2-private-staging",
+  "workerId": "18d2ab8c00114236856e4524d090f437",
+  "hostname": "pit-v2-private-staging.coriolanmorel.workers.dev",
+  "previousVersionId": "1dae8f0b-f7df-4e6a-8980-f6472b6c7de6",
+  "deploymentId": "8dc327ff-b662-4cc3-b678-05822731b25b",
+  "versionId": "53bd8fdf-28f6-4ecc-bb69-caacdbfa6e2b",
+  "package": {
+    "fileCount": 232,
+    "assetBytes": 9991037,
+    "treeSha256": "89aea0865001a93f1ee4d59ae015d128d4199e68e9f02bce44cc6a1442326d24",
+    "assetManifestSha256": "27bc4e8644db14665d41c70f2123440ca37701aa612e336f4fabe1bab301df95",
+    "headersSha256": "2335441ec9a8c54fe67be7fe3eb0aeb3e61e1e34b3fb5d99b85933209adc4df3",
+    "mode": "hosted-read-only",
+    "signingEnabled": false,
+    "paymentExecutionEnabled": false
+  },
+  "access": {
+    "applicationId": "e0e7911e-aca1-407b-bb3b-20d9a2e858ea",
+    "allowPolicyId": "8ea75407-050c-45fe-be38-2403c482c972",
+    "allowedEmail": "coriolanmorel@gmail.com",
+    "bypassPolicies": 0,
+    "previewUrlsEnabled": false,
+    "anonymousHttp": {
+      "/": 403,
+      "/guide/": 403,
+      "/operations/token-creator/": 403,
+      "/nav.js": 403,
+      "/_astro/catalogue-browser.CVKA7xy7.js": 403
+    },
+    "anonymousChromium": "ACCESS_LOGIN_ONLY_NO_PIT_DOM",
+    "anonymousFirefox": "ACCESS_LOGIN_ONLY_NO_PIT_DOM",
+    "authenticatedProductUi": "NOT_VERIFIED"
+  },
+  "billing": {
+    "workersPlan": "Free, operator-confirmed",
+    "zeroTrustPlan": "Free, operator-confirmed",
+    "apiBillingReadback": "UNAVAILABLE_WITH_CURRENT_TOKEN",
+    "expectedIncrementalFixedCostUsdPerMonth": "0.00 subject to Free limits"
+  },
+  "externalBlockchainTransactions": 0,
+  "rollback": "Restore protected Worker version 1dae8f0b-f7df-4e6a-8980-f6472b6c7de6 or deny-all placeholder; preserve Worker-level Access and confirm anonymous denial."
+}
