@@ -14,10 +14,6 @@ const requestedCategory = new URLSearchParams(location.search).get("category");
 if (category && requestedCategory && [...category.options].some((option) => option.value === requestedCategory)) category.value = requestedCategory;
 function update() {
   if (category) category.dataset.category = category.value;
-  for (const link of document.querySelectorAll<HTMLAnchorElement>(".category-topbar a[data-category]")) {
-    if (link.dataset.category === category?.value) link.setAttribute("aria-current", "true");
-    else link.removeAttribute("aria-current");
-  }
   const query = (directorySearch?.value || search?.value || "").trim().toLocaleLowerCase();
   const filtered = Boolean(query || category?.value !== "all" || usage?.value !== "all" || network?.value !== "all" || price?.value !== "all");
   let matched = 0;

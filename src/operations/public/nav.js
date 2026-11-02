@@ -1,5 +1,32 @@
 const disclosures = [...document.querySelectorAll("[data-nav-disclosure]")];
 const search = document.querySelector("#operation-search");
+const toolsMenu = document.querySelector(".desktop-nav .tools-menu");
+if (toolsMenu) {
+  const trigger = toolsMenu.querySelector("summary");
+  const panel = toolsMenu.querySelector(".tools-menu-panel");
+  const desktopMenu = () => window.innerWidth > 700;
+  let closeTimer;
+  const cancelClose = () => { if (closeTimer) clearTimeout(closeTimer); closeTimer = undefined; };
+  trigger?.addEventListener("mouseenter", () => {
+    if (!desktopMenu()) return;
+    cancelClose();
+    toolsMenu.open = true;
+  });
+  panel?.addEventListener("mouseenter", cancelClose);
+  toolsMenu.addEventListener("focusin", cancelClose);
+  toolsMenu.addEventListener("mouseleave", () => {
+    if (!desktopMenu()) return;
+    cancelClose();
+    closeTimer = setTimeout(() => {
+      if (!toolsMenu.matches(":hover")) toolsMenu.open = false;
+    }, 120);
+  });
+  trigger?.addEventListener("click", (event) => {
+    // Pointer hover has already opened the native disclosure. Keep that click
+    // from immediately closing it; keyboard activation retains native behavior.
+    if (event.detail > 0 && desktopMenu() && toolsMenu.open) event.preventDefault();
+  });
+}
 function openSearch() {
   if (search) {
     search.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });

@@ -7,11 +7,13 @@ test("hosted candidate exposes all routes but no signing journey", async ({ page
   });
   await page.goto("/");
   await expect(page.locator("[data-tool]")).toHaveCount(197);
-  await page.getByLabel("Search tools").fill("ERC-1155 Creator");
+  await page.getByRole("link", { name: "Search tools" }).click();
+  await expect(page.locator("#operation-search")).toBeFocused();
+  await page.locator("#operation-search").fill("ERC-1155 Creator");
   await expect(page.locator("[data-tool]:visible")).toHaveCount(1);
   await page.locator("[data-tool]:visible .product-card-foot a").click();
   await expect(page.getByRole("heading", { name: "ERC-1155 Creator" })).toBeVisible();
-  await expect(page.getByText("Execution is unavailable in this private preview")).toBeVisible();
+  await expect(page.getByText("Preview only")).toBeVisible();
   await expect(page.locator("#operation-root")).toHaveCount(0);
   expect(await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute("content")).toContain("connect-src 'none'");
   await expect(page.getByRole("button", { name: /confirm|connect|approve|execute/i })).toHaveCount(0);

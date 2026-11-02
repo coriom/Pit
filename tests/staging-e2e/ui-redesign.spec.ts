@@ -1,11 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-test("desktop navigation, category discovery and card details", async ({ page }) => {
+test("desktop navigation, category discovery and clean cards", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await expect(page.getByRole("link", { name: "PIT home" })).toHaveText("PIT");
+  await expect(page.getByRole("link", { name: "PIT home" }).locator("span")).toHaveText("PIT");
   await page.locator(".desktop-nav .tools-menu summary").click();
-  await expect(page.locator(".category-menu a")).toHaveCount(9);
+  await expect(page.locator(".category-menu .menu-category-main")).toHaveCount(9);
   await page.keyboard.press("Escape");
   await expect(page.locator(".desktop-nav .tools-menu")).not.toHaveAttribute("open");
   await page.keyboard.press("/");
@@ -16,10 +16,8 @@ test("desktop navigation, category discovery and card details", async ({ page })
   await expect(page.locator("#search-count")).toHaveText("1 tool");
   await page.locator("#directory-search").fill("ERC-1155 Creator");
   const card = page.locator("[data-tool]:visible");
-  await expect(card.locator(".product-card-details")).not.toHaveAttribute("open");
-  await card.locator("summary").click();
-  await expect(card.locator(".product-card-details")).toHaveAttribute("open");
-  await expect(card.getByText("Anvil for local execution")).toBeVisible();
+  await expect(card.locator(".product-card-details")).toHaveCount(0);
+  await expect(card.getByText("Details", { exact: true })).toHaveCount(0);
   await card.getByRole("link", { name: "Open ERC-1155 Creator" }).click();
   await expect(page.getByRole("heading", { name: "ERC-1155 Creator" })).toBeVisible();
   await expect(page.getByText("Preview only")).toBeVisible();

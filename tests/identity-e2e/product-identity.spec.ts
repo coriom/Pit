@@ -29,9 +29,9 @@ test("desktop identity, keyboard menu and discovery", async ({ page }) => {
   await expect(page.getByRole("heading", { name: /Make more of what’s on-chain/ })).toBeVisible();
   await expect(page.getByText("PIT / YOUR WEB3 WORKSPACE")).toHaveCount(0);
   await expect(page.locator(".product-lanes")).toHaveCount(0);
-  await expect(page.locator(".category-topbar a")).toHaveCount(9);
+  await expect(page.locator(".category-topbar")).toHaveCount(0);
   await capture(page, "hero-and-categories.png", ".product-hero");
-  await capture(page, "navbar-categories.png", ".site-header");
+  await capture(page, "page-without-category-strip.png");
   await expect(page.locator(".category-tile")).toHaveCount(9);
   await expect(page.locator('.featured-grid a[href="/tools/portfolio-exposure/"]')).toContainText("Free");
   await expect(page.locator('.featured-grid a[href="/operations/token-creator/"]')).toContainText("Preview");
@@ -39,10 +39,20 @@ test("desktop identity, keyboard menu and discovery", async ({ page }) => {
   expect(new Set(colors).size).toBe(9);
   await expect(page.locator(".product-hero")).toHaveCSS("background-image", "none");
   expect(await page.locator(".product-hero").evaluate((node) => getComputedStyle(node, "::before").backgroundImage)).toContain("radial-gradient");
+  await page.locator(".tools-menu summary").hover();
+  await expect(page.locator(".tools-menu-panel")).toBeVisible();
+  await expect(page.locator(".menu-intro")).toHaveCount(0);
+  await page.locator(".tools-menu-panel").evaluate(async (panel) => {
+    await Promise.all(panel.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
+  });
+  await capture(page, "clean-tools-megamenu.png");
+  await expect(page.locator(".menu-category")).toHaveCount(9);
+  await page.locator(".menu-category-main").first().hover();
+  await expect(page.locator(".tools-menu-panel")).toBeVisible();
+  await page.locator(".hero-search").hover();
+  await expect(page.locator(".tools-menu")).not.toHaveAttribute("open");
   await page.locator(".tools-menu summary").click();
   await expect(page.locator(".tools-menu-panel")).toBeVisible();
-  await capture(page, "navbar-megamenu.png", ".site-header");
-  await expect(page.locator(".menu-category")).toHaveCount(9);
   await page.locator(".hero-search").click();
   await expect(page.locator(".tools-menu")).not.toHaveAttribute("open");
   await page.locator(".tools-menu summary").focus();
@@ -56,9 +66,9 @@ test("desktop identity, keyboard menu and discovery", async ({ page }) => {
   await expect(page.locator("[data-tool]:visible")).toHaveCount(1);
   await expect(page.locator("#search-count")).toHaveText("1 tool");
   const card = page.locator("[data-tool]:visible");
-  await expect(card.locator(".product-card-details")).not.toHaveAttribute("open");
-  await card.locator("summary").click();
-  await expect(card.getByText("Anvil for local execution")).toBeVisible();
+  await expect(card.locator(".product-card-details")).toHaveCount(0);
+  await expect(card.getByText("Details", { exact: true })).toHaveCount(0);
+  await capture(page, "clean-tool-card.png", "[data-tool]:visible");
   await card.getByRole("link", { name: "Open ERC-1155 Creator" }).click();
   await expect(page.getByText("Preview only")).toBeVisible();
   await expect(page.locator("#operation-root")).toHaveCount(0);
@@ -73,7 +83,7 @@ test("category links, mobile menu, search and no overflow", async ({ page }) => 
   await page.locator(".mobile-categories > summary").click();
   await expect(page.locator(".mobile-categories a")).toHaveCount(9);
   await capture(page, "mobile-navigation.png");
-  await expect(page.locator(".category-topbar")).toBeHidden();
+  await expect(page.locator(".category-topbar")).toHaveCount(0);
   await page.keyboard.press("Escape");
   await expect(page.locator(".mobile-nav")).not.toHaveAttribute("open");
   await page.locator(".nav-search").click();
@@ -141,7 +151,7 @@ test("tablet category cards and menu remain within the viewport", async ({ page 
   await page.setViewportSize({ width: 820, height: 1180 });
   await openStatic(page);
   await expect(page.locator(".category-tile")).toHaveCount(9);
-  await expect(page.locator(".category-topbar a")).toHaveCount(9);
+  await expect(page.locator(".category-topbar")).toHaveCount(0);
   await page.locator(".tools-menu summary").click();
   await expect(page.locator(".tools-menu-panel")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2)).toBe(true);
@@ -150,13 +160,14 @@ test("tablet category cards and menu remain within the viewport", async ({ page 
 test("direct category navigation and native filters stay keyboard accessible", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openStatic(page);
-  const direct = page.locator('.category-topbar a[data-category="token-creator"]');
+  await page.locator(".tools-menu summary").focus();
+  await page.keyboard.press("Enter");
+  const direct = page.locator('.category-menu .menu-category[data-category="token-creator"] .menu-category-main');
   await expect(direct).toBeVisible();
   await direct.focus();
   await expect(direct).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.locator("#operation-category")).toHaveValue("token-creator");
-  await expect(page.locator('.category-topbar a[data-category="token-creator"]')).toHaveAttribute("aria-current", "true");
   const category = page.locator("#operation-category");
   await category.focus();
   await expect(category).toBeFocused();
@@ -171,7 +182,7 @@ test("direct category navigation and native filters stay keyboard accessible", a
   await page.locator("#reset-filters").click();
   await expect(category).toHaveValue("all");
   await expect(page.locator("#operation-usage")).toHaveValue("all");
-  await expect(page.locator('.category-topbar a[aria-current="true"]')).toHaveCount(0);
+  await expect(page.locator(".category-topbar")).toHaveCount(0);
 });
 
 test("guide presents product boundaries as a handbook", async ({ page }) => {

@@ -23,7 +23,6 @@ const featured = (id: string) => {
       <details class="tools-menu" data-nav-disclosure>
         <summary aria-controls="tools-mega-panel">Tools <span class="menu-chevron" aria-hidden="true"></span></summary>
         <div class="tools-menu-panel" id="tools-mega-panel">
-          <div class="menu-intro"><p class="menu-heading">Explore PIT</p><strong>Find your next tool.</strong><p>Move from an idea to the right workflow.</p><a class="menu-all" href="/#directory">Browse the complete directory</a></div>
           <div class="category-menu" aria-label="Tool categories">
             {V2_CATEGORIES.map((category) => { const item = featured(category.id); return <div class="menu-category" data-category={category.id}><a class="menu-category-main" href={categoryHref(category.id)}>{category.label}</a>{item && <a class="menu-feature" href={item.path}>{item.title}</a>}</div>; })}
           </div>
@@ -55,9 +54,4 @@ const featured = (id: string) => {
       </nav>
     </details>
   </div>
-  <nav class="category-topbar" aria-label="Tool categories">
-    <div class="category-topbar-inner">
-      {V2_CATEGORIES.map((category) => <a data-category={category.id} href={categoryHref(category.id)}>{category.label}</a>)}
-    </div>
-  </nav>
 </header>
