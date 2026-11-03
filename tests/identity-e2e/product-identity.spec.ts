@@ -142,13 +142,13 @@ test("global navigation returns to PIT from all surfaces and direct tool links",
     ["/explorer/", "/inspect/native-balance/"],
     ["/", "/operations/token-creator/"],
   ]) {
-    await page.goto(`http://pit.local${landing}`);
+    await page.goto(`http://pit.local${landing}`, { waitUntil: "domcontentloaded" });
     await expect(page.locator("header .brand")).toHaveAttribute("href", "/");
-    await page.goto(`http://pit.local${deep}`);
+    await page.goto(`http://pit.local${deep}`, { waitUntil: "domcontentloaded" });
     await expect(page.locator("header .brand")).toHaveAttribute("href", "/");
     await page.locator("header .brand").click();
     await expect(page).toHaveURL("http://pit.local/");
-    await page.goBack();
+    await page.goBack({ waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL(`http://pit.local${deep}`);
   }
   await capture(page, "apple-global-nav-after.png");
