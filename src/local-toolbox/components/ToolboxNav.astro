@@ -1,22 +1,26 @@
 ---
 import { V2_CATEGORIES } from "../../lib/v2-catalog-core";
+import { unifiedProductPaths, unifiedCategoryHref } from "../../lib/product-navigation";
 const { root, current = "" } = Astro.props as { root: string; current?: "home" | "tools" | "privacy" | "legal" | "" };
 const categories = V2_CATEGORIES.filter((category) => category.id !== "blockchain-explorer");
+const menuCategories = process.env.PIT_UNIFIED_PREVIEW === "1" ? V2_CATEGORIES : categories;
 const unified = process.env.PIT_UNIFIED_PREVIEW === "1";
-const homeHref = unified ? "/toolbox/" : root;
-const toolsHref = unified ? "/tools/" : `${root}tools/`;
+const homeHref = unified ? unifiedProductPaths.home : root;
+const toolboxHref = unified ? unifiedProductPaths.toolbox : root;
+const directoryHref = unified ? unifiedProductPaths.directory : `${root}tools/`;
+const categoryHref = (id: string) => unified ? unifiedCategoryHref(id) : `${toolsHref}#category-${id}`;
+const toolsHref = unified ? unifiedProductPaths.toolboxTools : `${root}tools/`;
 const privacyHref = unified ? "/privacy/" : `${root}privacy/`;
 const legalHref = unified ? "/legal/" : `${root}legal/`;
 ---
 <header class="local-site-header">
-  <a href={homeHref} class="brand" aria-label="PIT Toolbox home">PIT</a>
+  <a href={homeHref} class="brand" aria-label={unified ? "PIT home" : "PIT Toolbox home"}>PIT</a>
   <nav class="local-desktop-nav" aria-label="Main navigation">
-    <a href={homeHref} aria-current={current === "home" ? "page" : undefined}>Home</a>
-    <details><summary>Tools</summary><div class="local-nav-panel"><a class="local-menu-all" href={toolsHref}>All tools</a>{categories.map((category) => <a data-category={category.id} href={`${toolsHref}#category-${category.id}`}>{category.label}</a>)}</div></details>
-    <a href={toolsHref} aria-current={current === "tools" ? "page" : undefined}>Toolbox</a>
-    <a href={privacyHref} aria-current={current === "privacy" ? "page" : undefined}>Privacy</a>
-    <a href={legalHref} aria-current={current === "legal" ? "page" : undefined}>Site information</a>
+    <a href={homeHref}>{unified ? "Home" : "Toolbox home"}</a>
+    <details><summary>Tools</summary><div class="local-nav-panel"><a class="local-menu-all" href={directoryHref}>All tools</a>{menuCategories.map((category) => <a data-category={category.id} href={categoryHref(category.id)}>{category.label}</a>)}</div></details>
+    <a href={toolboxHref} aria-current={current === "home" || current === "tools" ? "page" : undefined}>Toolbox</a>
+    {unified && <><a href={unifiedProductPaths.explorer}>Explorer</a><a href={unifiedProductPaths.operations}>Operations</a><a href={unifiedProductPaths.guide}>Guide</a></>}
   </nav>
-  <a class="local-nav-search" href={`${toolsHref}#tool-search`}>Search</a>
-  <details class="local-mobile-nav"><summary aria-label="Open navigation menu">Menu</summary><nav aria-label="Mobile navigation"><a href={homeHref}>Home</a><a href={toolsHref}>Toolbox</a><a href={`${toolsHref}#tool-search`}>Search tools</a><details><summary>Categories</summary><div>{categories.map((category) => <a data-category={category.id} href={`${toolsHref}#category-${category.id}`}>{category.label}</a>)}</div></details><a href={privacyHref}>Privacy</a><a href={legalHref}>Site information</a></nav></details>
+  <a class="local-nav-search" href={unified ? unifiedProductPaths.search : `${toolsHref}#tool-search`}>Search</a>
+  <details class="local-mobile-nav"><summary aria-label="Open navigation menu">Menu</summary><nav aria-label="Mobile navigation"><a href={homeHref}>{unified ? "Home" : "Toolbox home"}</a><a href={directoryHref}>All tools</a><a href={toolboxHref}>Toolbox</a>{unified && <><a href={unifiedProductPaths.explorer}>Explorer</a><a href={unifiedProductPaths.operations}>Operations</a><a href={unifiedProductPaths.guide}>Guide</a></>}<a href={unified ? unifiedProductPaths.search : `${toolsHref}#tool-search`}>Search tools</a><details><summary>Categories</summary><div>{menuCategories.map((category) => <a data-category={category.id} href={categoryHref(category.id)}>{category.label}</a>)}</div></details>{!unified && <><a href={privacyHref}>Privacy</a><a href={legalHref}>Site information</a></>}</nav></details>
 </header>

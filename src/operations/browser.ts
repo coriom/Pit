@@ -20,8 +20,25 @@ const vestAbi = contracts.PitTokenVesting.abi as Abi;
 const commonToken = `<label>Token contract address<input name="token" autocomplete="off" required placeholder="0x…" /></label>`;
 const commonAmount = `<label>Amount in token units<input name="amount" inputmode="decimal" required placeholder="100.0" /></label>`;
 const commonBeneficiary = `<label>Beneficiary address<input name="beneficiary" autocomplete="off" required placeholder="0x…" /></label>`;
+function bindTokenCreatorPreset(form: HTMLFormElement) {
+  const preset = form.querySelector<HTMLSelectElement>('select[name="preset"]');
+  const settings = form.querySelector<HTMLFieldSetElement>("#advanced-settings");
+  const standard = form.querySelector<HTMLElement>("#standard-permissions");
+  if (!preset || !settings) return;
+  const sync = () => {
+    const advanced = preset.value === "advanced";
+    settings.hidden = !advanced; settings.disabled = !advanced;
+    if (standard) standard.hidden = advanced;
+    if (!advanced) {
+      const cap = settings.querySelector<HTMLInputElement>('input[name="cap"]');
+      if (cap) cap.value = "";
+      settings.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((input) => { input.checked = false; });
+    }
+  };
+  preset.addEventListener("change", sync); sync();
+}
 const fields: Record<OperationId, string> = {
-  "token-creator": `<div class="field-grid"><label>Preset<select name="preset"><option value="standard">Standard fixed supply</option><option value="advanced">Advanced roles and cap</option></select></label><label>Token name<input name="name" required maxlength="60" placeholder="Example Token" /></label><label>Symbol<input name="symbol" required maxlength="16" placeholder="EXM" /></label><label>Initial supply (18 decimals)<input name="supply" inputmode="decimal" required placeholder="1000000" /></label><label>Initial recipient<input name="recipient" required placeholder="0x…" /></label><label>Advanced cap (18 decimals)<input name="cap" inputmode="decimal" placeholder="2000000" /></label></div><div id="advanced-fields"><label><input type="checkbox" name="minting"/> Creator may mint up to cap</label><label><input type="checkbox" name="burning"/> Holders may burn</label><label><input type="checkbox" name="pausing"/> Creator may pause all transfers</label></div><p class="muted">Advanced administrator and enabled roles go only to the connected creator. No PIT role, transfer tax, blacklist or upgradeability.</p>`,
+  "token-creator": `<div class="field-grid"><label>Preset<select name="preset"><option value="standard">Standard fixed supply</option><option value="advanced">Advanced roles and cap</option></select></label><label>Token name<input name="name" required maxlength="60" placeholder="Example Token" /></label><label>Symbol<input name="symbol" required maxlength="16" placeholder="EXM" /></label><label>Initial supply (18 decimals)<input name="supply" inputmode="decimal" required placeholder="1000000" /></label><label>Initial recipient<input name="recipient" required placeholder="0x…" /></label></div><p id="standard-permissions" class="form-help">Fixed supply. No administrator or additional minting role is created.</p><fieldset id="advanced-settings" class="advanced-settings" hidden disabled><legend>Advanced permissions</legend><p class="form-help">The connected creator receives the selected roles and delayed default administration. PIT receives no role.</p><label>Advanced cap (18 decimals)<input name="cap" inputmode="decimal" required placeholder="2000000" /></label><div class="permission-options"><label class="permission-option"><input type="checkbox" name="minting"/><span><strong>Mint up to cap</strong><small>The creator can increase supply within the cap.</small></span></label><label class="permission-option"><input type="checkbox" name="burning"/><span><strong>Holder burn</strong><small>Holders may destroy their own tokens.</small></span></label><label class="permission-option"><input type="checkbox" name="pausing"/><span><strong>Pause transfers</strong><small>The creator can pause token transfers.</small></span></label></div></fieldset>`,
   multisender: `${commonToken}<label>Recipients (CSV: address,amount; optional header)<textarea name="recipients" required placeholder="address,amount&#10;0x…,10"></textarea></label><label>Import a local CSV (maximum 256 KiB)<input type="file" id="recipients-file" accept=".csv,text/csv" /></label><p class="muted">1–100 distinct recipients; exact amounts. Standard ERC-20 behavior required. Approval is at most the batch total.</p>`,
   "token-locker": `<div class="field-grid">${commonToken}${commonAmount}${commonBeneficiary}<label>Unlock date and time (UTC)<input type="datetime-local" name="unlock" required /></label></div><p class="muted">Beneficiary is immutable. Funding is allowed only before unlock; direct transfers to the contract are unsupported.</p>`,
   "token-vesting": `<div class="field-grid">${commonToken}${commonAmount}${commonBeneficiary}<label>Start date and time (UTC)<input type="datetime-local" name="start" required /></label><label>Duration in whole days<input name="durationDays" inputmode="numeric" required placeholder="365" /></label><label>Cliff date and time (UTC; blank means start)<input type="datetime-local" name="cliff" /></label></div><p class="muted">Fund once before start. Beneficiary and schedule are immutable. No late top-ups, revocation or ownership transfer. Integer vesting rounds down until completion.</p>`,
@@ -40,6 +57,7 @@ type Prepared = {
 
 function boot(kind: OperationId) {
   const form = document.querySelector<HTMLFormElement>("#operation-form")!;
+  bindTokenCreatorPreset(form);
   const lifecycle = document.querySelector<HTMLElement>("#lifecycle")!;
   const output = document.querySelector<HTMLOutputElement>("#result")!;
   const walletState = document.querySelector<HTMLElement>("#wallet-state")!;
@@ -119,7 +137,9 @@ function boot(kind: OperationId) {
     await assertLocalChain();
     if (!account) throw Error("Connect a local wallet first.");
     if (kind === "token-creator") {
-      const preset = value(data, "preset") === "advanced" ? "advanced" : "standard";
+      const presetValue = value(data, "preset");
+      if (presetValue !== "standard" && presetValue !== "advanced") throw Error("Unsupported token preset.");
+      const preset = presetValue;
       const name = value(data, "name"), symbol = value(data, "symbol");
       if (!name || !symbol || name.length > 60 || symbol.length > 16 || /[\u0000-\u001f]/.test(name + symbol)) throw Error("Name and symbol must be short printable text.");
       const supply = positiveUnits(value(data, "supply"), 18);
@@ -154,7 +174,9 @@ function boot(kind: OperationId) {
     return { kind, token, decimals: d, amount, beneficiary, start, duration, cliff };
   }
   function preview(p: Prepared) {
-    if (p.kind === "token-creator") return `${p.preset} token · ${p.name} (${p.symbol}) · ${formatUnits(p.supply!,18)} initial · recipient ${p.beneficiary}\nCap ${formatUnits(p.cap!,18)} · mint ${p.minting ? "enabled" : "disabled"} · burn ${p.burning ? "enabled" : "disabled"} · pause ${p.pausing ? "enabled" : "disabled"}. Creator ${account} controls enabled roles. Advanced default admin is unique; transfer requires acceptance after one day. No PIT role.`;
+    if (p.kind === "token-creator") return p.preset === "standard"
+      ? `Standard fixed-supply token · ${p.name} (${p.symbol}) · ${formatUnits(p.supply!,18)} initial · recipient ${p.beneficiary}. No administrator or minting role.`
+      : `Advanced token · ${p.name} (${p.symbol}) · ${formatUnits(p.supply!,18)} initial · recipient ${p.beneficiary}\nCap ${formatUnits(p.cap!,18)} · mint ${p.minting ? "enabled" : "disabled"} · burn ${p.burning ? "enabled" : "disabled"} · pause ${p.pausing ? "enabled" : "disabled"}. Creator ${account} controls enabled roles. Default admin transfer requires acceptance after one day. No PIT role.`;
     if (p.kind === "multisender") return `${p.recipients!.length} distinct recipients · total ${formatUnits(p.total!,p.decimals!)} token units · standard token ${p.token}. All-or-nothing; nonstandard fee/rebase tokens may revert.\n${p.recipients!.map((r) => `${r.address}: ${formatUnits(r.amount,p.decimals!)} token units`).join("\n")}`;
     if (p.kind === "token-locker") return `${formatUnits(p.amount!,p.decimals!)} token units of ${p.token} locked for ${p.beneficiary} until ${new Date(Number(p.unlock!)*1000).toISOString()}. Beneficiary immutable; no early release.`;
     return `${formatUnits(p.amount!,p.decimals!)} token units of ${p.token} vest for ${p.beneficiary} from ${new Date(Number(p.start!)*1000).toISOString()} for ${p.duration!/86400n} days; cliff ${new Date(Number(p.cliff!)*1000).toISOString()}. Fully fund before start.`;

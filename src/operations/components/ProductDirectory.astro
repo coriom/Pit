@@ -1,5 +1,6 @@
 ---
 import { operationCatalog } from "../lib/catalog";
+import { operationPresentation } from "../lib/presentation";
 import { V2_LOCAL_TASKS } from "../../lib/v2-local-catalog";
 import { V2_EXPLORER_TASKS } from "../../lib/v2-explorer-catalog";
 import { V2_CATEGORIES } from "../../lib/v2-catalog-core";
@@ -7,6 +8,7 @@ import { V2_CATEGORIES } from "../../lib/v2-catalog-core";
 // Static presentation over authoritative registries. The three build trees
 // retain separate entry points, JavaScript and network policies.
 const unified = process.env.PIT_UNIFIED_PREVIEW === "1";
+const hosted = process.env.PIT_HOSTED_STAGING === "1";
 const categories = V2_CATEGORIES.map(({ id, label }) => ({ id, label }));
 const cards = [
   ...(unified ? V2_LOCAL_TASKS.map((item) => ({
@@ -20,7 +22,7 @@ const cards = [
     networks: item.networks.join(" "), usage: "read-only", price: "Free",
   })) : []),
   ...operationCatalog.map((item) => ({
-    id: `operation-${item.id}`, title: item.title, description: item.description,
+    id: `operation-${item.id}`, title: item.title, description: operationPresentation(item, hosted).description,
     category: categories.find(({ label }) => label === item.category)?.id ?? "developer-tools",
     path: `/operations/${item.id}/`, networks: "anvil",
     usage: "transaction", price: item.pricing === "FREE" ? "Free" : `From ${item.fee.match(/[\d.]+(?:[–-][\d.]+)? USDC/)?.[0] ?? "indicative fee"}`,
@@ -38,7 +40,7 @@ const cards = [
     <label>Price<select id="operation-price"><option value="all">All prices</option><option value="free">Free</option><option value="indicative">Indicative fee</option></select></label>
   </div>
   <div class="directory-status"><p id="search-count" role="status" aria-live="polite">{cards.length} results</p><button id="reset-filters" type="button" class="text-button" hidden>Clear filters</button></div>
-  <div class="product-grid" id="product-catalogue">{cards.map((item) => <article class="product-card" data-tool data-search={`${item.title} ${item.description} ${item.category} ${item.id}`.toLowerCase()} data-category={item.category} data-usage={item.usage} data-networks={item.networks} data-price={item.price === "Free" ? "free" : "indicative"}>
+  <div class="product-grid" id="product-catalogue">{cards.map((item) => <article class="product-card" data-tool data-search={`${item.title} ${item.description} ${item.category} ${item.id}`.toLowerCase()} data-title={item.title} data-description={item.description} data-category-label={categories.find(({ id }) => id === item.category)?.label ?? item.category} data-tags={`${item.usage} ${item.networks} ${item.usage === "local" ? "calculator calculation" : ""}`} data-category={item.category} data-usage={item.usage} data-networks={item.networks} data-price={item.price === "Free" ? "free" : "indicative"}>
     <div class="product-card-body"><p class="product-card-surface"><span class="category-mark" aria-hidden="true"></span>{categories.find(({ id }) => id === item.category)?.label}</p><h3><a href={item.path}>{item.title}</a></h3><p class="product-card-description">{item.description}</p></div>
     <div class="product-card-foot"><span>{item.price}{item.usage === "transaction" && " · Preview"}</span><a href={item.path} aria-label={`Open ${item.title}`}>Open</a></div>
   </article>)}</div>

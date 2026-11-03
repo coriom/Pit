@@ -41,7 +41,7 @@
 .v2-category-filters small { margin-left: .25rem; opacity: .8; }
 .v2-planned-card { border-style: dashed; }
 .local-task-card small { display: block; margin-top: .8rem; color: var(--pit-accent); }
-@media (max-width: 760px) { .local-filter-list button { flex: 1 1 140px; } .shell > header { flex-wrap: wrap; gap: .6rem; } .shell > header nav { display: flex; flex-wrap: wrap; gap: .6rem 1rem; } }
+@media (max-width: 900px) { .local-filter-list button { flex: 1 1 140px; } .shell > header { flex-wrap: wrap; gap: .6rem; } .shell > header nav { display: flex; flex-wrap: wrap; gap: .6rem 1rem; } }
 /* Shared PIT product treatment; the offline build keeps its existing script boundary. */
 :root { background: var(--pit-bg); color: var(--pit-text); }
 body { background: var(--pit-bg); color: var(--pit-text); }
@@ -111,7 +111,7 @@ body { background: var(--pit-bg); color: var(--pit-text); }
 .local-focus-result p { color: var(--pit-text); }
 .local-skip { background: var(--pit-accent); color: var(--pit-bg); }
 @media (max-width: 900px) { .tool-grid, .local-task-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .shell { padding: 0 18px; }
   .shell > .local-site-header { min-height: 60px; margin: 0 -18px; padding: 0 18px; gap: 14px; flex-wrap: nowrap; }
   .shell > header nav.local-desktop-nav { display: none; }
@@ -184,3 +184,10 @@ body { background: radial-gradient(ellipse 52% 28% at 11% 2%,#394b7954,transpare
 .local-nav-panel a[data-category] { gap: 0; background: transparent; }
 .local-nav-panel a[data-category]:hover, .local-nav-panel a[data-category]:focus-visible { background: var(--category-wash); color: var(--category-accent); }
 .local-mobile-nav nav details div a { gap: 0; }
+
+/* Keep the integrated global nav legible on tablet without changing the offline bundle. */
+@media (min-width: 901px) and (max-width: 1100px) { .local-desktop-nav { gap: 13px; } .shell > .local-site-header { gap: 22px; } }
+.local-nav-search { display: flex; align-items: center; min-height: 44px; }
+
+/* Keep primary Toolbox copy readable immediately; cards retain their restrained motion. */
+.local-intro h1, .local-intro p, .local-actions { animation: none; }

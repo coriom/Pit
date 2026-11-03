@@ -7,6 +7,8 @@ const ROOT = "dist-read-only-explorer";
 const HOST = "dist-read-only-explorer-host";
 const IDS = ["batch-balances", "native-balance", "selected-erc20-balances", "selected-erc20-allowances", "nft-approval", "ens-resolver", "nft-ownership", "account-code", "wallet-nonce", "transaction-detail", "network-gas", "blob-activity", "tx-transfer-events", "base-transaction-cost", "multicall-static-reads", "proxy-storage", "bytecode-compare", "ownership-role", "erc20-contract", "permit-signals", "erc165-interface", "timelock-standard", "safe-multisig", "uniswap-v3-pool", "uniswap-v3-position", "aave-reserve-index", "erc4626-vault-state", "chainlink-feed"];
 const PAGES = ["index.html", "404.html", ...IDS.map((id) => `inspect/${id}/index.html`)].sort();
+const UNIFIED_CATEGORIES = ["trading-risk", "blockchain-explorer", "token-creator", "token-management", "transfers-airdrops", "vesting-locking", "defi-liquidity", "portfolio-analytics", "developer-tools"];
+const UNIFIED_LINKS = new Set(["/explorer/", "/toolbox/", "/tools/", "/#directory", "/#operation-search", "/guide/", ...UNIFIED_CATEGORIES.map((id) => `/?category=${id}#directory`)]);
 const HEADERS = {
   "Strict-Transport-Security": "max-age=86400",
   "X-Content-Type-Options": "nosniff",
@@ -46,7 +48,7 @@ function policy(htmlByPage, jsAssets, cssAssets = []) {
     }
     for (const [, , body] of extract(html, "style")) styleHashes.add(cspHash(body));
     for (const [, href] of html.matchAll(/\bhref="([^"]+)"/g)) {
-      if (href === "/" || href === "/#explorer-search" || href.startsWith("#") || cssAssets.some((asset) => href === `/${asset}`) || (unified && ["/explorer/", "/explorer/#explorer-search", "/toolbox/", "/#directory", "/guide/"].includes(href))) continue;
+      if (href === "/" || href === "/#explorer-search" || href.startsWith("#") || cssAssets.some((asset) => href === `/${asset}`) || (unified && UNIFIED_LINKS.has(href))) continue;
       if (!IDS.some((id) => href === `/inspect/${id}/`)) throw Error(`Explorer link leaves allowlist: ${page} -> ${href}`);
     }
   }

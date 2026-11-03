@@ -120,7 +120,10 @@ test("advanced preset and invalid states stay explicit on mobile", async ({ page
   });
   await page.goto("/operations/token-creator/");
   await page.getByRole("button", { name: "Connect local wallet" }).click();
+  await expect(page.locator("#advanced-settings")).toBeHidden();
+  await expect(page.getByLabel("Advanced cap (18 decimals)")).toBeDisabled();
   await page.getByLabel("Preset").selectOption("advanced");
+  await expect(page.locator("#advanced-settings")).toBeVisible();
   await page.getByLabel("Token name").fill("Advanced Browser");
   await page.getByLabel("Symbol").fill("ABR");
   await page.getByLabel("Initial supply (18 decimals)").fill("100");
@@ -129,8 +132,8 @@ test("advanced preset and invalid states stay explicit on mobile", async ({ page
   await page.getByRole("button", { name: "Validate and review" }).click();
   await expect(page.locator("#lifecycle")).toHaveText("Invalid input");
   await page.getByLabel("Advanced cap (18 decimals)").fill("150");
-  await page.getByLabel("Creator may mint up to cap").check();
-  await page.getByLabel("Creator may pause all transfers").check();
+  await page.getByLabel(/Mint up to cap/).check();
+  await page.getByLabel(/Pause transfers/).check();
   await page.getByRole("button", { name: "Validate and review" }).click();
   await expect(page.locator("#result")).toContainText("mint enabled");
   await page.getByRole("button", { name: "Simulate on Anvil" }).click();
@@ -226,6 +229,22 @@ test("four local paid browser workflows use exact mock USDC, real receipts and s
   await navigate("token-creator");
   await page.getByRole("button", { name: "Deploy local payment fixtures" }).click();
   await expect(page.locator("#paid-state")).toContainText("Local fixtures ready", { timeout: 30_000 });
+  const preset = page.getByLabel("Preset");
+  const advancedSettings = page.locator("#advanced-settings");
+  await expect(advancedSettings).toBeHidden();
+  await expect(advancedSettings).toHaveAttribute("disabled", "");
+  await expect(page.getByLabel("Advanced cap (18 decimals)")).toBeDisabled();
+  await preset.selectOption("advanced");
+  await expect(advancedSettings).toBeVisible();
+  await page.getByLabel("Advanced cap (18 decimals)").fill("2000");
+  await page.getByLabel(/Mint up to cap/).check();
+  expect(await page.getByLabel(/Mint up to cap/).evaluate((node) => Math.round(node.getBoundingClientRect().width))).toBe(20);
+  await preset.selectOption("standard");
+  await expect(advancedSettings).toBeHidden();
+  expect(await page.locator("#paid-form").evaluate((form) => [...new FormData(form as HTMLFormElement).keys()])).not.toContain("cap");
+  expect(await page.getByLabel("Advanced cap (18 decimals)").inputValue()).toBe("");
+  expect(await page.getByLabel(/Mint up to cap/).isChecked()).toBe(false);
+  if (process.env.PIT_UI_EVIDENCE_DIR) await page.locator("#paid-form").screenshot({ path: `${process.env.PIT_UI_EVIDENCE_DIR}/apple-standard-form-after.png` });
   const setup = await page.locator("#paid-output").textContent() ?? "";
   const mock = setup.match(/LOCAL MOCK USDC (0x[0-9a-fA-F]{40})/)?.[1];
   const creatorRouter = setup.match(/Creator router (0x[0-9a-fA-F]{40})/)?.[1];
@@ -238,6 +257,24 @@ test("four local paid browser workflows use exact mock USDC, real receipts and s
   const created = await pay();
   const token = created.match(/Result (0x[0-9a-fA-F]{40})/)?.[1];
   expect(token).toBeTruthy();
+  await navigate("token-creator");
+  await page.getByLabel("Preset").selectOption("advanced");
+  await page.getByLabel("Name").fill("Browser Advanced");
+  await page.getByLabel("Symbol").fill("BADV");
+  await page.getByLabel("Initial supply (18 decimals)").fill("1000");
+  await page.getByLabel("Initial supply recipient").fill(accounts[0]);
+  await page.getByLabel("Advanced cap (18 decimals)").fill("2000");
+  await page.getByLabel(/Mint up to cap/).check();
+  if (process.env.PIT_UI_EVIDENCE_DIR) await page.locator("#paid-form").screenshot({ path: `${process.env.PIT_UI_EVIDENCE_DIR}/apple-advanced-form-after.png` });
+  const advancedCreated = await pay();
+  const advancedToken = advancedCreated.match(/Result (0x[0-9a-fA-F]{40})/)?.[1];
+  expect(advancedToken).toBeTruthy();
+  const advancedStateAbi = [
+    { type: "function", name: "cap", inputs: [], outputs: [{ type: "uint256" }], stateMutability: "view" },
+    { type: "function", name: "mintingEnabled", inputs: [], outputs: [{ type: "bool" }], stateMutability: "view" },
+  ] as const;
+  expect(await client.readContract({ address: advancedToken as `0x${string}`, abi: advancedStateAbi, functionName: "cap" })).toBe(parseUnits("2000", 18));
+  expect(await client.readContract({ address: advancedToken as `0x${string}`, abi: advancedStateAbi, functionName: "mintingEnabled" })).toBe(true);
   await navigate("multisender");
   await page.getByLabel("ERC-20 asset contract").fill(mock!);
   await page.getByLabel(/Recipients CSV/).fill(`address,amount\n${accounts[1]},1`);
@@ -268,7 +305,7 @@ test("four local paid browser workflows use exact mock USDC, real receipts and s
   const vest = await pay();
   expect(vest).toMatch(/Result 0x[0-9a-fA-F]{40}/);
   const merchantBalance = await client.readContract({ address: mock as `0x${string}`, abi: [{ type: "function", name: "balanceOf", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }], stateMutability: "view" }], functionName: "balanceOf", args: ["0x0000000000000000000000000000000000000FEE"] });
-  expect(merchantBalance).toBe(170_200_000n);
+  expect(merchantBalance).toBe(319_200_000n);
   const allowanceAbi = [{ type: "function", name: "allowance", inputs: [{ type: "address" }, { type: "address" }], outputs: [{ type: "uint256" }], stateMutability: "view" }] as const;
   for (const spender of [creatorRouter!, assetRouter!]) {
     expect(await client.readContract({ address: mock as `0x${string}`, abi: allowanceAbi, functionName: "allowance", args: [accounts[0] as `0x${string}`, spender as `0x${string}`] })).toBe(0n);

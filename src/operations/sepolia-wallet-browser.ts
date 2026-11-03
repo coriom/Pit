@@ -48,8 +48,25 @@ const kind = root?.dataset.operation as OperationId | undefined;
 const tokenInput = '<label>Reviewed demonstration token<input name="token" autocomplete="off" required /></label>';
 const amountInput = '<label>Amount in token units<input name="amount" inputmode="decimal" required /></label>';
 const beneficiaryInput = '<label>Beneficiary address<input name="beneficiary" autocomplete="off" required /></label>';
+function bindTokenCreatorPreset(form: HTMLFormElement) {
+  const preset = form.querySelector<HTMLSelectElement>('select[name="preset"]');
+  const settings = form.querySelector<HTMLFieldSetElement>("#advanced-settings");
+  const standard = form.querySelector<HTMLElement>("#standard-permissions");
+  if (!preset || !settings) return;
+  const sync = () => {
+    const advanced = preset.value === "advanced";
+    settings.hidden = !advanced; settings.disabled = !advanced;
+    if (standard) standard.hidden = advanced;
+    if (!advanced) {
+      const cap = settings.querySelector<HTMLInputElement>('input[name="cap"]');
+      if (cap) cap.value = "";
+      settings.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((input) => { input.checked = false; });
+    }
+  };
+  preset.addEventListener("change", sync); sync();
+}
 const fields: Record<OperationId, string> = {
-  "token-creator": '<div class="field-grid"><label>Preset<select name="preset"><option value="standard">Standard fixed supply</option><option value="advanced">Advanced roles and cap</option></select></label><label>Token name<input name="name" required maxlength="60" /></label><label>Symbol<input name="symbol" required maxlength="16" /></label><label>Initial supply (18 decimals)<input name="supply" inputmode="decimal" required /></label><label>Initial recipient<input name="recipient" required /></label><label>Advanced cap (18 decimals)<input name="cap" inputmode="decimal" /></label></div><label><input type="checkbox" name="minting" /> Creator may mint up to cap</label><label><input type="checkbox" name="burning" /> Holders may burn</label><label><input type="checkbox" name="pausing" /> Creator may pause</label><p class="muted">Advanced preset: connected creator is the sole initial administrator. Admin transfer takes one day. No PIT role.</p>',
+  "token-creator": '<div class="field-grid"><label>Preset<select name="preset"><option value="standard">Standard fixed supply</option><option value="advanced">Advanced roles and cap</option></select></label><label>Token name<input name="name" required maxlength="60" /></label><label>Symbol<input name="symbol" required maxlength="16" /></label><label>Initial supply (18 decimals)<input name="supply" inputmode="decimal" required /></label><label>Initial recipient<input name="recipient" required /></label></div><p id="standard-permissions" class="form-help">Fixed supply. No administrator or additional minting role is created.</p><fieldset id="advanced-settings" class="advanced-settings" hidden disabled><legend>Advanced permissions</legend><p class="form-help">The connected creator receives the selected roles and delayed default administration. PIT receives no role.</p><label>Advanced cap (18 decimals)<input name="cap" inputmode="decimal" required /></label><div class="permission-options"><label class="permission-option"><input type="checkbox" name="minting"/><span><strong>Mint up to cap</strong><small>The creator can increase supply within the cap.</small></span></label><label class="permission-option"><input type="checkbox" name="burning"/><span><strong>Holder burn</strong><small>Holders may destroy their own tokens.</small></span></label><label class="permission-option"><input type="checkbox" name="pausing"/><span><strong>Pause transfers</strong><small>The creator can pause token transfers.</small></span></label></div></fieldset>',
   multisender: `${tokenInput}<label>Recipients (CSV: address,amount; optional header)<textarea name="recipients" required></textarea></label><label>Import local CSV<input type="file" id="recipients-file" accept=".csv,text/csv" /></label><p class="muted">1–100 distinct recipients. The exact total is the maximum requested allowance. Standard PIT test token only.</p>`,
   "token-locker": `<div class="field-grid">${tokenInput}${amountInput}${beneficiaryInput}<label>Unlock date and time (UTC)<input type="datetime-local" name="unlock" required /></label></div><p class="muted">Immutable beneficiary. Fund before unlock; no early release or PIT withdrawal.</p>`,
   "token-vesting": `<div class="field-grid">${tokenInput}${amountInput}${beneficiaryInput}<label>Start date and time (UTC)<input type="datetime-local" name="start" required /></label><label>Duration in whole minutes<input name="durationMinutes" inputmode="numeric" required /></label><label>Cliff date and time (UTC, optional)<input type="datetime-local" name="cliff" /></label></div><p class="muted">15–43,200 whole minutes. Immutable beneficiary. Fund once before start. Late direct token transfers are unsupported.</p>`,
@@ -62,6 +79,7 @@ if (root && kind && fields[kind]) {
 
 function boot(operation: OperationId) {
   const form = document.querySelector<HTMLFormElement>("#operation-form")!;
+  bindTokenCreatorPreset(form);
   const providerSelect = document.querySelector<HTMLSelectElement>("#provider")!;
   const walletState = document.querySelector<HTMLElement>("#wallet-state")!;
   const lifecycle = document.querySelector<HTMLElement>("#lifecycle")!;
@@ -139,7 +157,9 @@ function boot(operation: OperationId) {
   async function prepare(data: FormData): Promise<Prepared> {
     await assertChainAndAccount();
     if (operation === "token-creator") {
-      const preset = value(data, "preset") === "advanced" ? "advanced" : "standard";
+      const presetValue = value(data, "preset");
+      if (presetValue !== "standard" && presetValue !== "advanced") throw Error("Unsupported token preset.");
+      const preset = presetValue;
       if (campaign && preset !== "standard") throw Error("The approved campaign creates one fixed-supply standard token only.");
       const name = value(data, "name"), symbol = value(data, "symbol");
       if (!name || !symbol || name.length > 60 || symbol.length > 16 || /[\u0000-\u001f]/.test(name + symbol)) throw Error("Name and symbol must be short printable text.");
@@ -170,7 +190,9 @@ function boot(operation: OperationId) {
     return { kind: operation, token, decimals, amount, beneficiary, start, duration, cliff };
   }
   function describe(p: Prepared) {
-    if (p.kind === "token-creator") return `${p.preset} token ${p.name} (${p.symbol})\nInitial ${formatUnits(p.supply!, 18)}; cap ${formatUnits(p.cap!, 18)}; recipient ${p.beneficiary}; creator/admin ${account}\nMint ${p.minting}; burn ${p.burning}; pause ${p.pausing}. Advanced admin transfer has a one-day delay. PIT has no role.`;
+    if (p.kind === "token-creator") return p.preset === "standard"
+      ? `Standard fixed-supply token ${p.name} (${p.symbol})\nInitial ${formatUnits(p.supply!, 18)}; recipient ${p.beneficiary}. No administrator or minting role.`
+      : `Advanced token ${p.name} (${p.symbol})\nInitial ${formatUnits(p.supply!, 18)}; cap ${formatUnits(p.cap!, 18)}; recipient ${p.beneficiary}; creator/admin ${account}\nMint ${p.minting}; burn ${p.burning}; pause ${p.pausing}. Admin transfer has a one-day delay. PIT has no role.`;
     if (p.kind === "multisender") return `${p.recipients!.length} recipients; ${formatUnits(p.total!, 18)} tokens from ${account}; spender ${deployment.sender.address}\n${p.recipients!.map((r) => `${r.address}: ${formatUnits(r.amount, 18)}`).join("\n")}`;
     if (p.kind === "token-locker") return `Lock ${formatUnits(p.amount!, 18)} tokens for immutable beneficiary ${p.beneficiary} until ${new Date(Number(p.unlock!) * 1000).toISOString()}.`;
     return `Vest ${formatUnits(p.amount!, 18)} tokens for immutable beneficiary ${p.beneficiary}; start ${new Date(Number(p.start!) * 1000).toISOString()}, cliff ${new Date(Number(p.cliff!) * 1000).toISOString()}, duration ${p.duration! / 60n} minutes.`;

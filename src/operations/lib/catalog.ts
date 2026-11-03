@@ -1,7 +1,7 @@
 import { PIT_PRICES } from "../../lib/pit-pricing";
 const fee = (id: keyof typeof PIT_PRICES) => PIT_PRICES[id].label;
 export const legacyOperationCatalog = [
-  { id: "token-creator", title: "ERC-20 Token Creator", category: "Token Creator", description: "Create a fixed-supply or limited advanced ERC-20 on local Anvil.", fee: `${fee("standard-erc20-creation")} or ${fee("advanced-erc20-creation")}`, pricing: "FIXED_FEE" },
+  { id: "token-creator", title: "ERC-20 Token Creator", category: "Token Creator", description: "Create a fixed-supply or limited advanced ERC-20 on local Anvil.", previewDescription: "Review a standard or advanced ERC-20 creation workflow.", fee: `${fee("standard-erc20-creation")} or ${fee("advanced-erc20-creation")}`, pricing: "FIXED_FEE" },
   { id: "multisender", title: "ERC-20 MultiSender", category: "Transfers & Airdrops", description: "Send one standard ERC-20 to a bounded recipient list atomically.", fee: fee("erc20-bulk-distribution"), pricing: "VARIABLE_FEE" },
   { id: "token-locker", title: "Token Locker", category: "Vesting & Locking", description: "Fund an immutable ERC-20 lock and release after its UTC unlock time.", fee: fee("token-locker"), pricing: "FIXED_FEE" },
   { id: "token-vesting", title: "Token Vesting", category: "Vesting & Locking", description: "Fund one linear ERC-20 schedule with an optional cliff.", fee: fee("custom-vesting"), pricing: "FIXED_FEE" },
@@ -22,7 +22,7 @@ export const phase5OperationCatalog = [
 ] as const;
 export const phase6OperationCatalog = [
   { id: "nft-manager", title: "ERC-721 Collection Manager", category: "Token Management", description: "Inspect a named collection and token, then mint or manage an exact approval when authorized.", fee: "Free inspection · proposed write fee inactive", pricing: "FREE" },
-  { id: "erc1155-creator", title: "ERC-1155 Creator", category: "Token Creator", description: "Create a capped multi-token collection and define its first token ID on local Anvil.", fee: fee("erc1155-creator"), pricing: "FIXED_FEE" },
+  { id: "erc1155-creator", title: "ERC-1155 Creator", category: "Token Creator", description: "Create a capped multi-token collection and define its first token ID on local Anvil.", previewDescription: "Review how a capped multi-token collection would be created.", fee: fee("erc1155-creator"), pricing: "FIXED_FEE" },
   { id: "erc1155-manager", title: "ERC-1155 Manager", category: "Token Management", description: "Inspect supply, ownership and approval; mint, burn or transfer supported local tokens.", fee: "Free inspection · proposed write fee inactive", pricing: "FREE" },
   { id: "erc1155-multisender", title: "ERC-1155 MultiSender", category: "Transfers & Airdrops", description: "Send a bounded atomic batch of token IDs and amounts from one owner.", fee: fee("erc1155-multisender"), pricing: "VARIABLE_FEE" },
   { id: "metadata-studio", title: "NFT Metadata Studio", category: "Developer Tools", description: "Validate NFT metadata and convert a bounded CSV to portable JSON files locally.", fee: "Free", pricing: "FREE" },

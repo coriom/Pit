@@ -125,7 +125,11 @@ function assertLinks(html, page, allowed) {
     const linkPath = href.split(/[?#]/)[0];
     const target = linkPath.startsWith("/") ? posix.normalize(linkPath) : posix.normalize(posix.join("/", posix.dirname(page), linkPath));
     const file = target.endsWith("/") ? `${target}index.html` : target;
-    if (process.env.PIT_UNIFIED_PREVIEW === "1" && file === "/toolbox/index.html") continue;
+    // Integrated staging contains these sibling surfaces. The standalone
+    // Toolbox build still rejects every link outside its own static package.
+    if (process.env.PIT_UNIFIED_PREVIEW === "1" && new Set([
+      "/index.html", "/toolbox/index.html", "/explorer/index.html", "/guide/index.html",
+    ]).has(file)) continue;
     if (!allowed.has(file.slice(1))) throw Error(`Link leaves local toolbox: ${page} -> ${href}`);
   }
 }

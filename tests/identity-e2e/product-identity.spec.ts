@@ -65,12 +65,12 @@ test("desktop identity, keyboard menu and discovery", async ({ page }) => {
   await page.locator("#operation-search").fill("ERC-1155 Creator");
   await expect(page.locator("[data-tool]:visible")).toHaveCount(1);
   await expect(page.locator("#search-count")).toHaveText("1 tool");
-  const card = page.locator("[data-tool]:visible");
+  const card = page.locator("[data-tool]:visible").first();
   await expect(card.locator(".product-card-details")).toHaveCount(0);
   await expect(card.getByText("Details", { exact: true })).toHaveCount(0);
-  await capture(page, "clean-tool-card.png", "[data-tool]:visible");
+  if (evidence) await card.screenshot({ path: join(evidence, "clean-tool-card.png") });
   await card.getByRole("link", { name: "Open ERC-1155 Creator" }).click();
-  await expect(page.getByText("Preview only")).toBeVisible();
+  await expect(page.locator(".preview-state strong")).toHaveText("Preview only");
   await expect(page.locator("#operation-root")).toHaveCount(0);
 });
 
@@ -104,12 +104,72 @@ test("offline Toolbox keeps category cues and existing discovery", async ({ page
   await expect(page.getByRole("heading", { name: "Make sense of the numbers." })).toBeVisible();
   await expect(page.locator(".local-task-card[data-category]")).toHaveCount(9);
   await page.locator(".local-desktop-nav details summary").click();
-  await expect(page.locator(".local-nav-panel [data-category]")).toHaveCount(8);
+  await expect(page.locator(".local-nav-panel [data-category]")).toHaveCount(9);
   await page.goto("http://pit.local/tools/", { waitUntil: "domcontentloaded" });
   await page.locator("#tool-search").fill("portfolio exposure");
   await expect(page.locator("[data-card]:visible").first()).toContainText(/Portfolio Exposure/i);
   await expect(page.locator("[data-category-filter='portfolio-analytics']")).toBeVisible();
   await expect(page.locator("[data-card]:visible").first()).toHaveCSS("background-image", /linear-gradient/);
+});
+
+test("search terminology, category combination and ranked results", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStatic(page);
+  const search = page.locator("#operation-search");
+  for (const [query, title] of [
+    ["risk calculator", /risk/i], ["erc-20 creator", /ERC-20 Token Creator/i], ["wallet balance", /Batch Balance Checker/i],
+    ["ERC20 creator", /ERC-20 Token Creator/i],
+  ] as const) {
+    await search.fill(query);
+    await expect(page.locator("[data-tool]:visible").first()).toContainText(title);
+  }
+  await capture(page, "apple-search-after.png", "#directory");
+  await page.locator("#operation-category").selectOption("token-creator");
+  await search.fill("creator");
+  await expect(page.locator("[data-tool]:visible").first()).toHaveAttribute("data-category", "token-creator");
+  await search.fill("no-such-pit-tool");
+  await expect(page.locator("#empty-results")).toBeVisible();
+  await page.locator("#reset-filters").click();
+  await expect(search).toHaveValue("");
+  await expect(page.locator("#operation-category")).toHaveValue("all");
+});
+
+test("global navigation returns to PIT from all surfaces and direct tool links", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openStatic(page);
+  for (const [landing, deep] of [
+    ["/toolbox/", "/tools/portfolio-exposure/"],
+    ["/explorer/", "/inspect/native-balance/"],
+    ["/", "/operations/token-creator/"],
+  ]) {
+    await page.goto(`http://pit.local${landing}`);
+    await expect(page.locator("header .brand")).toHaveAttribute("href", "/");
+    await page.goto(`http://pit.local${deep}`);
+    await expect(page.locator("header .brand")).toHaveAttribute("href", "/");
+    await page.locator("header .brand").click();
+    await expect(page).toHaveURL("http://pit.local/");
+    await page.goBack();
+    await expect(page).toHaveURL(`http://pit.local${deep}`);
+  }
+  await capture(page, "apple-global-nav-after.png");
+});
+
+test("hosted wallet truth, readable first frame and comfortable controls", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await openStatic(page);
+  const wallet = page.locator(".wallet-entry > summary");
+  await expect(wallet).toHaveAttribute("aria-label", /unavailable/i);
+  await expect(wallet).toHaveCSS("min-height", "44px");
+  await expect(page.locator(".nav-search")).toHaveCSS("min-height", "44px");
+  await expect(page.locator(".hero-content")).toHaveCSS("animation-name", "none");
+  await page.locator(".wallet-entry > summary").click();
+  await expect(page.getByText(/cannot connect a wallet/)).toBeVisible();
+  await page.goto("http://pit.local/operations/token-creator/");
+  await expect(page.locator(".detail-intro")).toContainText("Review a standard or advanced ERC-20 creation workflow.");
+  await expect(page.locator("#operation-root")).toHaveCount(0);
+  await expect(page.locator(".detail-intro")).toHaveCSS("animation-name", "none");
+  await capture(page, "apple-hosted-wallet-after.png");
 });
 
 test("motion adds card response and ambient hero without changing navigation", async ({ page }) => {

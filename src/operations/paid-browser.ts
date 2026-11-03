@@ -33,11 +33,28 @@ type Prepared = { functionName: string; args: readonly unknown[]; token?: Addres
 type Pending = { hash: Hex; intentId: Hex; operation: PaidKind; payer: Address; router: Address; fee: string; requestHash: Hex; operationCode: Hex };
 
 const input = (name: string, label: string, placeholder = "") => `<label>${label}<input name="${name}" required placeholder="${placeholder}" autocomplete="off" /></label>`;
+function bindTokenCreatorPreset(form: HTMLFormElement) {
+  const preset = form.querySelector<HTMLSelectElement>('select[name="preset"]');
+  const settings = form.querySelector<HTMLFieldSetElement>("#advanced-settings");
+  const standard = form.querySelector<HTMLElement>("#standard-permissions");
+  if (!preset || !settings) return;
+  const sync = () => {
+    const advanced = preset.value === "advanced";
+    settings.hidden = !advanced; settings.disabled = !advanced;
+    if (standard) standard.hidden = advanced;
+    if (!advanced) {
+      const cap = settings.querySelector<HTMLInputElement>('input[name="cap"]');
+      if (cap) cap.value = "";
+      settings.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((input) => { input.checked = false; });
+    }
+  };
+  preset.addEventListener("change", sync); sync();
+}
 const tokenInput = input("token", "ERC-20 asset contract", "0x…");
 const amountInput = input("amount", "Asset amount", "100");
 const beneficiaryInput = input("beneficiary", "Immutable beneficiary", "0x…");
 const forms: Record<PaidKind, string> = {
-  "token-creator": `<div class="field-grid"><label>Preset<select name="preset"><option value="standard">Standard fixed supply</option><option value="advanced">Advanced roles and cap</option></select></label>${input("name", "Name", "Local Token")}${input("symbol", "Symbol", "LOC")}${input("supply", "Initial supply (18 decimals)", "1000")}${input("recipient", "Initial supply recipient", "0x…")}<label>Advanced cap (18 decimals)<input name="cap" placeholder="2000" autocomplete="off" /></label></div><label><input type="checkbox" name="minting"/> Creator may mint to cap</label><label><input type="checkbox" name="burning"/> Holders may burn</label><label><input type="checkbox" name="pausing"/> Creator may pause transfers</label>`,
+  "token-creator": `<div class="field-grid"><label>Preset<select name="preset"><option value="standard">Standard fixed supply</option><option value="advanced">Advanced roles and cap</option></select></label>${input("name", "Name", "Local Token")}${input("symbol", "Symbol", "LOC")}${input("supply", "Initial supply (18 decimals)", "1000")}${input("recipient", "Initial supply recipient", "0x…")}</div><p id="standard-permissions" class="form-help">Fixed supply. No administrator or additional minting role is created.</p><fieldset id="advanced-settings" class="advanced-settings" hidden disabled><legend>Advanced permissions</legend><p class="form-help">The creator wallet receives the selected roles and delayed default administration. PIT receives no role. Review these powers before signing.</p><label>Advanced cap (18 decimals)<input name="cap" required placeholder="2000" autocomplete="off" /></label><div class="permission-options"><label class="permission-option"><input type="checkbox" name="minting"/><span><strong>Mint up to cap</strong><small>The creator may increase supply within the cap.</small></span></label><label class="permission-option"><input type="checkbox" name="burning"/><span><strong>Holder burn</strong><small>Token holders may destroy their own tokens.</small></span></label><label class="permission-option"><input type="checkbox" name="pausing"/><span><strong>Pause transfers</strong><small>The creator may temporarily stop transfers.</small></span></label></div></fieldset>`,
   multisender: `${tokenInput}<label>Recipients CSV (address,amount; 1–100 distinct)<textarea name="recipients" required placeholder="address,amount&#10;0x…,10"></textarea></label><label>Import local CSV (maximum 256 KiB)<input id="paid-csv" type="file" accept=".csv,text/csv" /></label>`,
   "token-locker": `<div class="field-grid">${tokenInput}${amountInput}${beneficiaryInput}${input("unlock", "Unlock UTC (YYYY-MM-DDTHH:mm)", "2030-01-01T12:00")}</div>`,
   "token-vesting": `<div class="field-grid">${tokenInput}${amountInput}${beneficiaryInput}${input("start", "Start UTC", "2030-01-01T12:00")}${input("durationDays", "Duration in whole days", "30")}<label>Cliff UTC (blank means start)<input name="cliff" placeholder="2030-01-02T12:00" autocomplete="off" /></label></div>`,
@@ -49,6 +66,7 @@ function boot() {
   root!.innerHTML = `<section class="panel"><h2>Local mock-USDC payment</h2><p>Only loopback Anvil chain 31337. The mock token is not Circle USDC; fees go to a fixed local fixture address. No account, real money or remote broadcast.</p><button id="paid-connect" type="button">Connect local wallet</button> <button id="paid-setup" type="button" disabled>Deploy local payment fixtures</button><p id="paid-wallet" role="status">Disconnected</p></section><form id="paid-form" class="panel"><h2>Configure ${kind}</h2>${forms[kind!]}<div class="actions"><button id="paid-review" type="submit">Validate and quote</button><button id="paid-approve" type="button" disabled>Approve exact amounts</button><button id="paid-simulate" type="button" disabled>Simulate and estimate gas</button><button id="paid-execute" type="button" disabled>Confirm atomic operation</button></div></form><section class="panel"><h2>Review and receipt</h2><p id="paid-state" role="status" aria-live="polite">Idle</p><output id="paid-output" aria-live="polite">Connect a disposable Anvil wallet.</output><div class="actions"><button id="paid-reconcile" type="button" hidden>Check pending receipt</button><button id="paid-download" type="button" hidden>Download JSON receipt</button></div></section><p class="muted">Existing lock and vesting claims remain free in the standard operation page. Direct public contract calls remain possible outside PIT's guided paid route.</p>`;
   const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
   const form = $<HTMLFormElement>("#paid-form"), output = $<HTMLOutputElement>("#paid-output");
+  bindTokenCreatorPreset(form);
   const state = $<HTMLElement>("#paid-state"), walletState = $<HTMLElement>("#paid-wallet");
   const setupButton = $<HTMLButtonElement>("#paid-setup"), approveButton = $<HTMLButtonElement>("#paid-approve");
   const simulateButton = $<HTMLButtonElement>("#paid-simulate"), executeButton = $<HTMLButtonElement>("#paid-execute");
@@ -123,7 +141,9 @@ function boot() {
       const name = value(data, "name"), symbol = value(data, "symbol");
       if (!name || !symbol || name.length > 60 || symbol.length > 16 || /[\u0000-\u001f]/.test(name + symbol)) throw Error("Invalid token name or symbol.");
       const supply = positiveUnits(value(data, "supply"), 18), recipient = requiredAddress(value(data, "recipient"));
-      const advanced = value(data, "preset") === "advanced";
+      const presetValue = value(data, "preset");
+      if (presetValue !== "standard" && presetValue !== "advanced") throw Error("Unsupported token preset.");
+      const advanced = presetValue === "advanced";
       if (advanced) {
         const cap = positiveUnits(value(data, "cap"), 18);
         if (cap < supply) throw Error("Cap is lower than initial supply.");
