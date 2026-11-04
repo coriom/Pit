@@ -1,0 +1,52 @@
+{
+  "schema": "pit.apple-design-staging-result.v1",
+  "recordedAtUtc": "2026-11-04T02:20:04Z",
+  "sourceCommit": "fa4925b5486b42c0e14199a9d76faf896910730d",
+  "approvedManifestSha256": "cceb1ad533c60f5f9705f280a0391de9701b62f0ab2e59796988ca9f6207d0ee",
+  "assetTreeSha256": "7f90e00f807c5b4601c835ba3888f7fffcb9c031630e2404678de3547a6e1d0a",
+  "assetCountInLocalPackage": 232,
+  "worker": {
+    "name": "pit-v2-private-staging",
+    "hostname": "pit-v2-private-staging.coriolanmorel.workers.dev",
+    "accountId": "77dc4e907cd36ee29964c8aff47f7c38",
+    "id": "18d2ab8c00114236856e4524d090f437",
+    "previousVersionId": "7ea97ce5-49a0-439b-beed-ee979d6cd58f",
+    "versionId": "bf24fd8a-7ddd-4889-8427-22c5fa02b087",
+    "deploymentId": "4ec82fe9-de24-4dd6-bc88-b07ad7606812",
+    "workersDevEnabled": true,
+    "previewUrlsEnabled": false
+  },
+  "access": {
+    "applicationId": "e0e7911e-aca1-407b-bb3b-20d9a2e858ea",
+    "destinationWorkerId": "18d2ab8c00114236856e4524d090f437",
+    "allowPolicyId": "8ea75407-050c-45fe-be38-2403c482c972",
+    "allowedEmail": "coriolanmorel@gmail.com",
+    "bypassPolicies": 0,
+    "anonymousHttp403": [
+      "/",
+      "/guide/",
+      "/toolbox/",
+      "/inspect/native-balance/",
+      "/operations/token-creator/",
+      "/tools/portfolio-exposure/",
+      "/_astro/catalogue-browser.BYl7FaBU.js"
+    ],
+    "anonymousBrowserResults": {
+      "chromium": "Cloudflare Access login; no PIT product DOM",
+      "firefox": "Cloudflare Access login; no PIT product DOM"
+    },
+    "authenticatedProductWalkthrough": "NOT_VERIFIED"
+  },
+  "deployment": {
+    "wranglerVersion": "4.152.0",
+    "assetsUploaded": 225,
+    "assetsReused": 6,
+    "mode": "hosted-read-only",
+    "hostedSigning": false,
+    "paymentExecution": false,
+    "mainnetExecution": false,
+    "expectedIncrementalFixedCostUsdPerMonth": "0 while Workers Free and Zero Trust Free remain active",
+    "billingEvidence": "Operator previously confirmed both plans are Free; API token received HTTP 403 for subscription read, so current billing state was not independently read back",
+    "rollbackVersionId": "7ea97ce5-49a0-439b-beed-ee979d6cd58f"
+  }
+}
