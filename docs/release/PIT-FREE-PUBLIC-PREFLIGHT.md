@@ -29,3 +29,5 @@ The final public configuration requires verified current publisher identity/stat
 5. If wrong content, legal identity, security headers or execution capability appears, remove the public route or roll the public Worker back to its previous reviewed version. Never route traffic through the private staging or SIWE Worker.
 
 **No final publication manifest or deployment authorization digest exists yet.** A guessed hostname or historic private address would make that digest misleading.
+
+Phase 10D adds a [five-name .fr comparison](PIT-FREE-DOMAIN-REVIEW.md) and [four reviewable Free legal drafts](../legal/PIT-FREE-PUBLIC-DRAFTS.md). The names are not owned, and an existing French software business uses the PIT name; domain availability alone does not clear name rights.

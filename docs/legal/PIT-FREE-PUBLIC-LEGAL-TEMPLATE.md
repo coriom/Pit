@@ -2,6 +2,8 @@
 
 This is a review draft, not legal advice or a representation that PIT has regulatory authorization. The generated public pages require verified publisher details and approved final text.
 
+The fuller French publication drafts are in [PIT-FREE-PUBLIC-DRAFTS.md](PIT-FREE-PUBLIC-DRAFTS.md). Their marked fields must be resolved before copying final reviewed paragraphs into the private build configuration.
+
 ## Operator fields required
 
 - Legal name and actual personal/business status; registration number if applicable.
