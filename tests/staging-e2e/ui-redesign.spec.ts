@@ -20,7 +20,7 @@ test("desktop navigation, category discovery and clean cards", async ({ page }) 
   await expect(card.getByText("Details", { exact: true })).toHaveCount(0);
   await card.getByRole("link", { name: "Open ERC-1155 Creator" }).click();
   await expect(page.getByRole("heading", { name: "ERC-1155 Creator" })).toBeVisible();
-  await expect(page.getByText("Preview only")).toBeVisible();
+  await expect(page.locator(".preview-state strong", { hasText: "Preview only" })).toBeVisible();
   await expect(page.locator(".technical-details")).not.toHaveAttribute("open");
 });
 
@@ -55,12 +55,16 @@ test("mobile menu and cross-surface search remain usable", async ({ page }) => {
   await page.locator(".local-mobile-nav > summary").click();
   await expect(page.locator(".local-mobile-nav nav a").first()).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2)).toBe(true);
-  await page.locator(".local-mobile-nav nav a", { hasText: "Toolbox" }).click();
-  await expect(page).toHaveURL(/\/tools\/$/);
+  await page.locator(".local-mobile-nav nav a", { hasText: "All tools" }).click();
+  await expect(page).toHaveURL(/\/#directory$/);
+  await expect(page.locator("[data-tool]")).toHaveCount(197);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/toolbox\/$/);
   await page.locator(".local-mobile-nav > summary").click();
   await page.locator(".local-mobile-nav nav details > summary").click();
   await page.locator(".local-mobile-nav nav details a").first().click();
-  await expect(page.locator("[data-category-filter][aria-pressed='true']")).not.toHaveAttribute("data-category-filter", "all");
+  await expect(page).toHaveURL(/\?category=trading-risk#directory$/);
+  await expect(page.locator("#operation-category")).toHaveValue("trading-risk");
 
   await page.goto("/explorer/");
   await expect(page.locator(".explorer-mobile-nav > nav")).toBeHidden();
