@@ -6,7 +6,7 @@ test("unified loopback directory links all three isolated products", async ({ pa
   page.on("request", (request) => { if (!request.url().startsWith("http://127.0.0.1:4414/")) external.push(request.url()); });
   const home = await page.goto("/");
   expect(home?.status()).toBe(200);
-  await expect(page.getByRole("heading", { name: /Web3 work, made clearer/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Make more of what’s on-chain." })).toBeVisible();
   await expect(page.locator("[data-tool]")).toHaveCount(197);
   const hrefs = await page.locator("[data-tool]").evaluateAll((nodes) => nodes.map((node) => (node.querySelector(".product-card-foot a") as HTMLAnchorElement).getAttribute("href")!));
   for (let offset = 0; offset < hrefs.length; offset += 12) {
@@ -27,7 +27,7 @@ test("unified loopback directory links all three isolated products", async ({ pa
   await expect(page.locator("[data-tool]:visible")).toHaveCount(18);
   await page.locator("#operation-price").selectOption("indicative");
   expect(await page.locator("[data-tool]:visible").count()).toBeGreaterThan(0);
-  await page.getByLabel("Search tools").fill("ERC-1155 Creator");
+  await page.locator("#operation-search").fill("ERC-1155 Creator");
   await expect(page.locator("[data-tool]:visible")).toHaveCount(1);
   await page.locator("[data-tool]:visible .product-card-foot a").click();
   await expect(page.getByRole("heading", { name: "ERC-1155 Creator" })).toBeVisible();
