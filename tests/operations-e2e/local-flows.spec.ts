@@ -210,7 +210,10 @@ test("four local paid browser workflows use exact mock USDC, real receipts and s
   const client = createPublicClient({ chain: foundry, transport: http(rpcUrl) });
   const navigate = async (kind: string) => {
     const response = await page.goto(`/operations/${kind}/?paid-local=1`);
-    expect(response?.status()).toBe(200);
+    // Firefox may revalidate an already visited static route and receive 304;
+    // the wallet and on-chain assertions below still verify the rendered page.
+    expect([200, 304]).toContain(response?.status());
+    await page.getByLabel("Wallet provider").selectOption({ label: "Injected wallet" });
     await page.getByRole("button", { name: "Connect local wallet" }).click();
     await expect(page.locator("#paid-wallet")).toContainText("chain 31337", { timeout: 30_000 });
   };
@@ -321,13 +324,72 @@ test("local paid route rejects missing wallet and non-Anvil chain before setup",
   await expect(page.locator("#paid-state")).toHaveText("Connection failed");
   await expect(page.getByRole("button", { name: "Deploy local payment fixtures" })).toBeDisabled();
   await page.evaluate(() => { (window as any).ethereum = { request: async ({ method }: { method: string }) => method === "eth_chainId" ? "0x2105" : [] }; });
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent("eip6963:announceProvider", { detail: { info: { name: "Wrong network" }, provider: (window as any).ethereum } })));
+  await page.getByLabel("Wallet provider").selectOption({ label: "Wrong network" });
   await page.getByRole("button", { name: "Connect local wallet" }).click();
   await expect(page.locator("#paid-output")).toContainText("Remote chains cannot execute here");
   await expect(page.getByRole("button", { name: "Deploy local payment fixtures" })).toBeDisabled();
   await page.evaluate((account) => { (window as any).ethereum = { request: async ({ method }: { method: string }) =>
     method === "eth_chainId" ? "0x7a69" : method === "eth_requestAccounts" || method === "eth_accounts" ? [account]
       : method === "eth_getBlockByNumber" ? { number: "0x0", hash: `0x${"00".repeat(32)}` } : null }; }, accounts[0]);
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent("eip6963:announceProvider", { detail: { info: { name: "Inconsistent local state" }, provider: (window as any).ethereum } })));
+  await page.getByLabel("Wallet provider").selectOption({ label: "Inconsistent local state" });
   await page.getByRole("button", { name: "Connect local wallet" }).click();
   await expect(page.locator("#paid-output")).toContainText("do not share the same chain state");
   await expect(page.getByRole("button", { name: "Deploy local payment fixtures" })).toBeDisabled();
+});
+
+test("paid wallet selection, rejection and account change discard transaction state", async ({ page }) => {
+  await page.addInitScript((address) => {
+    const listeners: Record<string, (() => void)[]> = {};
+    const provider = {
+      request: async ({ method, params = [] }: { method: string; params?: unknown[] }) => {
+        if (method === "eth_requestAccounts") return [address];
+        const response = await fetch("http://127.0.0.1:8545", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
+        const data = await response.json(); if (data.error) throw Error(`Local RPC error ${data.error.code}`); return data.result;
+      },
+      on: (event: string, callback: () => void) => { (listeners[event] ??= []).push(callback); },
+      removeListener: (event: string, callback: () => void) => { listeners[event] = (listeners[event] ?? []).filter((entry) => entry !== callback); },
+      emit: (event: string) => { for (const callback of listeners[event] ?? []) callback(); },
+    };
+    const rejected = { request: async () => { throw Error("Wallet rejected confirmation"); } };
+    (window as any).pitPaidProviders = { provider, rejected };
+    window.addEventListener("eip6963:requestProvider", () => {
+      window.dispatchEvent(new CustomEvent("eip6963:announceProvider", { detail: { info: { name: "Rejected wallet" }, provider: rejected } }));
+      window.dispatchEvent(new CustomEvent("eip6963:announceProvider", { detail: { info: { name: "Local Anvil" }, provider } }));
+    });
+  }, accounts[0]);
+  await page.goto("/operations/token-creator/?paid-local=1");
+  await page.getByRole("button", { name: "Connect local wallet" }).click();
+  await expect(page.locator("#paid-output")).toContainText("Select a wallet provider explicitly");
+  await page.getByLabel("Wallet provider").selectOption({ label: "Rejected wallet" });
+  await page.getByRole("button", { name: "Connect local wallet" }).click();
+  await expect(page.locator("#paid-state")).toHaveText("Connection failed");
+  await page.getByLabel("Wallet provider").selectOption({ label: "Local Anvil" });
+  await page.getByRole("button", { name: "Connect local wallet" }).click();
+  await expect(page.locator("#paid-wallet")).toContainText("chain 31337");
+  await page.evaluate(() => (window as any).pitPaidProviders.provider.emit("accountsChanged"));
+  await expect(page.locator("#paid-state")).toHaveText("Connection changed");
+  await expect(page.getByRole("button", { name: "Confirm atomic operation" })).toBeDisabled();
+});
+
+test("late wallet response cannot reconnect a provider after selection changes", async ({ page }) => {
+  await page.addInitScript(() => {
+    let release: (() => void) | undefined;
+    const first = { request: async () => { await new Promise<void>((resolve) => { release = resolve; }); return "0x7a69"; } };
+    const second = { request: async () => "0x7a69" };
+    (window as any).releasePaidWallet = () => release?.();
+    window.addEventListener("eip6963:requestProvider", () => {
+      window.dispatchEvent(new CustomEvent("eip6963:announceProvider", { detail: { info: { name: "Slow wallet" }, provider: first } }));
+      window.dispatchEvent(new CustomEvent("eip6963:announceProvider", { detail: { info: { name: "Other wallet" }, provider: second } }));
+    });
+  });
+  await page.goto("/operations/token-creator/?paid-local=1");
+  await page.getByLabel("Wallet provider").selectOption({ label: "Slow wallet" });
+  await page.getByRole("button", { name: "Connect local wallet" }).click();
+  await page.getByLabel("Wallet provider").selectOption({ label: "Other wallet" });
+  await page.evaluate(() => (window as any).releasePaidWallet());
+  await expect(page.locator("#paid-state")).toHaveText("Connection changed");
+  await expect(page.getByRole("button", { name: "Deploy local payment fixtures" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Confirm atomic operation" })).toBeDisabled();
 });

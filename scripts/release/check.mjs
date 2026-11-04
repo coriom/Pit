@@ -61,6 +61,7 @@ try {
     "PASS no direct analytics dependency or app-source analytics import",
   );
   run("pnpm", ["test"]);
+  run("node", ["scripts/release/check-rc-config.mjs"]);
   run("pnpm", ["check"]);
   run("pnpm", ["build"]);
   run("node", ["scripts/release/artifacts.mjs"]);

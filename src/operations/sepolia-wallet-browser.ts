@@ -33,7 +33,7 @@ const senderAbi = contracts.PitMultiSender.abi as Abi;
 const lockAbi = contracts.PitTokenLock.abi as Abi;
 const vestAbi = contracts.PitTokenVesting.abi as Abi;
 
-type Provider = EIP1193Provider & { on?: (event: string, callback: (...args: any[]) => void) => void };
+type Provider = EIP1193Provider & { on?: (event: string, callback: (...args: any[]) => void) => void; removeListener?: (event: string, callback: (...args: any[]) => void) => void };
 type Candidate = { name: string; provider: Provider };
 type Plan = { label: string; to: Address | null; data: Hex; abi?: Abi; functionName?: string; args?: readonly unknown[] };
 type Prepared = {
@@ -108,6 +108,7 @@ function boot(operation: OperationId) {
   }
   const candidates: Candidate[] = [];
   let provider: Provider | undefined, account: Address | undefined, prepared: Prepared | undefined;
+  let connectionSequence = 0;
   let currentPlan: Plan | undefined, releasePlan: Plan | undefined, created: Address | undefined;
   let busy = false, generation = 0;
   const value = (data: FormData, key: string) => String(data.get(key) ?? "").trim();
@@ -128,7 +129,9 @@ function boot(operation: OperationId) {
     if (injected?.providers?.length) injected.providers.forEach((item: Provider, index: number) => addCandidate(`Injected wallet ${index + 1}`, item));
     else if (injected) addCandidate("Injected wallet", injected);
   }, 500);
-  const onChange = () => { clear(); account = undefined; walletState.textContent = "Wallet or chain changed. Reconnect and review again."; set("Connection changed", "All prepared transaction data was discarded.", true); };
+  const onChange = () => { connectionSequence++; clear(); account = undefined; walletState.textContent = "Wallet or chain changed. Reconnect and review again."; set("Connection changed", "All prepared transaction data was discarded.", true); };
+  let providerListener: (() => void) | undefined;
+  const detachProvider = () => { if (providerListener) for (const event of ["accountsChanged", "chainChanged", "disconnect"]) provider?.removeListener?.(event, providerListener); providerListener = undefined; };
   async function assertChainAndAccount() {
     if (!provider || !account) throw Error("Connect a wallet first.");
     if (!["127.0.0.1", "localhost"].includes(location.hostname)) throw Error("Wallet execution is restricted to a local preview.");
@@ -294,20 +297,25 @@ function boot(operation: OperationId) {
     return receipt;
   }
   document.querySelector<HTMLButtonElement>("#connect")!.addEventListener("click", async () => {
+    const sequence = ++connectionSequence;
     try {
       const selected = candidates[Number(providerSelect.value)];
       if (!selected || providerSelect.value === "") throw Error("Select a wallet provider explicitly.");
-      clear(); provider = selected.provider;
+      detachProvider(); clear(); provider = selected.provider;
       const list = await provider.request({ method: "eth_requestAccounts" }) as string[];
+      if (sequence !== connectionSequence || provider !== selected.provider) throw Error("Wallet selection changed during connection.");
       if (list.length !== 1) throw Error("Select exactly one account in the wallet.");
       account = requiredAddress(list[0]);
-      provider.on?.("accountsChanged", onChange); provider.on?.("chainChanged", onChange); provider.on?.("disconnect", onChange);
+      const connectedProvider = provider;
+      providerListener = () => { if (provider === connectedProvider) onChange(); };
+      provider.on?.("accountsChanged", providerListener); provider.on?.("chainChanged", providerListener); provider.on?.("disconnect", providerListener);
       await assertChainAndAccount();
+      if (sequence !== connectionSequence || provider !== selected.provider) throw Error("Wallet selection changed during verification.");
       walletState.textContent = `${selected.name}: ${account.slice(0, 6)}…${account.slice(-4)} · Base Sepolia 84532`;
       set("Connected", campaign ? "Approved campaign loaded. Configure the operation." : "Read and simulation only. No campaign approval is loaded; signing is disabled.");
-    } catch (error) { clear(); account = undefined; set("Connection failed", String(error), true); }
+    } catch (error) { if (sequence !== connectionSequence) return; detachProvider(); provider = undefined; clear(); account = undefined; set("Connection failed", String(error), true); }
   });
-  providerSelect.addEventListener("change", onChange);
+  providerSelect.addEventListener("change", () => { detachProvider(); provider = undefined; onChange(); });
   form.addEventListener("input", clear);
   form.addEventListener("submit", async (event) => {
     event.preventDefault();

@@ -1,0 +1,18 @@
+{
+  "schema": "pit.production-payment-candidate.v1",
+  "enabled": false,
+  "status": "UNCONFIGURED_DO_NOT_DEPLOY",
+  "chainId": null,
+  "canonicalCircleUsdc": null,
+  "merchantFeeRecipient": null,
+  "merchantOwnershipEvidence": null,
+  "priceAdministrator": null,
+  "priceGovernance": null,
+  "approvedPriceVersion": null,
+  "approvedFeesMicroUsdc": null,
+  "paidTokenCreator": null,
+  "paidOperations": null,
+  "independentAuditReference": null,
+  "legalApprovalReference": null,
+  "walletExtensionAcceptanceReference": null
+}

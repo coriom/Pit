@@ -1,6 +1,6 @@
 import {
   createPublicClient, createWalletClient, custom, http, decodeEventLog, encodeFunctionData, keccak256, stringToHex, formatUnits,
-  type Abi, type Address, type Hex,
+  type Abi, type Address, type Hex, type EIP1193Provider,
 } from "viem";
 import { foundry } from "viem/chains";
 import { contracts } from "./generated/contracts";
@@ -31,6 +31,7 @@ type Prepared = { functionName: string; args: readonly unknown[]; token?: Addres
   beneficiary?: Address; recipients?: { address: Address; amount: bigint; before: bigint }[];
   total?: bigint; supply?: bigint; advanced?: boolean; assetBefore?: bigint; decimals?: number; };
 type Pending = { hash: Hex; intentId: Hex; operation: PaidKind; payer: Address; router: Address; fee: string; requestHash: Hex; operationCode: Hex };
+type Provider = EIP1193Provider & { on?: (event: string, callback: (...args: any[]) => void) => void; removeListener?: (event: string, callback: (...args: any[]) => void) => void };
 
 const input = (name: string, label: string, placeholder = "") => `<label>${label}<input name="${name}" required placeholder="${placeholder}" autocomplete="off" /></label>`;
 function bindTokenCreatorPreset(form: HTMLFormElement) {
@@ -63,7 +64,7 @@ const forms: Record<PaidKind, string> = {
 if (root && kind && forms[kind]) boot();
 
 function boot() {
-  root!.innerHTML = `<section class="panel"><h2>Local mock-USDC payment</h2><p>Only loopback Anvil chain 31337. The mock token is not Circle USDC; fees go to a fixed local fixture address. No account, real money or remote broadcast.</p><button id="paid-connect" type="button">Connect local wallet</button> <button id="paid-setup" type="button" disabled>Deploy local payment fixtures</button><p id="paid-wallet" role="status">Disconnected</p></section><form id="paid-form" class="panel"><h2>Configure ${kind}</h2>${forms[kind!]}<div class="actions"><button id="paid-review" type="submit">Validate and quote</button><button id="paid-approve" type="button" disabled>Approve exact amounts</button><button id="paid-simulate" type="button" disabled>Simulate and estimate gas</button><button id="paid-execute" type="button" disabled>Confirm atomic operation</button></div></form><section class="panel"><h2>Review and receipt</h2><p id="paid-state" role="status" aria-live="polite">Idle</p><output id="paid-output" aria-live="polite">Connect a disposable Anvil wallet.</output><div class="actions"><button id="paid-reconcile" type="button" hidden>Check pending receipt</button><button id="paid-download" type="button" hidden>Download JSON receipt</button></div></section><p class="muted">Existing lock and vesting claims remain free in the standard operation page. Direct public contract calls remain possible outside PIT's guided paid route.</p>`;
+  root!.innerHTML = `<section class="panel"><h2>Local mock-USDC payment</h2><p>Only loopback Anvil chain 31337. The mock token is not Circle USDC; fees go to a fixed local fixture address. No account, real money or remote broadcast.</p><label>Wallet provider<select id="paid-provider"><option value="">Select a wallet</option></select></label><button id="paid-connect" type="button">Connect local wallet</button> <button id="paid-setup" type="button" disabled>Deploy local payment fixtures</button><p id="paid-wallet" role="status">Disconnected</p></section><form id="paid-form" class="panel"><h2>Configure ${kind}</h2>${forms[kind!]}<div class="actions"><button id="paid-review" type="submit">Validate and quote</button><button id="paid-approve" type="button" disabled>Approve exact amounts</button><button id="paid-simulate" type="button" disabled>Simulate and estimate gas</button><button id="paid-execute" type="button" disabled>Confirm atomic operation</button></div></form><section class="panel"><h2>Review and receipt</h2><p id="paid-state" role="status" aria-live="polite">Idle</p><output id="paid-output" aria-live="polite">Connect a disposable Anvil wallet.</output><div class="actions"><button id="paid-reconcile" type="button" hidden>Check pending receipt</button><button id="paid-download" type="button" hidden>Download JSON receipt</button></div></section><p class="muted">Existing lock and vesting claims remain free in the standard operation page. Direct public contract calls remain possible outside PIT's guided paid route.</p>`;
   const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
   const form = $<HTMLFormElement>("#paid-form"), output = $<HTMLOutputElement>("#paid-output");
   bindTokenCreatorPreset(form);
@@ -71,6 +72,11 @@ function boot() {
   const setupButton = $<HTMLButtonElement>("#paid-setup"), approveButton = $<HTMLButtonElement>("#paid-approve");
   const simulateButton = $<HTMLButtonElement>("#paid-simulate"), executeButton = $<HTMLButtonElement>("#paid-execute");
   const reconcileButton = $<HTMLButtonElement>("#paid-reconcile"), downloadButton = $<HTMLButtonElement>("#paid-download");
+  const providerSelect = $<HTMLSelectElement>("#paid-provider");
+  const candidates: { name: string; provider: Provider }[] = [];
+  let provider: Provider | undefined;
+  let providerListener: (() => void) | undefined;
+  let connectionSequence = 0;
   let account: Address | undefined, router: Address | undefined, paymentToken: Address | undefined;
   let prepared: Prepared | undefined, quote: LocalQuote | undefined, simulated = false, busy = false;
   let inMemoryPending: Pending | undefined;
@@ -89,17 +95,17 @@ function boot() {
     : p.functionName === "createLock" ? "PIT_LOCK_V1" : "PIT_VESTING_V1"));
   async function guard() {
     if (!["127.0.0.1", "localhost"].includes(location.hostname)) throw Error("Paid demo requires loopback hosting.");
-    if (!window.ethereum) throw Error("No injected local wallet provider.");
-    if (await window.ethereum.request({ method: "eth_chainId" }) !== "0x7a69" || await publicClient.getChainId() !== 31337) throw Error("Wrong network: only Anvil chain 31337 can sign.");
-    const walletBlock = await window.ethereum.request({ method: "eth_getBlockByNumber", params: ["latest", false] }) as { number?: Hex; hash?: Hex } | null;
+    if (!provider) throw Error("Select and connect a local wallet provider.");
+    if (await provider.request({ method: "eth_chainId" }) !== "0x7a69" || await publicClient.getChainId() !== 31337) throw Error("Wrong network: only Anvil chain 31337 can sign.");
+    const walletBlock = await provider.request({ method: "eth_getBlockByNumber", params: ["latest", false] }) as { number?: Hex; hash?: Hex } | null;
     if (!walletBlock?.number || !walletBlock.hash || !/^0x[0-9a-fA-F]+$/.test(walletBlock.number)) throw Error("Wallet did not provide a verifiable local block.");
     const localBlock = await publicClient.getBlock({ blockNumber: BigInt(walletBlock.number) });
     if (localBlock.hash?.toLowerCase() !== walletBlock.hash.toLowerCase()) throw Error("Wallet and loopback Anvil RPC do not share the same chain state.");
     if (!account) throw Error("Connect a local wallet first.");
-    const accounts = await window.ethereum.request({ method: "eth_accounts" }) as string[];
+    const accounts = await provider.request({ method: "eth_accounts" }) as string[];
     if (!accounts.some((entry) => entry.toLowerCase() === account!.toLowerCase())) { invalidate(); throw Error("Wallet account changed. Review again."); }
   }
-  function wallet() { if (!account || !window.ethereum) throw Error("Wallet unavailable."); return createWalletClient({ account, chain: foundry, transport: custom(window.ethereum) }); }
+  function wallet() { if (!account || !provider) throw Error("Wallet unavailable."); return createWalletClient({ account, chain: foundry, transport: custom(provider) }); }
   async function read(address: Address, abi: Abi, functionName: string, args: readonly unknown[] = []) {
     return publicClient.readContract({ address, abi, functionName, args });
   }
@@ -301,26 +307,50 @@ function boot() {
     reconcileButton.hidden = true; invalidate();
   }
 
+  function addCandidate(name: string, candidate: Provider) {
+    if (!candidate || typeof candidate.request !== "function" || candidates.some((item) => item.provider === candidate) || candidates.length >= 8) return;
+    candidates.push({ name: name.slice(0, 60), provider: candidate });
+    const option = document.createElement("option"); option.value = String(candidates.length - 1); option.textContent = name.slice(0, 60); providerSelect.append(option);
+  }
+  window.addEventListener("eip6963:announceProvider", (event: Event) => {
+    const detail = (event as CustomEvent).detail;
+    if (detail?.provider?.request && typeof detail?.info?.name === "string") addCandidate(detail.info.name, detail.provider);
+  });
+  window.dispatchEvent(new Event("eip6963:requestProvider"));
+  window.setTimeout(() => {
+    const injected = (window as Window & { ethereum?: Provider & { providers?: Provider[] } }).ethereum;
+    if (injected?.providers?.length) injected.providers.forEach((item: Provider, index: number) => addCandidate(`Injected wallet ${index + 1}`, item));
+    else if (injected) addCandidate("Injected wallet", injected);
+  }, 500);
+  const onProviderChange = () => { connectionSequence++; account = undefined; invalidate(); setupButton.disabled = true; walletState.textContent = "Wallet or network changed. Connect and review again."; set("Connection changed", "Prepared quote and transaction data were discarded.", true); };
+  const detach = () => { if (providerListener) for (const event of ["accountsChanged", "chainChanged", "disconnect"]) provider?.removeListener?.(event, providerListener); providerListener = undefined; };
+  providerSelect.addEventListener("change", () => { detach(); provider = undefined; onProviderChange(); });
   $<HTMLButtonElement>("#paid-connect").addEventListener("click", async () => {
+    const sequence = ++connectionSequence;
     walletState.textContent = "Checking local wallet and chain…";
     set("Connecting", "Verifying Anvil chain ID, account and local block before any operation.");
     try {
-      if (!window.ethereum) throw Error("No injected local wallet.");
-      if (await window.ethereum.request({ method: "eth_chainId" }) !== "0x7a69") throw Error("Select Anvil chain 31337. Remote chains cannot execute here.");
-      const list = await window.ethereum.request({ method: "eth_requestAccounts" }) as string[];
+      const selected = providerSelect.value === "" ? undefined : candidates[Number(providerSelect.value)];
+      if (!selected) throw Error("Select a wallet provider explicitly.");
+      detach(); provider = selected.provider; invalidate(); account = undefined; setupButton.disabled = true;
+      if (await provider.request({ method: "eth_chainId" }) !== "0x7a69") throw Error("Select Anvil chain 31337. Remote chains cannot execute here.");
+      const list = await provider.request({ method: "eth_requestAccounts" }) as string[];
+      if (sequence !== connectionSequence || provider !== selected.provider) throw Error("Wallet selection changed during connection.");
       account = requiredAddress(list[0] ?? ""); await guard();
+      if (sequence !== connectionSequence || provider !== selected.provider) throw Error("Wallet selection changed during verification.");
+      const connectedProvider = provider;
+      providerListener = () => { if (provider === connectedProvider) onProviderChange(); };
+      for (const event of ["accountsChanged", "chainChanged", "disconnect"]) provider.on?.(event, providerListener);
       const saved = sessionStorage.getItem(sessionKey);
       if (saved) { const pair = JSON.parse(saved) as { creator: Address; asset: Address }; router = requiredAddress(kind === "token-creator" ? pair.creator : pair.asset); }
       if (router) await verifyFixture();
+      if (sequence !== connectionSequence || provider !== selected.provider) throw Error("Wallet selection changed during fixture verification.");
       walletState.textContent = `Connected ${account.slice(0, 6)}…${account.slice(-4)} · chain 31337${router ? ` · local router ${router}` : ""}`;
       setupButton.disabled = Boolean(router);
       reconcileButton.hidden = !pending();
       set("Connected", router ? "Local payment fixture verified. Configure an operation." : "Deploy the two local test fixtures before quoting.");
-    } catch (error) { account = undefined; invalidate(); walletState.textContent = "Disconnected"; set("Connection failed", String(error), true); }
+    } catch (error) { if (sequence !== connectionSequence) return; detach(); provider = undefined; account = undefined; invalidate(); setupButton.disabled = true; walletState.textContent = "Disconnected"; set("Connection failed", String(error), true); }
   });
-  window.ethereum?.on?.("accountsChanged", () => { account = undefined; invalidate(); walletState.textContent = "Wallet changed. Connect and review again."; });
-  window.ethereum?.on?.("chainChanged", () => { account = undefined; invalidate(); walletState.textContent = "Network changed. Connect and review again."; });
-  window.ethereum?.on?.("disconnect", () => { account = undefined; invalidate(); walletState.textContent = "Disconnected."; });
   setupButton.addEventListener("click", async () => {
     if (busy) return; busy = true; setupButton.disabled = true;
     try {
