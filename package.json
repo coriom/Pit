@@ -29,6 +29,7 @@
     "product:staging:build": "pnpm product:preview:build && node scripts/product/staging-package.mjs && node scripts/product/check-staging-package.mjs",
     "product:cloudflare-staging:build": "PIT_UNIFIED_PREVIEW=1 pnpm toolbox:check && PIT_UNIFIED_PREVIEW=1 pnpm explorer:check && PIT_UNIFIED_PREVIEW=1 PIT_HOSTED_STAGING=1 pnpm operations:check && PIT_HOSTED_STAGING=1 node scripts/product/staging-package.mjs && node scripts/product/check-staging-package.mjs && node scripts/product/cloudflare-staging-package.mjs && node scripts/product/check-cloudflare-staging-package.mjs",
     "product:free:rc": "pnpm product:cloudflare-staging:build && node scripts/product/free-release-candidate.mjs",
+    "product:free:public-candidate": "node scripts/product/free-public-candidate.mjs",
     "operations:manifest": "forge build --offline && node scripts/operations/deployment-manifest.mjs",
     "operations:deployment:dry-run": "node --test tests/operations-deployment-rehearsal.test.mjs",
     "billing:test": "node billing/billing.test.mjs",

@@ -1,4 +1,5 @@
 node_modules/
+node_modules
 out/
 cache/
 dist-operations/
@@ -8,6 +9,7 @@ dist-operations-deployment/
 dist-product-staging/
 dist-product-cloudflare-staging/
 dist-pit-free-rc/
+dist-pit-free-public-candidate/
 dist/
 dist-readonly-beta/
 dist-readonly-beta-host/
