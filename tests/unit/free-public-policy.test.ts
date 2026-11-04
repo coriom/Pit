@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { freePublicRoutes, freeRobots, freeSitemap, publicFreeOrigin, validatePublicFreeConfig } from "../../scripts/product/free-public-policy.mjs";
+import { freePublicRoutes, freeRobots, freeSitemap, publicFreeOrigin, renderLegalText, validatePublicFreeConfig } from "../../scripts/product/free-public-policy.mjs";
 
 const valid = {
   schema: "pit.free-public-config.v1", origin: "https://example.org", legalReviewApproved: true,
@@ -16,8 +16,16 @@ describe("Free public release policy", () => {
     expect(() => publicFreeOrigin("https://example.org/path")).toThrow();
     expect(() => validatePublicFreeConfig({ ...valid, legalReviewApproved: false })).toThrow("legal review");
     expect(() => validatePublicFreeConfig({ ...valid, publisherRegistration: "[REQUIRED]" })).toThrow("publisherRegistration");
+    expect(() => validatePublicFreeConfig({ ...valid, publisherAddress: "[ADRESSE À CONFIRMER]" })).toThrow("publisherAddress");
     expect(() => validatePublicFreeConfig({ ...valid, legalText: { ...valid.legalText, privacy: "TBD" } })).toThrow("privacy");
+    expect(() => validatePublicFreeConfig({ ...valid, legalText: { ...valid.legalText, notice: `${valid.legalText.notice} [À CONFIRMER]` } })).toThrow("notice");
     expect(validatePublicFreeConfig(valid).origin).toBe("https://example.org");
+  });
+
+  it("renders reviewed legal paragraphs without treating user text as HTML", () => {
+    expect(renderLegalText('First & clear.\n\nSecond <script> sentence.')).toBe(
+      '<p>First &amp; clear.</p><p>Second &lt;script&gt; sentence.</p>',
+    );
   });
 
   it("indexes only free pages and never fabricates a staging origin", () => {

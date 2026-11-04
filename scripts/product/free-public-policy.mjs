@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 
+const unresolved = (value) => /\[(?:[^\]]*(?:TODO|REQUIRED|À CONFIRMER|A CONFIRMER|À COMPLÉTER|A COMPLETER)[^\]]*)\]|\bTBD\b/i.test(value);
+
 export function publicFreeOrigin(value) {
   if (typeof value !== "string") throw Error("A reviewed public HTTPS origin is required.");
   let url;
@@ -15,12 +17,20 @@ export function validatePublicFreeConfig(config) {
   const origin = publicFreeOrigin(config.origin);
   if (config.legalReviewApproved !== true) throw Error("Publisher and legal review are required before public metadata is generated.");
   for (const key of ["publisherName", "publisherStatus", "publisherAddress", "publisherRegistration", "contactEmail", "privacyEmail", "hostingProvider", "hostingAddress", "jurisdiction"])
-    if (typeof config[key] !== "string" || !config[key].trim() || /\[(?:TODO|REQUIRED)\]|TBD/i.test(config[key]))
+    if (typeof config[key] !== "string" || !config[key].trim() || unresolved(config[key]))
       throw Error(`Verified publisher field required: ${key}`);
   for (const key of ["notice", "privacy", "terms", "cookies"])
-    if (typeof config.legalText?.[key] !== "string" || config.legalText[key].trim().length < 80)
+    if (typeof config.legalText?.[key] !== "string" || config.legalText[key].trim().length < 80
+      || unresolved(config.legalText[key]))
       throw Error(`Reviewed legal text required: ${key}`);
   return { ...config, origin };
+}
+
+export function renderLegalText(value) {
+  const escape = (text) => text.replaceAll("&", "&amp;").replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+  return value.trim().split(/\n\s*\n/).map((paragraph) =>
+    `<p>${escape(paragraph.trim()).replaceAll("\n", "<br>")}</p>`).join("");
 }
 
 export function freePublicRoutes(paths) {

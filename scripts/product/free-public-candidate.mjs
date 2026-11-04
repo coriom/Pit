@@ -1,7 +1,7 @@
 // Local-only finalizer. It cannot deploy, and it refuses to index unresolved legal content.
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { freePublicRoutes, freeRobots, freeSitemap, sha256, validatePublicFreeConfig } from "./free-public-policy.mjs";
+import { freePublicRoutes, freeRobots, freeSitemap, renderLegalText, sha256, validatePublicFreeConfig } from "./free-public-policy.mjs";
 
 const input = process.env.PIT_FREE_PUBLIC_CONFIG;
 if (!input) throw Error("PIT_FREE_PUBLIC_CONFIG must name a reviewed local JSON configuration.");
@@ -37,7 +37,7 @@ for (const [key, title] of Object.entries(legalTitles)) {
   mkdirSync(join(root, name), { recursive: true });
   const facts = key === "notice" ? `<p>Publisher: ${escapeHtml(config.publisherName)} · ${escapeHtml(config.publisherStatus)} · ${escapeHtml(config.publisherRegistration)}.</p><p>Address: ${escapeHtml(config.publisherAddress)}. Contact: ${escapeHtml(config.contactEmail)}.</p><p>Host: ${escapeHtml(config.hostingProvider)}, ${escapeHtml(config.hostingAddress)}. Jurisdiction: ${escapeHtml(config.jurisdiction)}.</p>` : "";
   const privacyContact = key === "privacy" ? `<p>Privacy contact: ${escapeHtml(config.privacyEmail)}.</p>` : "";
-  const article = `<article class="local-notice"><h1>${title}</h1>${facts}${privacyContact}<p>${escapeHtml(config.legalText[key])}</p><p><a href="/legal/">Legal</a> · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a> · <a href="/cookies/">Cookies</a></p></article>`;
+  const article = `<article class="local-notice"><h1>${title}</h1>${facts}${privacyContact}${renderLegalText(config.legalText[key])}<p><a href="/legal/">Legal</a> · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a> · <a href="/cookies/">Cookies</a></p></article>`;
   const legalHtml = legalTemplate.replace(/<title>[^<]*<\/title>/, `<title>${title} · PIT Free</title>`)
     .replace(/<meta name="description" content="[^"]*"\s*\/?\s*>/, `<meta name="description" content="${title} for PIT Free." />`)
     .replace(/<article class="local-notice">[\s\S]*?<\/article>/, article);

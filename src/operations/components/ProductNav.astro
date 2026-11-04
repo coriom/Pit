@@ -39,7 +39,7 @@ const featured = (id: string) => {
       <summary aria-controls="wallet-entry-panel" aria-label={hosted ? "Wallet unavailable in read-only preview" : "Wallet connection guidance"}><span class="wallet-entry-label">{hosted ? "Wallet unavailable" : "Connect wallet"}</span><span class="wallet-entry-label-short">{hosted ? "Wallet off" : "Wallet"}</span></summary>
       <div class="wallet-entry-panel" id="wallet-entry-panel">
         <strong>{hosted ? "Wallet unavailable in preview" : "Connect inside an operation"}</strong>
-        <p>{hosted ? "This private preview is read-only. It cannot connect a wallet, request a signature or send a transaction." : "Open an operation to connect a wallet for local Anvil testing. No connection is made from this menu."}</p>
+        <p>{hosted ? "This preview is read-only. It cannot connect a wallet, request a signature or send a transaction." : "Open an operation to connect a wallet for local Anvil testing. No connection is made from this menu."}</p>
         <a href={hosted ? "/guide/" : "/#directory"}>{hosted ? "How PIT works" : "Browse operations"}</a>
       </div>
     </details>
