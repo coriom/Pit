@@ -25,4 +25,4 @@ const result = await build({
 // symlink must not make this tracked generated file depend on the worktree name.
 const output = result.outputFiles?.[0]?.text;
 if (!output) throw Error("AJV validator bundle is missing");
-writeFileSync("src/lib/validate-event.js", output.replace(/\.\.\/[^/\n"']+\/node_modules\//g, "node_modules/"));
+writeFileSync("src/lib/validate-event.js", output.replace(/(?:\.\.\/)+(?:[^/\n"']+\/)*?node_modules\//g, "node_modules/"));
