@@ -3,7 +3,8 @@ import { expect, test } from "@playwright/test";
 test("desktop navigation, category discovery and clean cards", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await expect(page.getByRole("link", { name: "PIT home" }).locator("span")).toHaveText("PIT");
+  await expect(page.getByRole("link", { name: "PIT Crypto home" }).locator("span")).toHaveText("PIT");
+  await expect(page.getByRole("link", { name: "PIT Crypto home" }).locator("small")).toHaveText("CRYPTO");
   await page.locator(".desktop-nav .tools-menu summary").click();
   await expect(page.locator(".category-menu .menu-category-main")).toHaveCount(9);
   await page.keyboard.press("Escape");

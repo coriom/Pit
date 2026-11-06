@@ -14,7 +14,7 @@ const privacyHref = unified ? "/privacy/" : `${root}privacy/`;
 const legalHref = unified ? "/legal/" : `${root}legal/`;
 ---
 <header class="local-site-header">
-  <a href={homeHref} class="brand" aria-label={unified ? "PIT home" : "PIT Toolbox home"}>PIT</a>
+  <a href={homeHref} class="brand" aria-label={unified ? "PIT Crypto home" : "PIT Crypto Toolbox home"}>PIT</a>
   <nav class="local-desktop-nav" aria-label="Main navigation">
     <a href={homeHref}>{unified ? "Home" : "Toolbox home"}</a>
     <details><summary>Tools</summary><div class="local-nav-panel"><a class="local-menu-all" href={directoryHref}>All tools</a>{menuCategories.map((category) => <a data-category={category.id} href={categoryHref(category.id)}>{category.label}</a>)}</div></details>

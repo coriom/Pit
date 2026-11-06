@@ -20,7 +20,7 @@ const categoryId = V2_CATEGORIES.find((category) => category.label === item.cate
   {hosted ? <div class="preview-state" role="status"><strong>Preview only</strong><p>Execution is unavailable in this read-only preview. No wallet connection, transaction or PIT payment is available here.</p></div> : <div id="operation-root" data-operation={item.id}></div>}
   {paidDemo && !hosted && <div class="decision-note"><div><strong>Local mock-USDC payment</strong><p>Payment and operation are atomic on Anvil. Approval and reverted transaction gas remain separate; no real USDC is used.</p></div><a class="button-link secondary" href="?paid-local=1">Open paid demo</a></div>}
   <details class="technical-details"><summary>Networks, fees and permissions</summary><div class="technical-details-inner"><dl class="operation-facts">
-    <div><dt>Availability</dt><dd>{hosted ? "Private read-only preview; execution unavailable" : "Local prototype; no external write"}</dd></div>
+    <div><dt>Availability</dt><dd>{hosted ? "Read-only preview; execution unavailable" : "Local prototype; no external write"}</dd></div>
     <div><dt>Wallet</dt><dd>{browserOnly || readOnly ? "Not needed for preparation or reads" : "Required for local execution"}</dd></div>
     <div><dt>Network</dt><dd>{browserOnly ? "Offline" : readOnly ? "Selected read-only RPC" : "Anvil chain 31337 only"}</dd></div>
     <div><dt>PIT price</dt><dd>{item.pricing === "FREE" ? "Free" : "Indicative, inactive outside local mock demo"}</dd></div>

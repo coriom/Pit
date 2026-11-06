@@ -39,7 +39,8 @@ if (paths.filter((path) => /^inspect\/[^/]+\/index\.html$/.test(path)).length !=
   throw Error("Catalog route coverage changed");
 for (const path of paths.filter((entry) => entry.startsWith("operations/") && entry.endsWith("/index.html"))) {
   const page = readFileSync(join(root, path), "utf8");
-  if (!page.includes("Private read-only preview") || page.includes('id="operation-root"')
+  if (!page.includes("Read-only preview; execution unavailable") || !page.includes("Execution is unavailable in this read-only preview")
+    || page.includes('id="operation-root"')
     || page.includes("paid-local=1") || !page.includes("connect-src 'none'"))
     throw Error(`Hosted execution exposed: ${path}`);
 }

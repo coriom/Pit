@@ -35,11 +35,11 @@ for (const [key, title] of Object.entries(legalTitles)) {
   const name = key === "notice" ? "legal" : key;
   const file = join(root, name, "index.html");
   mkdirSync(join(root, name), { recursive: true });
-  const facts = key === "notice" ? `<p>Publisher: ${escapeHtml(config.publisherName)} · ${escapeHtml(config.publisherStatus)} · ${escapeHtml(config.publisherRegistration)}.</p><p>Address: ${escapeHtml(config.publisherAddress)}. Contact: ${escapeHtml(config.contactEmail)}.</p><p>Host: ${escapeHtml(config.hostingProvider)}, ${escapeHtml(config.hostingAddress)}. Jurisdiction: ${escapeHtml(config.jurisdiction)}.</p>` : "";
+  const facts = key === "notice" ? `<p>Publisher: ${escapeHtml(config.publisherName)} · ${escapeHtml(config.publisherStatus)} · ${escapeHtml(config.publisherRegistration)}. Publication director: ${escapeHtml(config.publicationDirector)}.</p><p>Address: ${escapeHtml(config.publisherAddress)}. Contact: ${escapeHtml(config.contactEmail)} · ${escapeHtml(config.contactPhone)}.</p><p>Host: ${escapeHtml(config.hostingProvider)}, ${escapeHtml(config.hostingAddress)} · ${escapeHtml(config.hostingPhone)}. Jurisdiction: ${escapeHtml(config.jurisdiction)}.</p>` : "";
   const privacyContact = key === "privacy" ? `<p>Privacy contact: ${escapeHtml(config.privacyEmail)}.</p>` : "";
   const article = `<article class="local-notice"><h1>${title}</h1>${facts}${privacyContact}${renderLegalText(config.legalText[key])}<p><a href="/legal/">Legal</a> · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a> · <a href="/cookies/">Cookies</a></p></article>`;
-  const legalHtml = legalTemplate.replace(/<title>[^<]*<\/title>/, `<title>${title} · PIT Free</title>`)
-    .replace(/<meta name="description" content="[^"]*"\s*\/?\s*>/, `<meta name="description" content="${title} for PIT Free." />`)
+  const legalHtml = legalTemplate.replace(/<title>[^<]*<\/title>/, `<title>${title} · PIT Crypto Free</title>`)
+    .replace(/<meta name="description" content="[^"]*"\s*\/?\s*>/, `<meta name="description" content="${title} for PIT Crypto Free." />`)
     .replace(/<article class="local-notice">[\s\S]*?<\/article>/, article);
   if (!legalHtml.includes(article)) throw Error("Legal template could not be populated.");
   writeFileSync(file, legalHtml);
@@ -54,8 +54,17 @@ for (const name of readdirSync(root, { recursive: true })) {
   let html = readFileSync(file, "utf8");
   if (!html.includes("</head>")) throw Error(`Malformed HTML: ${name}`);
   html = html.replace(/<meta\s+name="robots"\s+content="[^"]*"\s*\/?\s*>/gi, "")
-    .replace(/<link\s+rel="canonical"\s+href="[^"]*"\s*\/?\s*>/gi, "");
-  html = html.replace("</head>", `<meta name="robots" content="${indexable ? "index,follow" : "noindex,nofollow"}">${indexable ? `<link rel="canonical" href="${config.origin}${path}">` : ""}</head>`);
+    .replace(/<link\s+rel="canonical"\s+href="[^"]*"\s*\/?\s*>/gi, "")
+    .replace(/<meta\s+property="og:url"\s+content="[^"]*"\s*\/?\s*>/gi, "");
+  const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
+  const descriptionMatch = html.match(/<meta name="description" content="([^"]+)"/i);
+  if (indexable && (!titleMatch || !descriptionMatch)) throw Error(`Public SEO metadata missing: ${name}`);
+  const socialType = html.includes('property="og:type"') ? "" : '<meta property="og:type" content="website">';
+  const socialSite = html.includes('property="og:site_name"') ? "" : '<meta property="og:site_name" content="PIT Crypto">';
+  const socialTitle = html.includes('property="og:title"') ? "" : `<meta property="og:title" content="${titleMatch?.[1] ?? ""}">`;
+  const socialDescription = html.includes('property="og:description"') ? "" : `<meta property="og:description" content="${descriptionMatch?.[1] ?? ""}">`;
+  const publicUrl = indexable ? `<link rel="canonical" href="${config.origin}${path}"><meta property="og:url" content="${config.origin}${path}">` : "";
+  html = html.replace("</head>", `<meta name="robots" content="${indexable ? "index,follow" : "noindex,nofollow"}">${socialType}${socialSite}${socialTitle}${socialDescription}${publicUrl}</head>`);
   if (html.includes("data-publication-pending")) throw Error(`Unresolved legal content: ${name}`);
   writeFileSync(file, html);
 }

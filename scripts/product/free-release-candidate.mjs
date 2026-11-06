@@ -34,6 +34,11 @@ for (const [path, metadata] of entries) {
   const actual = createHash("sha256").update(readFileSync(join(target, "public", path))).digest("hex");
   if (actual !== metadata.digest) throw Error(`Free candidate asset mismatch: ${path}`);
 }
+for (const path of ["index.html", "toolbox/index.html", "explorer/index.html"]) {
+  const html = readFileSync(join(target, "public", path), "utf8");
+  if (!html.includes("PIT Crypto") || html.includes("Private candidate · No indexing"))
+    throw Error(`Unfinished PIT Crypto Free branding: ${path}`);
+}
 const manifest = {
   schema: "pit.free-release-candidate.v1",
   status: "PREPARED_NOT_PUBLISHED",

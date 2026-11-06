@@ -1,14 +1,14 @@
-# PIT Free — textes de publication à compléter et relire
+# PIT Crypto Free — textes de publication à compléter et relire
 
 **Statut : brouillons complets sur le périmètre Free ; publication interdite tant que les champs entre crochets et la revue juridique ne sont pas clos.** Ces textes ne concernent ni les opérations payantes ni le Worker SIWE. La version finale doit être validée dans la langue du site effectivement publié.
 
 ## Mentions légales
 
-**Éditeur.** PIT Free est édité par **[NOM CIVIL PUBLIABLE ET QUALITÉ EI À CONFIRMER]**, entreprise individuelle, SIREN **[NUMÉRO À CONFIRMER POUR PUBLICATION]**, domiciliée **[ADRESSE PROFESSIONNELLE PUBLIABLE]**. Directeur de la publication : **[IDENTITÉ À CONFIRMER]**. Contact : **[COURRIEL PUBLIC TESTÉ]** ; **[TÉLÉPHONE SI REQUIS APRÈS REVUE]**. Le dossier historique de création date de mars 2025. La consultation administrative du 4 novembre 2026 confirme une unité légale active, mais la fiche publique masque son nom et l'activité principale affichée reste `96.09Z` ; elle ne prouve aucune modification d'activité Web3/logicielle.
+**Éditeur.** PIT Crypto Free est édité par **[NOM CIVIL PUBLIABLE]**, entrepreneur individuel (EI), immatriculation **[NUMÉRO À CONFIRMER POUR PUBLICATION]**, domicilié **[ADRESSE PROFESSIONNELLE PUBLIABLE]**. Directeur de la publication : **[IDENTITÉ À CONFIRMER]**. Contact : **[COURRIEL PUBLIC TESTÉ]** ; **[TÉLÉPHONE PROFESSIONNEL PUBLIC]**. Le registre officiel consulté le 6 novembre 2026 confirme une entreprise individuelle active dont le nom est non diffusable dans cette réponse publique ; l'activité principale affichée demeure `96.09Z`. Cette lecture ne prouve aucune modification d'activité Web3/logicielle acceptée. Le dossier historique de création date de mars 2025. Aucune adresse résidentielle n'est à recopier depuis les anciens dossiers.
 
-**Hébergement.** Les fichiers statiques du site seraient hébergés sur Cloudflare Workers Static Assets. Cloudflare publie pour Cloudflare, Inc. l'adresse `101 Townsend St, San Francisco, CA 94107, États-Unis`. **[VÉRIFIER L'ENTITÉ CONTRACTANTE ET LES COORDONNÉES D'HÉBERGEUR EXIGÉES POUR CE COMPTE]** avant d'insérer cette mention dans le site.
+**Hébergement.** Les fichiers statiques du site seraient hébergés sur Cloudflare Workers Static Assets. Cloudflare publie pour Cloudflare, Inc. l'adresse `101 Townsend St, San Francisco, CA 94107, États-Unis`. **[CONFIRMER L'ENTITÉ CONTRACTANTE, SON ADRESSE ET SON TÉLÉPHONE D'HÉBERGEUR]** avant d'insérer cette mention dans le site.
 
-**Service.** PIT Free fournit des calculs dans le navigateur et des inspections de blockchain déclenchées par l'utilisateur. Les pages Operations du paquet public décrivent des fonctions indisponibles à l'exécution ; elles ne connectent pas de portefeuille, ne signent pas de transaction et ne collectent pas de paiement. Date d'effet : **[DATE DE PUBLICATION]**.
+**Service.** PIT Crypto Free fournit des calculs dans le navigateur et des inspections de blockchain déclenchées par l'utilisateur. Les pages Operations du paquet public décrivent des fonctions indisponibles à l'exécution ; elles ne connectent pas de portefeuille, ne signent pas de transaction et ne collectent pas de paiement. Date d'effet : **[DATE DE PUBLICATION]**.
 
 ## Politique de confidentialité
 
@@ -24,15 +24,15 @@
 
 ## Conditions d'utilisation du service gratuit
 
-PIT Free permet d'utiliser des calculateurs et des inspections publiques sans compte, abonnement, portefeuille ou paiement PIT. Le résultat dépend des données saisies, de l'état observé sur la chaîne et de fournisseurs externes. Il peut être incomplet, obsolète ou indisponible. L'utilisateur vérifie les paramètres et les résultats avant toute décision financière ou transaction effectuée ailleurs. Les contenus ne constituent pas un conseil financier, fiscal, juridique ou en investissement, ni une validation de la sécurité d'un contrat.
+PIT Crypto Free permet d'utiliser des calculateurs et des inspections publiques sans compte, abonnement, portefeuille ou paiement PIT. Le résultat dépend des données saisies, de l'état observé sur la chaîne et de fournisseurs externes. Il peut être incomplet, obsolète ou indisponible. L'utilisateur vérifie les paramètres et les résultats avant toute décision financière ou transaction effectuée ailleurs. Les contenus ne constituent pas un conseil financier, fiscal, juridique ou en investissement, ni une validation de la sécurité d'un contrat.
 
-Les pages consacrées aux Operations sont informatives dans l'édition Free : aucun contrôle de signature, de diffusion de transaction ou de paiement n'y est disponible. PIT Free ne garde pas les actifs de l'utilisateur. Les services RPC peuvent limiter ou interrompre les lectures. Les imports et exports locaux dépendent du navigateur et de l'appareil utilisé.
+Les pages consacrées aux Operations sont informatives dans l'édition Free : aucun contrôle de signature, de diffusion de transaction ou de paiement n'y est disponible. PIT Crypto Free ne garde pas les actifs de l'utilisateur. Les services RPC peuvent limiter ou interrompre les lectures. Les imports et exports locaux dépendent du navigateur et de l'appareil utilisé.
 
 **[IDENTIFIER L'ÉDITEUR, LA DATE D'EFFET, LE CONTACT, LE DROIT APPLICABLE ET LES CONDITIONS DE RESPONSABILITÉ APRÈS REVUE PROFESSIONNELLE]**. Les conditions de paiement et d'opérations commerciales éventuelles feront l'objet de textes distincts et ne sont pas activées par ces conditions Free.
 
 ## Information sur les cookies et traceurs
 
-Le paquet PIT Free examiné ne contient ni outil d'analyse d'audience PIT, ni cookie de compte PIT, ni suivi publicitaire. Cela ne démontre pas l'absence de cookies techniques émis par le domaine ou par Cloudflare : **[INVENTORIER LES COOKIES ET STOCKAGES SUR L'HÔTE FINAL, LEUR ÉMETTEUR, FINALITÉ ET DURÉE]**.
+Le paquet PIT Crypto Free examiné ne contient ni outil d'analyse d'audience PIT, ni cookie de compte PIT, ni suivi publicitaire. Cela ne démontre pas l'absence de cookies techniques émis par le domaine ou par Cloudflare : **[INVENTORIER LES COOKIES ET STOCKAGES SUR L'HÔTE FINAL, LEUR ÉMETTEUR, FINALITÉ ET DURÉE]**.
 
 Si seuls des traceurs strictement nécessaires à la fourniture ou à la sécurité du site sont présents, cette page les décrit sans présenter de faux choix de consentement. Si un traceur non nécessaire est ajouté, **[OBTENIR LE CONSENTEMENT VALABLE AVANT DÉPÔT ET FOURNIR UN RETRAIT AUSSI SIMPLE]** avant toute publication. Aucun bandeau de consentement n'est inclus dans le candidat actuel.
 
@@ -43,4 +43,4 @@ Si seuls des traceurs strictement nécessaires à la fourniture ou à la sécuri
 - [Cloudflare — adresse publiée](https://www.cloudflare.com/about/) ; la relation contractuelle exacte du compte reste à vérifier.
 - Dossier local FDE, `docs/commercial-identity-review.md` et `docs/legal-activity-review.md` : sources de contexte conservées dans un autre dépôt, non autorisations de publication. Le registre public doit être revérifié au lancement.
 
-**Données manquantes minimales :** adresse professionnelle publiable ; contacts publics fonctionnels ; identité/directeur et activité actuels confirmés ; paramètres réels des journaux/cookies/transferts ; validation juridique des quatre textes. Aucune adresse résidentielle historique n'a été copiée.
+**Données manquantes minimales :** nom civil et immatriculation publiables, directeur de publication et activité actuelle confirmés ; adresse professionnelle, courriel et téléphone publics fonctionnels ; identité, adresse et téléphone de l'hébergeur contractuel ; paramètres réels des journaux/cookies/transferts ; validation juridique des quatre textes. Les coordonnées de l'éditeur et de l'hébergeur sont des champs obligatoires pour un site professionnel selon [Service Public](https://entreprendre.service-public.gouv.fr/vosdroits/F37351). Aucune adresse résidentielle historique n'a été copiée.

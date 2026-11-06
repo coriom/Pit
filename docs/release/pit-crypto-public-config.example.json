@@ -1,0 +1,25 @@
+{
+  "schema": "pit.crypto-free-public-config.v2",
+  "origin": "https://[DOMAINE-CONTRÔLÉ]",
+  "legalReviewApproved": false,
+  "brandRightsClearanceApproved": false,
+  "domainControlVerified": false,
+  "publisherName": "[NOM CIVIL PUBLIABLE]",
+  "publisherStatus": "entrepreneur individuel (EI)",
+  "publisherAddress": "[ADRESSE PROFESSIONNELLE PUBLIABLE]",
+  "publisherRegistration": "[IMMATRICULATION VALIDÉE]",
+  "publicationDirector": "[DIRECTEUR DE PUBLICATION]",
+  "contactEmail": "[COURRIEL PUBLIC TESTÉ]",
+  "contactPhone": "[TÉLÉPHONE PROFESSIONNEL PUBLIC]",
+  "privacyEmail": "[COURRIEL VIE PRIVÉE TESTÉ]",
+  "hostingProvider": "[ENTITÉ CONTRACTUELLE HÉBERGEUR]",
+  "hostingAddress": "[ADRESSE HÉBERGEUR]",
+  "hostingPhone": "[TÉLÉPHONE HÉBERGEUR]",
+  "jurisdiction": "[DROIT APPLICABLE VALIDÉ]",
+  "legalText": {
+    "notice": "[TEXTE FINAL VALIDÉ]",
+    "privacy": "[TEXTE FINAL VALIDÉ]",
+    "terms": "[TEXTE FINAL VALIDÉ]",
+    "cookies": "[TEXTE FINAL VALIDÉ]"
+  }
+}

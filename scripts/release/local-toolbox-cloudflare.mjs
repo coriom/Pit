@@ -14,7 +14,7 @@ const HEADER_LINE_LIMIT = 2000;
 const FREE_FILE_LIMIT = 20_000;
 const FREE_ASSET_LIMIT = 25 * 1024 * 1024;
 const NOT_FOUND = `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="robots" content="noindex,nofollow"><title>Page not found · PIT Toolbox</title></head><body><main><h1>Page not found</h1><p>This route is not part of the local PIT Toolbox.</p><p><a href="/">Home</a> · <a href="/tools/">Browse tools</a></p></main></body></html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="robots" content="noindex,nofollow"><title>Page not found · PIT Crypto Toolbox</title></head><body><main><h1>Page not found</h1><p>This route is not part of the PIT Crypto Toolbox.</p><p><a href="/">Home</a> · <a href="/tools/">Browse tools</a></p></main></body></html>
 `;
 
 async function walk(dir, root = dir) {

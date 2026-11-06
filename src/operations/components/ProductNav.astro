@@ -19,7 +19,7 @@ const featured = (id: string) => {
 ---
 <header class="site-header">
   <div class="nav-inner">
-    <a class="brand" href={unifiedProductPaths.home} aria-label="PIT home"><span>PIT</span><small>WEB3 TOOLS</small></a>
+    <a class="brand" href={unifiedProductPaths.home} aria-label="PIT Crypto home"><span>PIT</span><small>CRYPTO</small></a>
     <nav class="desktop-nav" aria-label="Main navigation">
       <a href={unifiedProductPaths.home} aria-current={active === "home" ? "page" : undefined}>Home</a>
       <details class="tools-menu" data-nav-disclosure>
@@ -40,13 +40,13 @@ const featured = (id: string) => {
       <div class="wallet-entry-panel" id="wallet-entry-panel">
         <strong>{hosted ? "Wallet unavailable in preview" : "Connect inside an operation"}</strong>
         <p>{hosted ? "This preview is read-only. It cannot connect a wallet, request a signature or send a transaction." : "Open an operation to connect a wallet for local Anvil testing. No connection is made from this menu."}</p>
-        <a href={hosted ? "/guide/" : "/#directory"}>{hosted ? "How PIT works" : "Browse operations"}</a>
+        <a href={hosted ? "/guide/" : "/#directory"}>{hosted ? "How PIT Crypto works" : "Browse operations"}</a>
       </div>
     </details>
     <details class="mobile-nav" data-nav-disclosure>
       <summary aria-label="Navigation menu"><span>Menu</span><span class="mobile-menu-glyph" aria-hidden="true"></span></summary>
       <nav aria-label="Mobile navigation">
-        <p class="mobile-nav-label">Explore PIT</p>
+        <p class="mobile-nav-label">Explore PIT Crypto</p>
         <a href={unifiedProductPaths.home} aria-current={active === "home" ? "page" : undefined}>Home</a>
         <a href={unifiedProductPaths.directory}>All tools</a>
         {unified && <><a href={unifiedProductPaths.toolbox} aria-current={active === "toolbox" ? "page" : undefined}>Toolbox</a><a href={unifiedProductPaths.explorer} aria-current={active === "explorer" ? "page" : undefined}>Explorer</a></>}

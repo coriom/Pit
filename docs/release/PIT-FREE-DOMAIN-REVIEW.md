@@ -1,5 +1,7 @@
 # PIT Free — noms de domaine et route Cloudflare (4 novembre 2026)
 
+**Archive du relevé du 4 novembre.** La décision de marque PIT Crypto et la recherche contradictoire du 6 novembre figurent dans [PIT-CRYPTO-BRAND-DOMAIN-PREFLIGHT.md](PIT-CRYPTO-BRAND-DOMAIN-PREFLIGHT.md). Ne pas utiliser les anciens résultats RDAP comme preuve actuelle de disponibilité.
+
 **Aucun domaine réservé, acheté, ajouté à Cloudflare ou routé.** Ce relevé sert à choisir un nom ; le contrôle au panier et la recherche de droits antérieurs restent nécessaires avant l'achat.
 
 ## Cinq candidats `.fr`

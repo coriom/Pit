@@ -1,4 +1,4 @@
-# PIT Free public candidate
+# PIT Crypto Free public candidate
 
 Status: source and static packaging prepared locally. No public site has been deployed.
 
@@ -6,9 +6,11 @@ Status: source and static packaging prepared locally. No public site has been de
 
 `pnpm product:free:rc` creates `dist-pit-free-rc/`: the integrated, read-only, non-indexed source package. It contains 151 Toolbox experiences, 28 Explorer inspections and 18 informational Operations routes. The latter cannot sign, broadcast or collect fees. Toolbox keeps `connect-src 'none'` and zero JavaScript chunks; Explorer uses only explicitly initiated public RPC reads.
 
-`PIT_FREE_PUBLIC_CONFIG=/absolute/path/to/reviewed-config.json pnpm product:free:public-candidate` creates `dist-pit-free-public-candidate/` locally. It accepts an exact HTTPS public origin and verified publisher facts. It refuses private staging hostnames, incomplete legal text and unreviewed legal content. It gives free routes canonical URLs and a sitemap, while Operations previews and the 404 remain `noindex`. It never deploys. A synthetic `example.org` configuration may be used only for local tests; that artifact is not releasable.
+`PIT_FREE_PUBLIC_CONFIG=/absolute/path/to/reviewed-config.json pnpm product:free:public-candidate` creates `dist-pit-free-public-candidate/` locally. It accepts an exact HTTPS public origin and verified publisher facts. It refuses private staging hostnames, incomplete legal text, unreviewed legal content, absent domain control and absent PIT Crypto prior-rights clearance. It gives free routes canonical and Open Graph URLs plus a sitemap, while Operations previews and the 404 remain `noindex`. It never deploys. A synthetic `example.org` configuration may be used only for local tests; that artifact is not releasable.
 
-The configuration schema is `pit.free-public-config.v1`. Required fields: `origin`, `legalReviewApproved: true`, `publisherName`, `publisherStatus`, `publisherAddress`, `publisherRegistration`, `contactEmail`, `privacyEmail`, `hostingProvider`, `hostingAddress`, `jurisdiction`, and reviewed plain-text `legalText.notice`, `.privacy`, `.terms`, `.cookies`. The operator or counsel must confirm the actual identity, wording, retention rules and legal basis before a real public build. No domain or legal identity is assumed in source.
+The configuration schema is `pit.crypto-free-public-config.v2`. Required gates: `legalReviewApproved: true`, `brandRightsClearanceApproved: true`, `domainControlVerified: true`. Required facts: `origin`, `publisherName`, `publisherStatus`, `publisherAddress`, `publisherRegistration`, `publicationDirector`, `contactEmail`, `contactPhone`, `privacyEmail`, `hostingProvider`, `hostingAddress`, `hostingPhone`, `jurisdiction`, and reviewed plain-text `legalText.notice`, `.privacy`, `.terms`, `.cookies`. The operator or counsel must confirm actual identity, business contact and hosting details, wording, retention rules and legal basis before a real public build. No domain or legal identity is assumed in source. Boolean gates attest to external evidence; the build cannot itself prove trademark clearance or domain control.
+
+Use [the fail-closed example](pit-crypto-public-config.example.json) as a field inventory. Keep the completed configuration outside Git. The example deliberately has false gates and placeholders and cannot produce an indexable build.
 
 ## Proposed hosting
 

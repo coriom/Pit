@@ -13,12 +13,16 @@ export function publicFreeOrigin(value) {
 }
 
 export function validatePublicFreeConfig(config) {
-  if (!config || config.schema !== "pit.free-public-config.v1") throw Error("Unsupported public Free configuration.");
+  if (!config || config.schema !== "pit.crypto-free-public-config.v2") throw Error("Unsupported public Free configuration.");
   const origin = publicFreeOrigin(config.origin);
   if (config.legalReviewApproved !== true) throw Error("Publisher and legal review are required before public metadata is generated.");
-  for (const key of ["publisherName", "publisherStatus", "publisherAddress", "publisherRegistration", "contactEmail", "privacyEmail", "hostingProvider", "hostingAddress", "jurisdiction"])
+  if (config.brandRightsClearanceApproved !== true) throw Error("PIT Crypto prior-rights clearance is required before public metadata is generated.");
+  if (config.domainControlVerified !== true) throw Error("Control of the selected public domain is required before public metadata is generated.");
+  for (const key of ["publisherName", "publisherStatus", "publisherAddress", "publisherRegistration", "publicationDirector", "contactEmail", "contactPhone", "privacyEmail", "hostingProvider", "hostingAddress", "hostingPhone", "jurisdiction"])
     if (typeof config[key] !== "string" || !config[key].trim() || unresolved(config[key]))
       throw Error(`Verified publisher field required: ${key}`);
+  for (const key of ["contactEmail", "privacyEmail"])
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(config[key])) throw Error(`Valid contact email required: ${key}`);
   for (const key of ["notice", "privacy", "terms", "cookies"])
     if (typeof config.legalText?.[key] !== "string" || config.legalText[key].trim().length < 80
       || unresolved(config.legalText[key]))

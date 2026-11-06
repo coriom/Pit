@@ -1,6 +1,8 @@
 # PIT Free — publication preflight (2026-11-04)
 
-Status: **source candidate prepared; public publication blocked; no public deployment or DNS change**. This record concerns PIT Free only. Paid execution and the private staging Worker remain separate.
+**Mise à jour Phase 10E :** identité PIT Crypto, statut des domaines et blocages actuels dans [PIT-CRYPTO-BRAND-DOMAIN-PREFLIGHT.md](PIT-CRYPTO-BRAND-DOMAIN-PREFLIGHT.md). Ce document conserve le relevé technique historique du 4 novembre.
+
+Status: **source candidate prepared; public publication blocked; no public deployment or DNS change**. This record concerns PIT Crypto Free only. Paid execution and the private staging Worker remain separate.
 
 ## Evidence checked
 
@@ -23,8 +25,8 @@ The final public configuration requires verified current publisher identity/stat
 ## Finalization and rollback
 
 1. Select a controlled public hostname; verify its Cloudflare zone, DNS and TLS. Confirm current account entitlement.
-2. Confirm the public publisher address and contact, current registered activity and final legal notices; keep the reviewed JSON configuration untracked and private. Set `legalReviewApproved:true` only after review.
-3. Run `pnpm product:free:rc`, then `PIT_FREE_PUBLIC_CONFIG=/absolute/path/to/reviewed-config.json pnpm product:free:public-candidate`. Check source commit, all asset and legal-page hashes, canonical links, sitemap, robots, headers, security boundaries, route inventory and absence of secrets/private hostnames. Build a canonical publication manifest binding these values, the Cloudflare account, exact Worker route, cost and rollback. **Only then** calculate its SHA-256 and request `GO PIT FREE PUBLIC <manifest-sha256>`.
+2. Confirm the public publisher address, email and phone, current registered activity, publication director, contractual host details and final legal notices; keep the reviewed JSON configuration untracked and private. Set `legalReviewApproved:true`, `brandRightsClearanceApproved:true` and `domainControlVerified:true` only against actual evidence.
+3. Run `pnpm product:free:rc`, then `PIT_FREE_PUBLIC_CONFIG=/absolute/path/to/reviewed-config.json pnpm product:free:public-candidate`. Check source commit, all asset and legal-page hashes, canonical links, sitemap, robots, headers, security boundaries, route inventory and absence of secrets/private hostnames. Build a canonical publication manifest binding these values, the Cloudflare account, exact Worker route, cost and rollback. **Only then** calculate its SHA-256 and request `GO PIT CRYPTO FREE PUBLIC <manifest-sha256>`.
 4. After a matching approval, deploy only the distinct public Worker. Smoke-test homepage, deep links, legal pages, 404, SEO, TLS, mobile navigation, public RPC reads, CSP, and absence of wallet/payment code from the actual hostname. Leave `pit-v2-private-staging` and its Access policy untouched.
 5. If wrong content, legal identity, security headers or execution capability appears, remove the public route or roll the public Worker back to its previous reviewed version. Never route traffic through the private staging or SIWE Worker.
 

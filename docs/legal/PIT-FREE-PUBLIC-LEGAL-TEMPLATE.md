@@ -1,4 +1,4 @@
-# PIT Free legal publication template
+# PIT Crypto Free legal publication template
 
 This is a review draft, not legal advice or a representation that PIT has regulatory authorization. The generated public pages require verified publisher details and approved final text.
 
@@ -7,14 +7,14 @@ The fuller French publication drafts are in [PIT-FREE-PUBLIC-DRAFTS.md](PIT-FREE
 ## Operator fields required
 
 - Legal name and actual personal/business status; registration number if applicable.
-- Registered or legally required postal address, jurisdiction, and working contact email.
-- Privacy contact; hosting provider identity and hosting address.
+- Registered professional postal address, jurisdiction, working contact email and professional phone.
+- Publication director and privacy contact; contractual hosting entity, address and phone.
 - Applicable tax/accounting identity where required; no PSCA or similar status may be claimed without evidence.
 - Approved retention criteria for hosting logs and any support correspondence; documented rights-request process and transfer information.
 
 ## Legal notice draft
 
-Identify the publisher and host using the verified fields above. Describe PIT Free as browser-local calculations and user-initiated public-chain inspection. State the actual service scope; do not describe previews as available transactions. Provide an effective date and a contact route.
+Identify the publisher and host using the verified fields above. Describe PIT Crypto Free as browser-local calculations and user-initiated public-chain inspection. State the actual service scope; do not describe previews as available transactions. Provide an effective date and a contact route.
 
 ## Privacy notice draft
 
@@ -22,7 +22,7 @@ Toolbox calculations and imported files remain in the browser in the reviewed st
 
 ## Terms and limitations draft
 
-Explain that free outputs depend on user inputs, selected RPC state and third-party providers; they may be stale or incomplete. They are not investment, tax or legal advice, executable prices or an assurance that a contract is safe. State availability limits and governing terms only after jurisdiction and publisher identity are confirmed. Keep paid operations and payment terms separate from PIT Free.
+Explain that free outputs depend on user inputs, selected RPC state and third-party providers; they may be stale or incomplete. They are not investment, tax or legal advice, executable prices or an assurance that a contract is safe. State availability limits and governing terms only after jurisdiction and publisher identity are confirmed. Keep paid operations and payment terms separate from PIT Crypto Free.
 
 ## Cookie information draft
 
