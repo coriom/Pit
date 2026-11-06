@@ -542,3 +542,23 @@ body { background: radial-gradient(ellipse 48% 24% at 5% 2%,#38487d55,transparen
 .catalogue-controls input, .catalogue-controls select { min-height: 40px; }
 @media (max-width: 980px) { .hero-art { opacity: .2; } }
 @media (max-width: 700px) { .hero-art { opacity: .12; mask-image: linear-gradient(90deg, transparent, #000 75%); } }
+.backend-tool { max-width: 880px; margin: 2rem auto 5rem; padding: 1.5rem; background: rgba(17,23,35,.75); border: 1px solid rgba(255,255,255,.12); border-radius: 18px; }
+.backend-form { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem; }
+.backend-form label { display: grid; gap: .4rem; color: #d9e0ee; font-size: .9rem; }
+.backend-form input,.backend-form select,.backend-form textarea { width: 100%; min-height: 42px; padding: .65rem .8rem; color: #f6f8ff; background: #111927; border: 1px solid #58677e; border-radius: 8px; font: inherit; }
+.backend-form textarea { resize: vertical; }
+.backend-form input:focus-visible,.backend-form select:focus-visible,.backend-form textarea:focus-visible { outline: 2px solid #a8d7ff; outline-offset: 2px; }
+.backend-form button,.backend-tool button { min-height: 42px; padding: .6rem 1rem; border-radius: 8px; cursor: pointer; }
+.backend-form button { align-self: end; }
+#backend-status { min-height: 1.5rem; margin-block: 1.5rem .7rem; }
+#backend-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
+#backend-actions[hidden] { display: none; }
+#backend-result { max-height: 32rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .8rem; line-height: 1.5; }
+.backend-recover { margin-top: 2rem; padding-top: 1.2rem; border-top: 1px solid rgba(255,255,255,.13); display: grid; grid-template-columns: 1fr 1fr auto; gap: .7rem; align-items: end; }
+.backend-recover p { grid-column: 1 / -1; margin: 0; }
+.backend-recover label { display: grid; gap: .35rem; }
+.backend-recover input { min-height: 42px; width: 100%; padding: .6rem; }
+#backend-access { margin: 1rem 0; }
+#backend-credentials { display: block; overflow-wrap: anywhere; white-space: pre-wrap; }
+@media (max-width: 700px) { .backend-form { grid-template-columns: 1fr; } .backend-tool { padding: 1rem; } }
+@media (max-width: 700px) { .backend-recover { grid-template-columns: 1fr; } }

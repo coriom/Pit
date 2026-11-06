@@ -1,0 +1,34 @@
+---
+import Layout from "../../../components/Layout.astro";
+import { BACKEND_TOOLS, backendEnabled } from "../../../../backend-tools/catalog";
+import { V2_CATEGORIES } from "../../../../lib/v2-catalog-core";
+export function getStaticPaths() { return backendEnabled() ? BACKEND_TOOLS.map((tool) => ({ params: { id: tool.id }, props: { tool } })) : []; }
+const { tool } = Astro.props;
+const origin = process.env.PIT_BACKEND_API_ORIGIN;
+if (!origin || !/^https:\/\/[^/]+$|^http:\/\/127\.0\.0\.1:\d+$/.test(origin)) throw Error("PIT_BACKEND_API_ORIGIN is required for backend build");
+const label = V2_CATEGORIES.find((category) => category.id === tool.category)?.label ?? "Blockchain tools";
+---
+<Layout title={tool.title} description={tool.description}>
+  <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">PIT</a><span aria-hidden="true">/</span><a href="/#directory">{label}</a><span aria-hidden="true">/</span><span aria-current="page">{tool.title}</span></nav>
+  <section class="detail-intro" data-category={tool.category}><p class="eyebrow">{label}</p><h1>{tool.title}</h1><p>{tool.description}</p><div class="detail-meta"><span>Read-only blockchain data</span><span aria-hidden="true">·</span><span>No wallet or payment</span></div></section>
+  <div class="preview-state"><strong>Private backend preview</strong><p>Reports and monitors use public blockchain data. Public RPC coverage can be incomplete. Distribution CSVs and alert email addresses are retained temporarily on the PIT backend. No transaction is signed or sent.</p></div>
+  <section class="backend-tool" data-backend-tool={tool.kind} data-api-origin={origin}>
+    <form id="backend-form" class="backend-form">
+      <label>Access code<input name="invite" type="password" autocomplete="off" required placeholder="Private beta access code" /></label>
+      <label>Network<select name="chain"><option value="base-sepolia">Base Sepolia</option><option value="base">Base</option><option value="ethereum">Ethereum</option></select></label>
+      <label>{tool.kind === "distribution" ? "ERC-20 token" : "Contract address"}<input name="contract" required pattern="0x[a-fA-F0-9]{40}" placeholder="0x…" /></label>
+      {(tool.kind === "events" || tool.kind === "permissions") && <><label>Start block<input name="fromBlock" type="number" min="0" required /></label><label>End block<input name="toBlock" type="number" min="0" required /></label></>}
+      {tool.kind === "events" && <><label>Event topic 0 (optional)<input name="topic0" pattern="0x[a-fA-F0-9]{64}" /></label><label>ABI JSON array (optional)<textarea name="abi" rows="4" placeholder='[{"type":"event",…}]'></textarea></label></>}
+      {tool.kind === "distribution" && <><label>Expected recipients CSV<textarea name="csv" rows="6" required placeholder="recipient,amount&#10;0x…,1.5"></textarea></label><label>Transaction hashes (one per line)<textarea name="transactionHashes" rows="4" required></textarea></label></>}
+      {tool.kind === "nft" && <label>Token IDs (comma separated, maximum 25)<textarea name="tokenIds" rows="3" required placeholder="1,2,3"></textarea></label>}
+      {tool.kind === "monitor" && <><label>Start block<input name="startBlock" type="number" min="0" required /></label><label>Rule<select name="rule"><option value="transfer-threshold">ERC-20 transfer threshold</option><option value="mint">Mint</option><option value="burn">Burn</option><option value="ownership">Ownership transfer</option><option value="roles">Role change</option><option value="pause">Pause state event</option><option value="proxy-upgrade">Proxy upgrade event</option></select></label><label>Threshold in token base units<input name="minimum" type="text" value="1" inputmode="numeric" /></label><label>Email alerts (optional)<input name="email" type="email" autocomplete="email" /></label></>}
+      <button type="submit">{tool.kind === "monitor" ? "Create monitor" : "Run report"}</button>
+    </form>
+    <p id="backend-status" role="status" aria-live="polite"></p>
+    <details id="backend-access" hidden><summary>Private result access</summary><p>Keep this ID and token if you need to reopen the result. The token is shown only here and is deleted with the result.</p><code id="backend-credentials"></code></details>
+    <form id="backend-recover" class="backend-recover"><p>Reopen an existing result or monitor</p><label>Result ID<input name="id" required pattern="[0-9a-fA-F-]{36}" /></label><label>Private access token<input name="token" type="password" required autocomplete="off" /></label><button type="submit">Reopen</button></form>
+    <div id="backend-actions" hidden><button id="backend-cancel" type="button">Cancel queued job</button><button id="backend-pause" type="button" hidden>Pause monitor</button><button id="backend-resume" type="button" hidden>Resume monitor</button><button id="backend-delete" type="button" hidden>Delete monitor</button><button id="backend-json" type="button" hidden>Download JSON</button><button id="backend-csv" type="button" hidden>Download CSV</button></div>
+    <pre id="backend-result" tabindex="0" aria-label="Report result"></pre>
+  </section>
+  <script src="../../../backend-browser.ts"></script>
+</Layout>

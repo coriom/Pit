@@ -1,0 +1,101 @@
+name: pit-crypto-backend
+services:
+  pit-db:
+    image: postgres:16.10-bookworm
+    environment:
+      POSTGRES_DB: pit_crypto
+      POSTGRES_USER: pit_api
+      POSTGRES_PASSWORD: ${PIT_DB_PASSWORD:?PIT_DB_PASSWORD required}
+    volumes:
+      - pit-db-data:/var/lib/postgresql/data
+    networks: [pit-internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pit_api -d pit_crypto"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+    mem_limit: 512m
+    cpus: 0.5
+    pids_limit: 100
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    labels: { traefik.enable: "false" }
+  pit-migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["node", "src/migrate.mjs"]
+    environment:
+      PIT_DATABASE_URL: ${PIT_DATABASE_URL:?PIT_DATABASE_URL required}
+    networks: [pit-internal]
+    depends_on:
+      pit-db: { condition: service_healthy }
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 192m
+    cpus: 0.25
+    pids_limit: 50
+    security_opt: [no-new-privileges:true]
+    restart: "no"
+    labels: { traefik.enable: "false" }
+  pit-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["node", "--max-old-space-size=192", "src/api.mjs"]
+    environment:
+      PIT_DATABASE_URL: ${PIT_DATABASE_URL:?PIT_DATABASE_URL required}
+      PIT_BACKEND_INVITE_SHA256: ${PIT_BACKEND_INVITE_SHA256:?invite hash required}
+      PIT_ALLOWED_ORIGIN: ${PIT_ALLOWED_ORIGIN:?approved origin required}
+      PIT_EMAIL_ALLOWED_RECIPIENTS: ${PIT_EMAIL_ALLOWED_RECIPIENTS:-}
+      PIT_API_PORT: "8789"
+    expose: ["8789"]
+    networks: [pit-internal, pit-egress]
+    depends_on:
+      pit-migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8789/pit/api/v1/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 256m
+    cpus: 0.25
+    pids_limit: 80
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    labels: { traefik.enable: "false" }
+  pit-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["node", "--max-old-space-size=384", "src/worker.mjs"]
+    environment:
+      PIT_DATABASE_URL: ${PIT_DATABASE_URL:?PIT_DATABASE_URL required}
+      PIT_SMTP_HOST: ${PIT_SMTP_HOST:-}
+      PIT_SMTP_PORT: ${PIT_SMTP_PORT:-}
+      PIT_SMTP_FROM: ${PIT_SMTP_FROM:-}
+      PIT_SMTP_SECURE: ${PIT_SMTP_SECURE:-1}
+      PIT_SMTP_USER: ${PIT_SMTP_USER:-}
+      PIT_SMTP_PASSWORD: ${PIT_SMTP_PASSWORD:-}
+    networks: [pit-internal, pit-egress]
+    depends_on:
+      pit-migrate: { condition: service_completed_successfully }
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 512m
+    cpus: 0.5
+    pids_limit: 80
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    labels: { traefik.enable: "false" }
+networks:
+  pit-internal:
+    internal: true
+    name: pit-crypto-backend-internal
+  pit-egress:
+    name: pit-crypto-backend-egress
+volumes:
+  pit-db-data:
+    name: pit-crypto-backend-db

@@ -6,10 +6,12 @@ import { V2_LOCAL_TASKS, V2_LOCAL_WORKSPACES } from "../../lib/v2-local-catalog"
 import { V2_EXPLORER_TASKS } from "../../lib/v2-explorer-catalog";
 import { operationCatalog } from "../lib/catalog";
 import { operationPresentation } from "../lib/presentation";
+import { BACKEND_TOOLS, backendEnabled } from "../../backend-tools/catalog";
 const hosted = process.env.PIT_HOSTED_STAGING === "1";
 const unified = process.env.PIT_UNIFIED_PREVIEW === "1";
 const categoryCount = (id: string) => (unified ? V2_LOCAL_TASKS.filter((item) => item.category === id).length + V2_EXPLORER_TASKS.filter((item) => item.category === id).length : 0)
-  + operationCatalog.filter((item) => V2_CATEGORIES.find((category) => category.id === id)?.label === item.category).length;
+  + operationCatalog.filter((item) => V2_CATEGORIES.find((category) => category.id === id)?.label === item.category).length
+  + (backendEnabled() ? BACKEND_TOOLS.filter((item) => item.category === id).length : 0);
 const featureOperation = (id: string) => { const item = operationCatalog.find((entry) => entry.id === id)!; return { title: item.title, description: operationPresentation(item, hosted).description, category: V2_CATEGORIES.find((entry) => entry.label === item.category)!.id, path: `/operations/${item.id}/`, availability: "Preview" }; };
 const featured = unified ? [
   ...["portfolio-exposure", "swap-cost"].map((id) => { const item = V2_LOCAL_WORKSPACES.find((entry) => entry.id === id)!; return { title: item.title, description: item.description, category: item.category, path: item.path!, availability: "Free" }; }),
