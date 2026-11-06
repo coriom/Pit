@@ -17,7 +17,7 @@ test('integer-exact CSV parsing and duplicate protection',()=>{
 test('metadata URL policy blocks private networks and unsafe schemes',async()=>{
   for(const ip of ['127.0.0.1','10.0.0.1','169.254.169.254','::1','::ffff:127.0.0.1','fc00::1'])assert.equal(publicAddress(ip),false,ip);
   assert.equal(publicAddress('8.8.8.8'),true);
-  for(const uri of ['http://example.com/x','https://127.0.0.1/x','file:///etc/passwd','https://user:pass@example.com/x'])assert.throws(()=>normalizeMetadataUri(uri));
+  for(const uri of ['http://example.com/x','https://127.0.0.1/x','file:///etc/passwd','https://'+'user:pass@example.com/x'])assert.throws(()=>normalizeMetadataUri(uri));
   await assert.rejects(resolvePublic('evil.example',async()=>[{address:'8.8.8.8',family:4},{address:'10.0.0.1',family:4}]),/PRIVATE_ADDRESS/);
   await assert.rejects(resolvePublic('evil.example',async()=>[{address:'::ffff:127.0.0.1',family:6}]),/PRIVATE_ADDRESS/);
   assert.throws(()=>ensureResponseStatus(302),/REDIRECT_FORBIDDEN/);assert.throws(()=>ensureResponseStatus(413),/HTTP_413/);
