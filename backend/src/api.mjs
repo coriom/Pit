@@ -3,6 +3,7 @@ import { createPool, hashToken, newAccess, newId, safeTokenMatch } from './db.mj
 import { limits, validateJob } from './config.mjs';
 import { monitorSchema } from './monitor.mjs';
 import { clientFor, assertChain } from './rpc.mjs';
+import { verifyEdgeRequest } from './edge-auth.mjs';
 
 const prefix='/pit/api/v1';
 const header={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Frame-Options':'DENY'};
@@ -12,14 +13,21 @@ const csvCell=value=>{let s=String(value??'');if(/^[=+@\-\t\r]/.test(s))s=`'${s}
 function csvFor(kind,result){const rows=kind==='events'?result.events:kind==='distribution'?result.rows:kind==='nft'?result.rows:kind==='permissions'?result.history:[];if(!rows?.length)return '';
   const columns=kind==='events'?['chainId','contract','blockNumber','blockHash','transactionHash','logIndex','signature','decoded']:kind==='distribution'?['recipient','amount','observedAmount','transferCount','balanceEvidence','status']:kind==='nft'?['tokenId','status','uri','metadataHash','issues','media']:['event','blockNumber','transactionHash','args'];
   return [columns.join(','),...rows.map(row=>columns.map(key=>csvCell(typeof row[key]==='object'?JSON.stringify(row[key]):row[key])).join(','))].join('\n');}
-async function body(req){let size=0,chunks=[];for await(const chunk of req){size+=chunk.length;if(size>limits.bodyBytes)throw new Error('BODY_LIMIT');chunks.push(chunk);}try{return JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch{throw new Error('INVALID_JSON');}}
+async function rawBody(req){if(req.pitRawBody)return req.pitRawBody;let size=0,chunks=[];for await(const chunk of req){size+=chunk.length;if(size>limits.bodyBytes)throw new Error('BODY_LIMIT');chunks.push(chunk);}req.pitRawBody=Buffer.concat(chunks);return req.pitRawBody;}
+async function body(req){try{return JSON.parse((await rawBody(req)).toString('utf8'));}catch{throw new Error('INVALID_JSON');}}
 async function authorized(pool,table,id,token){if(!token)return null;const {rows}=await pool.query(`SELECT * FROM ${table} WHERE id=$1`,[id]);return rows[0]&&safeTokenMatch(rows[0].access_hash,token)?rows[0]:null;}
 async function withInviteLock(pool,inviteHash,task){const db=await pool.connect();try{await db.query('BEGIN');await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[inviteHash]);const result=await task(db);await db.query('COMMIT');return result;}catch(error){await db.query('ROLLBACK');throw error;}finally{db.release();}}
-export function createApi(pool,{inviteHash=process.env.PIT_BACKEND_INVITE_SHA256,allowedOrigin=process.env.PIT_ALLOWED_ORIGIN,allowedEmails=process.env.PIT_EMAIL_ALLOWED_RECIPIENTS?.split(',').map(x=>x.trim().toLowerCase()).filter(Boolean)??[],clientFactory=clientFor}={}){
+export function createApi(pool,{inviteHash=process.env.PIT_BACKEND_INVITE_SHA256,allowedOrigin=process.env.PIT_ALLOWED_ORIGIN,allowedEmails=process.env.PIT_EMAIL_ALLOWED_RECIPIENTS?.split(',').map(x=>x.trim().toLowerCase()).filter(Boolean)??[],edgeSecret=process.env.PIT_EDGE_HMAC_KEY,clientFactory=clientFor}={}){
   if(!/^[a-f0-9]{64}$/.test(inviteHash??''))throw new Error('INVITE_HASH_REQUIRED');
   if(!/^https:\/\/[^/]+$|^http:\/\/127\.0\.0\.1:\d+$/.test(allowedOrigin??''))throw new Error('ALLOWED_ORIGIN_REQUIRED');
+  if(process.env.NODE_ENV==='production' && (!edgeSecret || edgeSecret.length<32))throw new Error('EDGE_AUTH_REQUIRED');
+  if(edgeSecret && edgeSecret.length<32)throw new Error('EDGE_AUTH_WEAK');
   return http.createServer(async(req,res)=>{try{
     const url=new URL(req.url,'http://localhost');const path=url.pathname;
+    const localHealth = ['/pit/api/v1/health','/pit/api/v1/ready'].includes(path) && ['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress);
+    if(edgeSecret && !localHealth){
+      if(!verifyEdgeRequest(req,await rawBody(req),edgeSecret))return send(res,403,{code:'EDGE_AUTH_REQUIRED'});
+    }
     if(req.headers.origin && req.headers.origin!==allowedOrigin)return send(res,403,{code:'ORIGIN_DENIED'});
     if(req.method==='OPTIONS'){res.writeHead(204,{...header,'Access-Control-Allow-Origin':allowedOrigin??'','Access-Control-Allow-Methods':'GET,POST,DELETE','Access-Control-Allow-Headers':'Content-Type,Authorization,X-PIT-Invite,Idempotency-Key'});res.end();return;}
     if(req.headers.origin&&allowedOrigin)res.setHeader('Access-Control-Allow-Origin',allowedOrigin);
@@ -30,10 +38,11 @@ export function createApi(pool,{inviteHash=process.env.PIT_BACKEND_INVITE_SHA256
     if(req.method==='POST'&&parts[0]==='jobs'&&parts.length===1){
       const invite=req.headers['x-pit-invite'];if(!safeTokenMatch(inviteHash,invite))return send(res,403,{code:'INVITE_REQUIRED'});
       const payload=await body(req),input=validateJob(payload.kind,payload.input);
-      const idempotency=req.headers['idempotency-key'];if(idempotency&&!/^[A-Za-z0-9_-]{16,100}$/.test(idempotency))return send(res,400,{code:'IDEMPOTENCY_INVALID'});
+      const idempotency=req.headers['idempotency-key'];if(typeof idempotency!=='string'||!/^[A-Za-z0-9_-]{16,100}$/.test(idempotency))return send(res,400,{code:'IDEMPOTENCY_REQUIRED'});
       const created=await withInviteLock(pool,inviteHash,async db=>{
         if(idempotency){const {rows}=await db.query(`SELECT id FROM pit_jobs WHERE invite_hash=$1 AND idempotency_key=$2`,[inviteHash,idempotency]);if(rows.length)return {status:409,body:{code:'ALREADY_SUBMITTED',jobId:rows[0].id}};}
         const {rows:q}=await db.query(`SELECT count(*)::int AS n FROM pit_jobs WHERE invite_hash=$1 AND created_at>now()-interval '1 day'`,[inviteHash]);if(q[0].n>=limits.maxJobsPerDay)return {status:429,body:{code:'DAILY_QUOTA'}};
+        const {rows:recent}=await db.query(`SELECT count(*)::int AS n FROM pit_jobs WHERE invite_hash=$1 AND created_at>now()-interval '1 minute'`,[inviteHash]);if(recent[0].n>=limits.maxJobsPerMinute)return {status:429,body:{code:'RATE_LIMIT'}};
         const token=newAccess(),id=newId();await db.query(`INSERT INTO pit_jobs(id,kind,access_hash,invite_hash,input_json,idempotency_key) VALUES($1,$2,$3,$4,$5,$6)`,[id,payload.kind,hashToken(token),inviteHash,JSON.stringify(input),idempotency??null]);return {status:202,body:{id,accessToken:token,status:'QUEUED'}};
       });return send(res,created.status,created.body);
     }
@@ -55,6 +64,7 @@ export function createApi(pool,{inviteHash=process.env.PIT_BACKEND_INVITE_SHA256
       const created=await withInviteLock(pool,inviteHash,async db=>{
         const {rows:existing}=await db.query(`SELECT id FROM pit_monitors WHERE invite_hash=$1 AND idempotency_key=$2`,[inviteHash,idempotency]);if(existing.length)return {status:409,body:{code:'ALREADY_SUBMITTED',monitorId:existing[0].id}};
         const {rows:count}=await db.query(`SELECT count(*)::int AS n FROM pit_monitors WHERE invite_hash=$1 AND expires_at>now()`,[inviteHash]);if(count[0].n>=limits.maxMonitorsPerOwner)return {status:429,body:{code:'MONITOR_QUOTA'}};
+        const {rows:recent}=await db.query(`SELECT count(*)::int AS n FROM pit_monitors WHERE invite_hash=$1 AND created_at>now()-interval '1 minute'`,[inviteHash]);if(recent[0].n>=limits.maxMonitorsPerMinute)return {status:429,body:{code:'RATE_LIMIT'}};
         const token=newAccess(),id=newId();await db.query(`INSERT INTO pit_monitors(id,access_hash,invite_hash,chain,contract,rule_json,cursor_block,email,expires_at,idempotency_key) VALUES($1,$2,$3,$4,$5,$6,$7,$8,now()+interval '72 hours',$9)`,[id,hashToken(token),inviteHash,input.chain,input.contract,JSON.stringify(input.rule),input.startBlock-1,input.email??null,idempotency]);return {status:202,body:{id,accessToken:token,status:'ACTIVE',expiresInHours:limits.monitorLifetimeHours}};
       });return send(res,created.status,created.body);
     }

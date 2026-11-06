@@ -22,7 +22,8 @@ export function matchesRule(log,rule){const t=log.signature?.toLowerCase();
   }
   return rule.type==='ownership'?t===topics.OwnershipTransferred:rule.type==='roles'?[topics.RoleGranted,topics.RoleRevoked].includes(t):rule.type==='pause'?[topics.Paused,topics.Unpaused].includes(t):rule.type==='proxy-upgrade'?t===topics.Upgraded:false;
 }
-export async function pollMonitor(pool,monitor,{client=clientFor(monitor.chain)}={}){
+export async function pollMonitor(pool,monitor,{client=clientFor(monitor.chain),intervalSeconds=30}={}){
+  if(!Number.isInteger(intervalSeconds)||intervalSeconds<1||intervalSeconds>300)throw new Error('POLL_INTERVAL_INVALID');
   await assertChain(client,monitor.chain);
   const head=await client.getBlockNumber(),safe=head>BigInt(limits.confirmedDepth)?head-BigInt(limits.confirmedDepth):0n;
   let cursor=BigInt(monitor.cursor_block);
@@ -31,10 +32,11 @@ export async function pollMonitor(pool,monitor,{client=clientFor(monitor.chain)}
     const {rowCount}=await pool.query(`UPDATE pit_monitors SET lease_until=now()+interval '2 minutes' WHERE id=$1 AND lease_token=$2 AND status='ACTIVE'`,[monitor.id,monitor.lease_token]);if(!rowCount)throw new Error('STALE_LEASE');
     await pool.query(`UPDATE pit_alerts SET status='REORGANIZED' WHERE monitor_id=$1 AND block_number>$2`,[monitor.id,cursor.toString()]);
   }}
-  if(safe<=cursor)return {status:'WAITING',cursor:Number(cursor)};
+  const defer=async()=>{const {rowCount}=await pool.query(`UPDATE pit_monitors SET lease_until=NULL,next_poll_at=now()+($2::int * interval '1 second') WHERE id=$1 AND lease_token=$3 AND status='ACTIVE'`,[monitor.id,intervalSeconds,monitor.lease_token]);if(!rowCount)throw new Error('STALE_LEASE');};
+  if(safe<=cursor){await defer();return {status:'WAITING',cursor:Number(cursor)};}
   const end=cursor+500n<safe?cursor+500n:safe;
   const result=await scanEvents({chain:monitor.chain,contract:monitor.contract,fromBlock:Number(cursor+1n),toBlock:Number(end)},{client});
-  if(result.status!=='COMPLETE')return {status:'PARTIAL',missing:result.missing,cursor:Number(cursor)};
+  if(result.status!=='COMPLETE'){await defer();return {status:'PARTIAL',missing:result.missing,cursor:Number(cursor)};}
   const matched=result.events.filter(e=>matchesRule(e,monitor.rule_json));
   if(matched.length>limits.maxAlertsPerPoll){await pool.query(`UPDATE pit_monitors SET status='PAUSED',lease_until=NULL WHERE id=$1 AND lease_token=$2`,[monitor.id,monitor.lease_token]);return {status:'PAUSED',reason:'ALERT_LIMIT',cursor:Number(cursor)};}
   const block=await client.getBlock({blockNumber:end});const db=await pool.connect();
@@ -42,7 +44,7 @@ export async function pollMonitor(pool,monitor,{client=clientFor(monitor.chain)}
     for(const event of matched){const id=randomUUID();const {rows}=await db.query(`INSERT INTO pit_alerts(id,monitor_id,chain_id,block_hash,block_number,transaction_hash,log_index,event_json) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT DO NOTHING RETURNING id`,[id,monitor.id,rpcFor(monitor.chain).id,event.blockHash,event.blockNumber,event.transactionHash,event.logIndex,JSON.stringify(event)]);
       if(rows.length&&monitor.email){const {rows:sent}=await db.query(`SELECT count(*)::int AS n FROM pit_deliveries d JOIN pit_alerts a ON a.id=d.alert_id WHERE a.monitor_id=$1 AND d.next_attempt_at>now()-interval '1 day'`,[monitor.id]);if(sent[0].n<50)await db.query(`INSERT INTO pit_deliveries(id,alert_id,email) VALUES($1,$2,$3)`,[randomUUID(),rows[0].id,monitor.email]);}
     }
-    const updated=await db.query(`UPDATE pit_monitors SET cursor_block=$2,cursor_hash=$3,next_poll_at=now()+interval '30 seconds',lease_until=NULL WHERE id=$1 AND lease_token=$4 AND cursor_block=$5 AND status='ACTIVE'`,[monitor.id,end.toString(),block.hash,monitor.lease_token,monitor.cursor_block]);if(!updated.rowCount)throw new Error('STALE_LEASE');await db.query('COMMIT');
+    const updated=await db.query(`UPDATE pit_monitors SET cursor_block=$2,cursor_hash=$3,next_poll_at=now()+($6::int * interval '1 second'),lease_until=NULL WHERE id=$1 AND lease_token=$4 AND cursor_block=$5 AND status='ACTIVE'`,[monitor.id,end.toString(),block.hash,monitor.lease_token,monitor.cursor_block,intervalSeconds]);if(!updated.rowCount)throw new Error('STALE_LEASE');await db.query('COMMIT');
   }catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}
   return {status:'COMPLETE',cursor:Number(end),newAlerts:matched.length};
 }

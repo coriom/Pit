@@ -13,6 +13,8 @@ import { verifyDistribution } from '../src/distribution.mjs';
 import { checkNft } from '../src/nft.mjs';
 import { claimMonitor, pollMonitor, sendQueuedDelivery } from '../src/monitor.mjs';
 import { processJob } from '../src/worker.mjs';
+import { edgeSignature } from '../src/edge-auth.mjs';
+import { limits } from '../src/config.mjs';
 
 const enabled=!!process.env.PIT_TEST_DATABASE_URL&&!!process.env.PIT_TEST_RPC_URL;
 const suite=enabled?test:test.skip;
@@ -36,12 +38,12 @@ suite('PostgreSQL + Anvil: five real workflows and private API',async t=>{
   const role=`0x${'4'.repeat(64)}`;await sendCall(control,controlAbi,'grantRole',[role,recipient1]);await sendCall(control,controlAbi,'revokeRole',[role,recipient1]);await sendCall(control,controlAbi,'setPaused',[true]);
   await sendCall(nft,nftAbi,'setTokenURI',['https://example.com/pit-token-1.json']);
   const from=Number(a.blockNumber),last=Number((await client.getBlockNumber()));await rpc('anvil_mine',['0x10']);
-  await writeFile('/tmp/pit-backend-fixtures.json',JSON.stringify({token,control,nft,fromBlock:from,toBlock:last,firstTransfer:a.transactionHash,secondTransfer:b.transactionHash}));
+  await writeFile('/tmp/pit-backend-fixtures.json',JSON.stringify({token,control,nft,sender,recipient1,recipient2,fromBlock:from,toBlock:last,firstTransfer:a.transactionHash,secondTransfer:b.transactionHash}));
   const events=await scanEvents({chain:'base-sepolia',contract:token,fromBlock:from,toBlock:last},{client});
   if(events.status!=='COMPLETE')console.error('EVENT_DIAGNOSTIC',JSON.stringify({from,last,head:String(await client.getBlockNumber()),missing:events.missing}));
   await t.test('event history: canonical logs, coverage, decode and exact export fields',()=>{assert.equal(events.status,'COMPLETE');assert.equal(events.events.length,2);assert.equal(events.events[0].transactionHash.toLowerCase(),a.transactionHash.toLowerCase());assert.equal(events.missing.length,0);});
   const permissions=await analyzePermissions({chain:'base-sepolia',contract:control,fromBlock:0,toBlock:last},{client,sourceLookup:async()=>({status:'UNKNOWN'})});
-  await t.test('permissions: owner, pause, grant/revoke and explicit history',()=>{assert.equal(permissions.facts.owner.toLowerCase(),sender.toLowerCase());assert.equal(permissions.facts.paused,true);assert(permissions.history.some(x=>x.event==='RoleGranted'));assert(permissions.history.some(x=>x.event==='RoleRevoked'));assert.equal(permissions.coverage.status,'COMPLETE');});
+  await t.test('permissions: owner, pause, grant/revoke and explicit unknown source',()=>{assert.equal(permissions.status,'PARTIAL');assert.equal(permissions.facts.owner.toLowerCase(),sender.toLowerCase());assert.equal(permissions.facts.paused,true);assert(permissions.history.some(x=>x.event==='RoleGranted'));assert(permissions.history.some(x=>x.event==='RoleRevoked'));assert.equal(permissions.coverage.status,'COMPLETE');});
   const distribution=await verifyDistribution({chain:'base-sepolia',token,csv:`recipient,amount\n${recipient1},1.5\n${recipient2},2.25`,transactionHashes:[a.transactionHash,b.transactionHash]},{client});
   if(distribution.status!=='VERIFIED')console.error('DISTRIBUTION_DIAGNOSTIC',JSON.stringify({receipts:distribution.receipts,rows:distribution.rows,unexpected:distribution.unexpected}));
   await t.test('distribution: receipt, transfer and real balance deltas',()=>{assert.equal(distribution.status,'VERIFIED');assert.equal(distribution.verifiedCount,2);assert.equal(distribution.expectedTotal,'3750000');assert(distribution.rows.every(x=>x.balanceEvidence==='CORROBORATED'));});
@@ -56,18 +58,19 @@ suite('PostgreSQL + Anvil: five real workflows and private API',async t=>{
   await sendCall(nft,parseAbi(['function setTokenURI(string)','function setURI(string)']),'setTokenURI',['']);
   await sendCall(nft,parseAbi(['function setURI(string)']),'setURI',['https://example.com/{id}.json']);
   await t.test('ERC-1155 URI substitution uses 64 lowercase hex characters',async()=>{let seen='';const report=await checkNft({chain:'base-sepolia',contract:nft,tokenIds:['15']},{client,fetcher:async uri=>{seen ||= uri;return {contentType:'application/json',body:Buffer.from('{"name":"V1","description":"fixture","image":"https://example.com/image.png"}')};}});assert(seen.includes('/'+(15n).toString(16).padStart(64,'0')+'.json'));assert.equal(report.rows[0].status,'ISSUES');});
+  await sendCall(nft,nftAbi,'setTokenURI',['https://example.com/pit-token-1.json']);
   await new Promise(resolve=>metadataServer.close(resolve));
   const monId=newId(),access=newAccess(),monitorStart=Number(await client.getBlockNumber())+1;
   await pool.query(`INSERT INTO pit_monitors(id,access_hash,invite_hash,chain,contract,rule_json,cursor_block,expires_at,email) VALUES($1,$2,$3,'base-sepolia',$4,$5,$6,now()+interval '1 day',$7)`,[monId,hashToken(access),hashToken('invite'),token,JSON.stringify({type:'transfer-threshold',minimum:'2000000'}),monitorStart-1,'test@example.com']);
   const newTransfer=await sendCall(token,tokenAbi,'transfer',[recipient2,3_000_000n]);await rpc('anvil_mine',['0x10']);
   const recoveredPool=createPool(process.env.PIT_TEST_DATABASE_URL);const monitor=await claimMonitor(recoveredPool);assert.equal(monitor.id,monId);
   const monResult=await pollMonitor(recoveredPool,monitor,{client});
-  await t.test('monitor: new post-creation event, restart recovery, durable cursor and dedup',async()=>{assert.equal(monResult.status,'COMPLETE');const alerts=(await recoveredPool.query('SELECT * FROM pit_alerts WHERE monitor_id=$1',[monId])).rows;assert.equal(alerts.length,1);assert.equal(alerts[0].transaction_hash.toLowerCase(),newTransfer.transactionHash.toLowerCase());const again=await pollMonitor(recoveredPool,(await recoveredPool.query('SELECT * FROM pit_monitors WHERE id=$1',[monId])).rows[0],{client});assert.equal(again.status,'WAITING');});await recoveredPool.end();
+  await t.test('monitor: new post-creation event, restart recovery, durable cursor and dedup',async()=>{assert.equal(monResult.status,'COMPLETE');const alerts=(await recoveredPool.query('SELECT * FROM pit_alerts WHERE monitor_id=$1',[monId])).rows;assert.equal(alerts.length,1);assert.equal(alerts[0].transaction_hash.toLowerCase(),newTransfer.transactionHash.toLowerCase());await recoveredPool.query(`UPDATE pit_monitors SET next_poll_at=now() WHERE id=$1`,[monId]);const again=await pollMonitor(recoveredPool,await claimMonitor(recoveredPool),{client,intervalSeconds:1});assert.equal(again.status,'WAITING');});await recoveredPool.end();
   const messages=[];const smtp=createSmtpServer(socket=>{socket.write('220 pit-test ESMTP\r\n');let data=false,buffer='';socket.on('data',chunk=>{buffer+=chunk.toString();let i;while((i=buffer.indexOf('\n'))>=0){const line=buffer.slice(0,i).replace(/\r$/,'');buffer=buffer.slice(i+1);if(data){if(line==='.') {data=false;socket.write('250 queued\r\n');}else messages.push(line);continue;}if(/^EHLO|^HELO/.test(line))socket.write('250-pit-test\r\n250 PIPELINING\r\n');else if(/^MAIL FROM|^RCPT TO/.test(line))socket.write('250 ok\r\n');else if(/^DATA/.test(line)){data=true;socket.write('354 go\r\n');}else if(/^QUIT/.test(line))socket.end('221 bye\r\n');else socket.write('250 ok\r\n');}});});
   await new Promise(resolve=>smtp.listen(0,'127.0.0.1',resolve));const delivery=await sendQueuedDelivery(pool,{PIT_SMTP_HOST:'127.0.0.1',PIT_SMTP_PORT:String(smtp.address().port),PIT_SMTP_FROM:'pit-test@example.com'});
   await t.test('notification delivered to isolated SMTP sink',()=>{assert.equal(delivery,'SENT');assert(messages.some(line=>line.includes('PIT Crypto contract alert')));});await new Promise(resolve=>smtp.close(resolve));
   const invite='local-private-invite',api=createApi(pool,{inviteHash:hashToken(invite),allowedOrigin:'http://127.0.0.1:4000',clientFactory:()=>client});await new Promise(resolve=>api.listen(0,'127.0.0.1',resolve));const url=`http://127.0.0.1:${api.address().port}/pit/api/v1`;
-  const create=await fetch(`${url}/jobs`,{method:'POST',headers:{'content-type':'application/json','x-pit-invite':invite},body:JSON.stringify({kind:'events',input:{chain:'base-sepolia',contract:token,fromBlock:from,toBlock:last}})});const created=await create.json();
+  const create=await fetch(`${url}/jobs`,{method:'POST',headers:{'content-type':'application/json','x-pit-invite':invite,'idempotency-key':'first_event_report_12345'},body:JSON.stringify({kind:'events',input:{chain:'base-sepolia',contract:token,fromBlock:from,toBlock:last}})});const created=await create.json();
   await t.test('API: invite, bearer isolation and durable queue claim',async()=>{assert.equal(create.status,202);const denied=await fetch(`${url}/jobs/${created.id}`);assert.equal(denied.status,404);const authorized=await fetch(`${url}/jobs/${created.id}`,{headers:{Authorization:`Bearer ${created.accessToken}`}});assert.equal(authorized.status,200);const claimed=await claimJob(pool);assert.equal(claimed.id,created.id);const second=await claimJob(pool);assert.equal(second,null);assert.equal(await processJob(pool,claimed,{client}),'COMPLETED');const finished=await fetch(`${url}/jobs/${created.id}`,{headers:{Authorization:`Bearer ${created.accessToken}`}});assert.equal((await finished.json()).result.events.length,2);});
   await t.test('API: origin denial, private export and monitor idempotency',async()=>{
     const denied=await fetch(`${url}/jobs/${created.id}`,{headers:{Origin:'https://evil.example',Authorization:`Bearer ${created.accessToken}`}});assert.equal(denied.status,403);
@@ -83,6 +86,28 @@ suite('PostgreSQL + Anvil: five real workflows and private API',async t=>{
     const responses=await Promise.all(Array.from({length:5},()=>fetch(`${url}/jobs`,{method:'POST',headers,body:payload})));
     assert.equal(responses.filter(r=>r.status===202).length,1);assert.equal(responses.filter(r=>r.status===409).length,4);
     const {rows}=await pool.query(`SELECT id FROM pit_jobs WHERE invite_hash=$1 AND idempotency_key=$2`,[hashToken(invite),headers['idempotency-key']]);assert.equal(rows.length,1);await pool.query('DELETE FROM pit_jobs WHERE id=$1',[rows[0].id]);
+  });
+  await t.test('direct origin rejects unsigned creation and private reads',async()=>{
+    const secret='local-edge-signature-secret-at-least-32-bytes';
+    const edgeApi=createApi(pool,{inviteHash:hashToken(invite),allowedOrigin:'http://127.0.0.1:4000',edgeSecret:secret,clientFactory:()=>client});
+    await new Promise(resolve=>edgeApi.listen(0,'127.0.0.1',resolve));
+    const edgeUrl=`http://127.0.0.1:${edgeApi.address().port}/pit/api/v1`;
+    const path='/pit/api/v1/jobs',payload=JSON.stringify({kind:'events',input:{chain:'base-sepolia',contract:token,fromBlock:from,toBlock:last}});
+    const unsigned=await fetch(`${edgeUrl}/jobs`,{method:'POST',headers:{'content-type':'application/json','x-pit-invite':invite,'idempotency-key':'edge_auth_test_job_123'},body:payload});assert.equal(unsigned.status,403);
+    const timestamp=String(Date.now());const headers={'content-type':'application/json','x-pit-invite':invite,'idempotency-key':'edge_auth_test_job_123','x-pit-edge-timestamp':timestamp,'x-pit-edge-signature':edgeSignature(secret,timestamp,'POST',path,Buffer.from(payload))};
+    const tampered=await fetch(`${edgeUrl}/jobs`,{method:'POST',headers,body:payload+' '});assert.equal(tampered.status,403);
+    const created=await fetch(`${edgeUrl}/jobs`,{method:'POST',headers,body:payload});assert.equal(created.status,202);const job=await created.json();
+    const direct=await fetch(`${edgeUrl}/jobs/${job.id}`,{headers:{Authorization:`Bearer ${job.accessToken}`}});assert.equal(direct.status,403);
+    await pool.query('DELETE FROM pit_jobs WHERE id=$1',[job.id]);await new Promise(resolve=>edgeApi.close(resolve));
+  });
+  await t.test('per-minute job quota stops expensive private-beta bursts',async()=>{
+    const rateInvite='local-rate-test-invite',rateHash=hashToken(rateInvite);
+    for(let i=0;i<limits.maxJobsPerMinute;i++)await pool.query(`INSERT INTO pit_jobs(id,kind,access_hash,invite_hash,input_json) VALUES($1,'events',$2,$3,'{}')`,[newId(),hashToken(newAccess()),rateHash]);
+    const rateApi=createApi(pool,{inviteHash:rateHash,allowedOrigin:'http://127.0.0.1:4000',clientFactory:()=>client});
+    await new Promise(resolve=>rateApi.listen(0,'127.0.0.1',resolve));
+    const response=await fetch(`http://127.0.0.1:${rateApi.address().port}/pit/api/v1/jobs`,{method:'POST',headers:{'content-type':'application/json','x-pit-invite':rateInvite,'idempotency-key':'rate_limit_check_12345'},body:JSON.stringify({kind:'events',input:{chain:'base-sepolia',contract:token,fromBlock:from,toBlock:last}})});
+    assert.equal(response.status,429);assert.equal((await response.json()).code,'RATE_LIMIT');
+    await new Promise(resolve=>rateApi.close(resolve));await pool.query('DELETE FROM pit_jobs WHERE invite_hash=$1',[rateHash]);
   });
   await t.test('expired worker lease can be claimed exactly once after restart',async()=>{
     const id=newId(),capability=newAccess(),oldClaim=newId();await pool.query(`INSERT INTO pit_jobs(id,kind,access_hash,invite_hash,input_json,status,lease_until,claim_token) VALUES($1,'events',$2,$3,$4,'RUNNING',now()-interval '1 minute',$5)`,[id,hashToken(capability),hashToken(invite),JSON.stringify({chain:'base-sepolia',contract:token,fromBlock:from,toBlock:last}),oldClaim]);

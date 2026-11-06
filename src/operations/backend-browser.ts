@@ -25,7 +25,7 @@ if (root) {
     try {
       const data = await request(`/${kind === "monitor" ? "monitors" : "jobs"}/${active.id}`);
       setStatus(`${data.status}${data.progress?.count !== undefined ? ` · ${data.progress.count} events` : ""}`);
-      if (kind === "monitor") { const alerts = await request(`/monitors/${active.id}/alerts`); result.textContent = JSON.stringify({ monitor: data, alerts: alerts.alerts }, null, 2); show("#backend-pause", data.status === "ACTIVE"); show("#backend-resume", data.status === "PAUSED"); return; }
+      if (kind === "monitor") { const alerts = await request(`/monitors/${active.id}/alerts`); result.textContent = JSON.stringify({ monitor: data, alerts: alerts.alerts }, null, 2); show("#backend-pause", data.status === "ACTIVE"); show("#backend-resume", data.status === "PAUSED"); window.setTimeout(poll, 3000); return; }
       if (["COMPLETED", "PARTIAL", "FAILED", "CANCELLED"].includes(data.status)) { result.textContent = JSON.stringify(data.result ?? { errorCode: data.errorCode }, null, 2); show("#backend-json", !!data.result); show("#backend-csv", !!data.result); show("#backend-cancel", false); return; }
       window.setTimeout(poll, 3000);
     } catch (error) { setStatus(`Unable to read result: ${String(error)}`); }

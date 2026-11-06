@@ -1,7 +1,7 @@
 name: pit-crypto-backend
 services:
   pit-db:
-    image: postgres:16.10-bookworm
+    image: postgres@sha256:${PIT_POSTGRES_IMAGE_DIGEST:?reviewed PostgreSQL digest required}
     environment:
       POSTGRES_DB: pit_crypto
       POSTGRES_USER: pit_api
@@ -18,12 +18,11 @@ services:
     cpus: 0.5
     pids_limit: 100
     security_opt: [no-new-privileges:true]
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
     restart: unless-stopped
     labels: { traefik.enable: "false" }
   pit-migrate:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/coriom/pit-backend@sha256:${PIT_BACKEND_IMAGE_DIGEST:?published immutable backend digest required}
     command: ["node", "src/migrate.mjs"]
     environment:
       PIT_DATABASE_URL: ${PIT_DATABASE_URL:?PIT_DATABASE_URL required}
@@ -36,16 +35,17 @@ services:
     cpus: 0.25
     pids_limit: 50
     security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
     restart: "no"
     labels: { traefik.enable: "false" }
   pit-api:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/coriom/pit-backend@sha256:${PIT_BACKEND_IMAGE_DIGEST:?published immutable backend digest required}
     command: ["node", "--max-old-space-size=192", "src/api.mjs"]
     environment:
       PIT_DATABASE_URL: ${PIT_DATABASE_URL:?PIT_DATABASE_URL required}
       PIT_BACKEND_INVITE_SHA256: ${PIT_BACKEND_INVITE_SHA256:?invite hash required}
+      PIT_EDGE_HMAC_KEY: ${PIT_EDGE_HMAC_KEY:?edge signing key required}
       PIT_ALLOWED_ORIGIN: ${PIT_ALLOWED_ORIGIN:?approved origin required}
       PIT_EMAIL_ALLOWED_RECIPIENTS: ${PIT_EMAIL_ALLOWED_RECIPIENTS:-}
       PIT_API_PORT: "8789"
@@ -64,12 +64,14 @@ services:
     cpus: 0.25
     pids_limit: 80
     security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    init: true
+    stop_grace_period: 30s
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
     restart: unless-stopped
     labels: { traefik.enable: "false" }
   pit-worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/coriom/pit-backend@sha256:${PIT_BACKEND_IMAGE_DIGEST:?published immutable backend digest required}
     command: ["node", "--max-old-space-size=384", "src/worker.mjs"]
     environment:
       PIT_DATABASE_URL: ${PIT_DATABASE_URL:?PIT_DATABASE_URL required}
@@ -88,6 +90,10 @@ services:
     cpus: 0.5
     pids_limit: 80
     security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    init: true
+    stop_grace_period: 30s
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
     restart: unless-stopped
     labels: { traefik.enable: "false" }
 networks:

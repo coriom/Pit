@@ -1,11 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseAllocations } from '../src/distribution.mjs';
-import { publicAddress, resolvePublic, normalizeMetadataUri, ensureResponseStatus } from '../src/safe-http.mjs';
+import { publicAddress, resolvePublic, normalizeMetadataUri, ensureResponseStatus, safeFetch } from '../src/safe-http.mjs';
 import { matchesRule } from '../src/monitor.mjs';
 import { validateJob } from '../src/config.mjs';
 import { scanEvents } from '../src/events.mjs';
 import { hashToken,safeTokenMatch } from '../src/db.mjs';
+import { edgeSignature, verifyEdgeRequest } from '../src/edge-auth.mjs';
+import { verifyAccess, signOriginRequest } from '../edge/worker.mjs';
+import { generateKeyPairSync, createSign } from 'node:crypto';
+import { EventEmitter } from 'node:events';
+import { Readable } from 'node:stream';
 import { keccak256, stringToHex } from 'viem';
 
 const a='0x1111111111111111111111111111111111111111';
@@ -22,6 +27,22 @@ test('metadata URL policy blocks private networks and unsafe schemes',async()=>{
   await assert.rejects(resolvePublic('evil.example',async()=>[{address:'::ffff:127.0.0.1',family:6}]),/PRIVATE_ADDRESS/);
   assert.throws(()=>ensureResponseStatus(302),/REDIRECT_FORBIDDEN/);assert.throws(()=>ensureResponseStatus(413),/HTTP_413/);
   assert.equal(normalizeMetadataUri('ipfs://QmYwAPJzv5CZsnAzt8auVTL8f5BTj1VUnFWK8mNQSi2wS7/a.json').hostname,'ipfs.io');
+});
+test('metadata fetch pins the validated public address and bounds redirects, size and time',async()=>{
+  let lookups=0,pinned=null;
+  const lookup=async()=>{lookups++;return [{address:'8.8.8.8',family:4}];};
+  const requestFn=(status,chunks)=>(_url,options,callback)=>{
+    options.lookup('example.com',{},(_error,address)=>{pinned=address;});
+    const req=new EventEmitter();req.end=()=>{const res=Readable.from(chunks);res.statusCode=status;res.headers={'content-type':'application/json'};queueMicrotask(()=>callback(res));};req.destroy=error=>req.emit('error',error);return req;
+  };
+  const ok=await safeFetch('https://example.com/a',{lookup,requestFn:requestFn(200,[Buffer.from('{}')])});
+  assert.equal(ok.body.toString(),'{}');assert.equal(pinned,'8.8.8.8');assert.equal(lookups,1);
+  await assert.rejects(safeFetch('https://example.com/a',{lookup,requestFn:requestFn(302,[])}),/REDIRECT_FORBIDDEN/);
+  await assert.rejects(safeFetch('https://example.com/a',{lookup,maxBytes:2,requestFn:requestFn(200,[Buffer.from('too large')])}),/BODY_LIMIT/);
+  const timeout=(_url,_options,_callback)=>{const req=new EventEmitter();req.end=()=>queueMicrotask(()=>req.emit('timeout'));req.destroy=error=>req.emit('error',error);return req;};
+  await assert.rejects(safeFetch('https://example.com/a',{lookup,requestFn:timeout}),/TIMEOUT/);
+  await assert.rejects(safeFetch('https://coolify',{lookup:async()=>[{address:'172.18.0.1',family:4}]}),/PRIVATE_ADDRESS/);
+  await assert.rejects(safeFetch('https://metadata.google.internal/computeMetadata/v1',{lookup}),/HOST_FORBIDDEN/);
 });
 test('monitor rules use exact event topics and integer thresholds',()=>{
   const topic=keccak256(stringToHex('Transfer(address,address,uint256)'));
@@ -40,6 +61,32 @@ test('request validation fails closed on range, extra fields and unsupported cha
 });
 test('tokens are hashed and compared without plaintext persistence',()=>{
   const hash=hashToken('test-capability');assert.equal(safeTokenMatch(hash,'test-capability'),true);assert.equal(safeTokenMatch(hash,'other'),false);
+});
+test('edge HMAC binds method, path, body and timestamp',async()=>{
+  const secret='a-local-test-secret-with-at-least-32-bytes';
+  const request=new Request('https://private.example/pit/api/v1/jobs?format=json',{method:'POST',body:'{"kind":"events"}'});
+  const signed=await signOriginRequest(request,{PIT_BACKEND_ORIGIN:'https://api.example',PIT_EDGE_HMAC_KEY:secret});
+  const body=Buffer.from(await signed.arrayBuffer());
+  const req={method:'POST',url:'/pit/api/v1/jobs?format=json',headers:{'x-pit-edge-timestamp':signed.headers.get('x-pit-edge-timestamp'),'x-pit-edge-signature':signed.headers.get('x-pit-edge-signature')}};
+  assert(verifyEdgeRequest(req,body,secret));
+  assert(!verifyEdgeRequest({...req,url:'/pit/api/v1/other'},body,secret));
+  assert(!verifyEdgeRequest({...req,method:'DELETE'},body,secret));
+  assert(!verifyEdgeRequest(req,Buffer.from('{}'),secret));
+  assert(!verifyEdgeRequest(req,body,secret,Date.now()+120_000));
+  assert.equal(edgeSignature(secret,req.headers['x-pit-edge-timestamp'],req.method,req.url,body),req.headers['x-pit-edge-signature']);
+});
+test('edge rejects unsigned or wrong-audience Access JWT',async()=>{
+  const {privateKey,publicKey}=generateKeyPairSync('rsa',{modulusLength:2048});
+  const jwk={...publicKey.export({format:'jwk'}),kid:'local-test-key'};
+  const encode=value=>Buffer.from(JSON.stringify(value)).toString('base64url');
+  const claims={iss:'https://test-team.cloudflareaccess.com',aud:'pit-beta',email:'operator@example.com',exp:Math.floor(Date.now()/1000)+60};
+  const tokenFor=value=>{const message=`${encode({alg:'RS256',kid:jwk.kid})}.${encode(value)}`;const signature=createSign('RSA-SHA256').update(message).sign(privateKey).toString('base64url');return `${message}.${signature}`;};
+  const env={PIT_ACCESS_TEAM:'test-team',PIT_ACCESS_AUD:'pit-beta',PIT_ACCESS_ALLOWED_EMAILS:'operator@example.com'};
+  const keys=async()=>[jwk];
+  assert(await verifyAccess(new Request('https://private.example/',{headers:{'Cf-Access-Jwt-Assertion':tokenFor(claims)}}),env,keys));
+  assert.equal(await verifyAccess(new Request('https://private.example/'),env,keys),false);
+  assert.equal(await verifyAccess(new Request('https://private.example/',{headers:{'Cf-Access-Jwt-Assertion':tokenFor({...claims,aud:'other'})}}),env,keys),false);
+  assert.equal(await verifyAccess(new Request('https://private.example/',{headers:{'Cf-Access-Jwt-Assertion':tokenFor({...claims,email:'other@example.com'})}}),env,keys),false);
 });
 test('failed eth_getLogs segments remain partial',async()=>{
   const client={getChainId:async()=>84532,getBlockNumber:async()=>100n,request:async()=>{throw Error('provider unavailable');}};

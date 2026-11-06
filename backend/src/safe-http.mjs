@@ -1,5 +1,4 @@
 import dns from 'node:dns/promises';
-import { request as httpRequest } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 import ipaddr from 'ipaddr.js';
 
@@ -25,10 +24,10 @@ export function normalizeMetadataUri(uri) {
   return url;
 }
 export function ensureResponseStatus(status){if(status>=300&&status<400)throw new Error('REDIRECT_FORBIDDEN');if(status<200||status>=300)throw new Error(`HTTP_${status}`);}
-export async function safeFetch(uri,{ method='GET', maxBytes=512*1024, timeoutMs=8000, lookup=dns.lookup }={}){
+export async function safeFetch(uri,{ method='GET', maxBytes=512*1024, timeoutMs=8000, lookup=dns.lookup, requestFn=httpsRequest }={}){
   const url=normalizeMetadataUri(uri),resolved=await resolvePublic(url.hostname,lookup);
   return new Promise((resolve,reject)=>{
-    const req=(url.protocol==='https:'?httpsRequest:httpRequest)(url,{method,agent:false,timeout:timeoutMs,lookup:(_h,_o,cb)=>cb(null,resolved.address,resolved.family),headers:{'Accept':'application/json,image/*;q=0.5','User-Agent':'PIT-Crypto-Metadata-Checker/1.0'},maxHeaderSize:8192},res=>{
+    const req=requestFn(url,{method,agent:false,timeout:timeoutMs,lookup:(_h,_o,cb)=>cb(null,resolved.address,resolved.family),headers:{'Accept':'application/json,image/*;q=0.5','User-Agent':'PIT-Crypto-Metadata-Checker/1.0'},maxHeaderSize:8192},res=>{
       try{ensureResponseStatus(res.statusCode);}catch(error){res.resume();reject(error);return;}
       const chunks=[];let size=0;
       res.on('data',chunk=>{size+=chunk.length;if(size>maxBytes){req.destroy(new Error('BODY_LIMIT'));return;}chunks.push(chunk);});

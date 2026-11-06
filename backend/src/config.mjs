@@ -17,6 +17,7 @@ export const limits = Object.freeze({
   bodyBytes: 256 * 1024, csvRows: 500, txHashes: 20, maxBlockSpan: 20_000,
   maxEvents: 5000, nftTokens: 25, metadataBytes: 512 * 1024,
   scanChunk: 500, maxLogRequests: 120, confirmedDepth: 12, maxJobsPerDay: 20,
+  maxJobsPerMinute: 10, maxMonitorsPerMinute: 1,
   monitorLifetimeHours: 72, maxMonitorsPerOwner: 3, maxAlertsPerPoll: 20,
 });
 export const address = z.string().regex(/^0x[a-fA-F0-9]{40}$/);
