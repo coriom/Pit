@@ -6,6 +6,7 @@ import { matchesRule } from '../src/monitor.mjs';
 import { validateJob } from '../src/config.mjs';
 import { scanEvents } from '../src/events.mjs';
 import { hashToken,safeTokenMatch } from '../src/db.mjs';
+import { keccak256, stringToHex } from 'viem';
 
 const a='0x1111111111111111111111111111111111111111';
 test('integer-exact CSV parsing and duplicate protection',()=>{
@@ -23,7 +24,7 @@ test('metadata URL policy blocks private networks and unsafe schemes',async()=>{
   assert.equal(normalizeMetadataUri('ipfs://QmYwAPJzv5CZsnAzt8auVTL8f5BTj1VUnFWK8mNQSi2wS7/a.json').hostname,'ipfs.io');
 });
 test('monitor rules use exact event topics and integer thresholds',()=>{
-  const topic='0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+  const topic=keccak256(stringToHex('Transfer(address,address,uint256)'));
   const zero=`0x${'0'.repeat(64)}`,recipient=`0x${'0'.repeat(24)}${'1'.repeat(40)}`;
   const log={signature:topic,topics:[topic,zero,recipient],data:`0x${(200n).toString(16).padStart(64,'0')}`};
   assert.equal(matchesRule(log,{type:'mint'}),true);
