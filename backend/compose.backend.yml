@@ -84,6 +84,12 @@ services:
     networks: [pit-internal, pit-egress]
     depends_on:
       pit-migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "node", "src/worker-health.mjs"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
     read_only: true
     tmpfs: [/tmp]
     mem_limit: 512m

@@ -94,11 +94,15 @@ suite('PostgreSQL + Anvil: five real workflows and private API',async t=>{
     const edgeUrl=`http://127.0.0.1:${edgeApi.address().port}/pit/api/v1`;
     const path='/pit/api/v1/jobs',payload=JSON.stringify({kind:'events',input:{chain:'base-sepolia',contract:token,fromBlock:from,toBlock:last}});
     const unsigned=await fetch(`${edgeUrl}/jobs`,{method:'POST',headers:{'content-type':'application/json','x-pit-invite':invite,'idempotency-key':'edge_auth_test_job_123'},body:payload});assert.equal(unsigned.status,403);
-    const timestamp=String(Date.now());const headers={'content-type':'application/json','x-pit-invite':invite,'idempotency-key':'edge_auth_test_job_123','x-pit-edge-timestamp':timestamp,'x-pit-edge-signature':edgeSignature(secret,timestamp,'POST',path,Buffer.from(payload))};
+    const timestamp=String(Date.now()),nonce='1'.repeat(32);const headers={'content-type':'application/json','x-pit-invite':invite,'idempotency-key':'edge_auth_test_job_123','x-pit-edge-timestamp':timestamp,'x-pit-edge-nonce':nonce,'x-pit-edge-signature':edgeSignature(secret,timestamp,nonce,'POST',path,Buffer.from(payload))};
     const tampered=await fetch(`${edgeUrl}/jobs`,{method:'POST',headers,body:payload+' '});assert.equal(tampered.status,403);
-    const created=await fetch(`${edgeUrl}/jobs`,{method:'POST',headers,body:payload});assert.equal(created.status,202);const job=await created.json();
+    const concurrent=await Promise.all(Array.from({length:3},()=>fetch(`${edgeUrl}/jobs`,{method:'POST',headers,body:payload})));
+    assert.equal(concurrent.filter(response=>response.status===202).length,1);
+    assert.equal(concurrent.filter(response=>response.status===403).length,2);
+    const job=await concurrent.find(response=>response.status===202).json();
+    const replay=await fetch(`${edgeUrl}/jobs`,{method:'POST',headers,body:payload});assert.equal(replay.status,403);assert.equal((await replay.json()).code,'EDGE_REPLAY_DENIED');
     const direct=await fetch(`${edgeUrl}/jobs/${job.id}`,{headers:{Authorization:`Bearer ${job.accessToken}`}});assert.equal(direct.status,403);
-    await pool.query('DELETE FROM pit_jobs WHERE id=$1',[job.id]);await new Promise(resolve=>edgeApi.close(resolve));
+    await pool.query('DELETE FROM pit_jobs WHERE id=$1',[job.id]);await pool.query('DELETE FROM pit_edge_nonces WHERE nonce=$1',[nonce]);await new Promise(resolve=>edgeApi.close(resolve));
   });
   await t.test('per-minute job quota stops expensive private-beta bursts',async()=>{
     const rateInvite='local-rate-test-invite',rateHash=hashToken(rateInvite);

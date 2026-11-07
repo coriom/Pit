@@ -27,5 +27,7 @@ export async function tick(pool){const job=await claimJob(pool);if(job)return {t
   const delivery=await sendQueuedDelivery(pool);return {type:'delivery',status:delivery};
 }
 if(import.meta.url===`file://${process.argv[1]}`){const pool=createPool();let stopping=false,cycles=0;process.on('SIGTERM',()=>stopping=true);process.on('SIGINT',()=>stopping=true);
-  while(!stopping){try{await pool.query(`INSERT INTO pit_worker_heartbeat(singleton,last_seen) VALUES(true,now()) ON CONFLICT(singleton) DO UPDATE SET last_seen=now()`);await tick(pool);if(++cycles%60===0)await expireData(pool);}catch{console.error('PIT_WORKER_ERROR');}await new Promise(r=>setTimeout(r,1000));}
-  await pool.end();}
+  const heartbeat=()=>pool.query(`INSERT INTO pit_worker_heartbeat(singleton,last_seen) VALUES(true,now()) ON CONFLICT(singleton) DO UPDATE SET last_seen=now()`).catch(()=>{});
+  await heartbeat();const heartbeatTimer=setInterval(heartbeat,30_000);
+  while(!stopping){try{await tick(pool);if(++cycles%60===0){await expireData(pool);await pool.query('DELETE FROM pit_edge_nonces WHERE expires_at<now()');}}catch{console.error('PIT_WORKER_ERROR');}await new Promise(r=>setTimeout(r,1000));}
+  clearInterval(heartbeatTimer);await pool.end();}

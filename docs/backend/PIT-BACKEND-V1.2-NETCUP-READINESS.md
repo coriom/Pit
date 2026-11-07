@@ -1,0 +1,55 @@
+# PIT Crypto backend V1.2 — controlled Netcup candidate
+
+Status on 2026-11-07: **source candidate only; deployment blocked**. This document supersedes the V1.1 preflight's observations where newer live evidence is given. No PIT route, Cloudflare Worker, VPS container, database or firewall rule was created. The five existing tools were not redesigned.
+
+## Shared VPS observations
+
+The existing `deopt-vps` SSH alias authenticated as `deoptops`. The account belongs to `sudo` but not `docker`; `/var/run/docker.sock` is `0660 root:docker`. The prior noninteractive sudo probe failed, so no privileged Docker inspection was retried. At 2026-11-07 02:18–02:28 UTC: RAM 7,947 MiB total, 6,317 MiB available, no swap; root volume 157 GiB total, 143 GiB available (5% used); load averages 0.66/0.48/0.44. Earlier three CPU snapshots were 89–97% idle. These are bounded snapshots, not sustained capacity proof.
+
+Unprivileged cgroup v2 reads found 12 running Docker scopes. Their observed memory values ranged from below 1 MiB to 462 MiB. Several scopes had no memory or CPU maximum; bounded scopes had memory ceilings of 256 MiB, 512 MiB, 768 MiB, 1 GiB, 1.5 GiB and 2 GiB. Every readable scope reported `oom=0`, `oom_kill=0` at this instant. Cgroup IDs cannot safely be mapped to service names, networks, restart history or routing labels without Docker access. **Capacity is PARTIAL**, and the proposed PIT steady-state ceiling of 1.25 vCPU/1.25 GiB remains provisional. Initial PIT limits stay at API 0.25 CPU/256 MiB, worker 0.5 CPU/512 MiB, PostgreSQL 0.5 CPU/512 MiB; migration 0.25 CPU/192 MiB is one-shot. Run one PIT worker and one API replica. Admit no workload increase until a measured Docker/Coolify snapshot and post-deployment observation show headroom for neighbors.
+
+The reviewed read-only snapshot script `backend/ops/readonly-vps-snapshot.py` prints container CPU/RAM, configured limits, restarts/OOM, network names, selected non-secret Traefik router labels, Docker storage and volume count. It never prints container environment variables, mount paths or logs. The operator can run one bounded command from WSL after reviewing the script:
+
+```sh
+ssh -t deopt-vps 'sudo python3 -' < backend/ops/readonly-vps-snapshot.py
+```
+
+This requires an existing authorized sudo session; it neither changes group membership nor persists a privilege change. The result must be reviewed before assigning PIT resources or a route.
+
+## TLS and route
+
+Normal IPv4 HTTPS validation passed on 2026-11-07: Let's Encrypt production YR1, SAN `94.16.113.122`, fingerprint SHA-256 `544A62862F97B143E942BD688EF4A922A43242C26C357FF1F51DE20FA2DCBF02`, valid 2026-11-03 14:20:05 through 2026-11-10 06:20:04 UTC. `https://94.16.113.122/health` and `/hbi/api/health` both returned 200 with TLS verification result 0. The fingerprint and expiry have **not changed** since the recovery handoff: real renewal is **PENDING**. Literal IPv6 access was not TLS-qualified. The shared proxy owner must demonstrate a new trusted production certificate, new validity period, matching IPv4 SAN and healthy DeOpt/HBI HTTPS before PIT deployment approval. PIT must not change Traefik or ACME.
+
+The source Compose advertises no Traefik route or host port. The current `/pit/api/v1/health` returns 503 at the shared origin; PIT is not deployed. A future `/pit/api` route needs exact observed Coolify proxy network and router labels, host/IP match, `websecure`, TLS resolver, priority relative to DeOpt/HBI, preservation of the full `/pit/api/v1` prefix (the API expects it), and a direct-origin unsigned-request denial test. Do not attach the worker or database to a proxy network. Do not strip `/pit/api` unless the API is changed and retested. The real Coolify-generated labels and network attachments are not yet visible to this account, so routing remains **unverified**.
+
+## Private API boundary
+
+The proposed Cloudflare gateway in `backend/edge/worker.mjs` checks Access JWT issuer, signature, audience, expiry and an exact email allowlist. It signs method, path, timestamp, random nonce and SHA-256 body hash with a server-side HMAC secret. The origin API verifies the signature and atomically inserts each nonce in dedicated PIT PostgreSQL; a replay fails. A one-minute timestamp window limits delayed submissions, and expired nonces are removed by the worker. The direct IP has no unsigned access to protected endpoints; loopback-only health/readiness remain local. An invitation is required for job/monitor creation; random bearer capabilities, stored only as hashes, protect private results and controls. CORS is an additional origin check, not authentication. Job and monitor quotas and retention are documented in `backend/README.md`.
+
+The gateway is **not deployed**. Existing Cloudflare Access on the PIT static staging does not protect a separate Netcup origin. Cloudflare's [Workers known issues](https://developers.cloudflare.com/workers/platform/known-issues/#fetch-to-ip-addresses) say Worker `fetch()` subrequests cannot target IP literals; the edge now rejects an IP-literal origin at configuration time. The current trusted **IP** certificate is therefore insufficient for this gateway design. A bounded read-only Cloudflare API call returned HTTP 200 and zero token-visible DNS zones, both with and without the known account filter. This does not prove no domain is owned elsewhere, but establishes no currently visible zone for an A record. A controlled DNS hostname pointing to the VPS, a publicly trusted certificate covering that hostname and an exact matching Netcup router Host rule are required. The exact Access application, gateway hostname, allowed identity and frontend origin must then be tested in the later scoped rollout. No domain or DNS change is authorized here. No permanent HMAC or invitation secret may enter browser assets. The private beta should keep external email delivery disabled: alert inbox works, but real SMTP delivery is unverified.
+
+## Outbound network gate
+
+The NFT fetcher already enforces HTTPS/IPFS gateway schemes, rejects IP literals/private DNS answers/redirects, pins a validated public IP for the TLS connection, and caps time and response size. Local adversarial tests cover direct private/IPv6 addresses, internal hostnames, redirects, DNS rebinding, oversized bodies and timeouts. This is **application protection**, not an independent egress boundary.
+
+Both API and worker currently join `pit-egress`, an ordinary Docker bridge. An internal PIT network prevents unintended access to other application containers by name but does not prevent public-IP hairpinning to the shared proxy, host gateway access, other reachable private subnets, metadata endpoints or a future SSRF implementation defect. Before live user-selected metadata URLs, the proxy owner must approve and verify a PIT-specific host egress policy on the actual assigned bridge/subnet: deny traffic from PIT API/worker to host and Docker gateway addresses, loopback, RFC1918/CGNAT/link-local/multicast/reserved ranges, ULA/link-local IPv6, cloud metadata destinations, and the VPS's own public addresses; allow PIT-internal PostgreSQL traffic and reviewed public HTTPS/DNS/RPC destinations. The policy must cover host `INPUT` as well as inter-network forwarding, survive Docker/Coolify recreation, and be exercised with disposable destinations and redirects without probing neighboring applications. Its exact interface/subnet and safe ordering cannot be fixed until Coolify network inspection. **No host firewall change is authorized here. Deployment remains blocked on this independent control.**
+
+## Images, database and recovery
+
+`backend/Dockerfile` pins Node 22.23.4 Bookworm Slim by digest and installs the backend lockfile with scripts disabled. It removes the global npm CLI from the runtime image after installation. The hardened local image starts as UID 1000 with a read-only filesystem, dropped capabilities and enforced 0.25 CPU/256 MiB limits. A pinned Trivy 0.76.2 scan of the preceding base found 61 HIGH/CRITICAL findings, including four fixable critical findings and 13 findings in the global npm CLI. After the base refresh and npm removal, the same scan found 35 findings: 34 HIGH and one CRITICAL, with **zero fixable versions reported**. The remaining CRITICAL is CVE-2023-45853 in zlib; [Debian's tracker](https://security-tracker.debian.org/tracker/CVE-2023-45853) states that the vulnerable MiniZip code was not built into Bookworm's affected zlib binary packages. This is a documented scanner finding, not a claim that the image has no residual risk. The pinned Node base and vulnerability results must be refreshed before a later deployment if advisories or packages change.
+
+`backend/compose.backend.yml` requires immutable GHCR backend and PostgreSQL digests and has PIT-only database, volume and internal network, no published worker/database ports, non-root read-only Node containers, dropped capabilities, bounded PIDs/logs, healthchecks and startup migration. The worker has a database-backed heartbeat healthcheck that stays live during long read-only jobs. A local build and SBOM/vulnerability review are distinct from a published immutable GHCR digest. No `latest` tag may be used for a deployment manifest.
+
+Migrations `001_init.sql` and `002_edge_nonces.sql` are idempotent and PIT-specific; the second has a manual rollback file. Use a dedicated `pit_crypto` database and `pit_api` role with credentials injected at runtime. Before rollout, take a PIT-only custom-format PostgreSQL dump; verify a restore into a disposable PIT database and the migration version; retain encrypted off-host backups on a PIT-specific schedule with an agreed destination and retention. At rollout, perform and verify the first real backup. A live backup schedule does not exist yet. The worker's lease token and PostgreSQL claiming prevent stale read-only jobs from overwriting a reclaimed result. Disk exhaustion must fail job admission and trigger PIT-only alerting/cleanup, not reuse another service's storage.
+
+## Approval gate
+
+No deployment manifest hash or `GO PIT BACKEND NETCUP` request is issued while the following material inputs are unresolved:
+
+1. New trusted production TLS certificate proving the first real renewal.
+2. Authorized sanitized Docker/Coolify snapshot mapping neighbors, limits, restarts/OOM, proxy labels/networks and storage to PIT's proposed allocation.
+3. PIT-specific independent outbound policy, with a safe reviewed host change and verification plan.
+4. Frozen source image published to GHCR by immutable digest, reviewed PostgreSQL digest, and a real DNS hostname with matching trusted certificate, Coolify route/network and gateway identity. Worker `fetch()` cannot use the current IP literal as its origin URL.
+5. PIT-only backup destination, retention and controlled private-beta rollback.
+
+GitHub source integration is not deployment authorization. The existing staging, DeOpt, HBI Hub, Toolio, payment contracts and shared proxy remain untouched.

@@ -27,6 +27,8 @@ export function createApi(pool,{inviteHash=process.env.PIT_BACKEND_INVITE_SHA256
     const localHealth = ['/pit/api/v1/health','/pit/api/v1/ready'].includes(path) && ['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress);
     if(edgeSecret && !localHealth){
       if(!verifyEdgeRequest(req,await rawBody(req),edgeSecret))return send(res,403,{code:'EDGE_AUTH_REQUIRED'});
+      const {rowCount}=await pool.query(`INSERT INTO pit_edge_nonces(nonce,expires_at) VALUES($1,now()+interval '2 minutes') ON CONFLICT DO NOTHING`,[req.headers['x-pit-edge-nonce']]);
+      if(rowCount!==1)return send(res,403,{code:'EDGE_REPLAY_DENIED'});
     }
     if(req.headers.origin && req.headers.origin!==allowedOrigin)return send(res,403,{code:'ORIGIN_DENIED'});
     if(req.method==='OPTIONS'){res.writeHead(204,{...header,'Access-Control-Allow-Origin':allowedOrigin??'','Access-Control-Allow-Methods':'GET,POST,DELETE','Access-Control-Allow-Headers':'Content-Type,Authorization,X-PIT-Invite,Idempotency-Key'});res.end();return;}

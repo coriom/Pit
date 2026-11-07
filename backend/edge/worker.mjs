@@ -44,17 +44,20 @@ async function limitedBody(request) {
 }
 export async function signOriginRequest(request, env) {
   const origin = new URL(env.PIT_BACKEND_ORIGIN);
-  if (origin.protocol !== 'https:' || origin.username || origin.password || origin.pathname !== '/' || origin.search || origin.hash || !env.PIT_EDGE_HMAC_KEY || env.PIT_EDGE_HMAC_KEY.length < 32) throw Error('EDGE_CONFIG_INVALID');
+  if (origin.protocol !== 'https:' || origin.username || origin.password || origin.pathname !== '/' || origin.search || origin.hash ||
+      /^(?:\d{1,3}\.){3}\d{1,3}$/.test(origin.hostname) || origin.hostname.startsWith('[') ||
+      !env.PIT_EDGE_HMAC_KEY || env.PIT_EDGE_HMAC_KEY.length < 32) throw Error('EDGE_CONFIG_INVALID');
   const url = new URL(request.url), body = await limitedBody(request);
   const path = url.pathname + url.search, timestamp = String(Date.now());
+  const nonce = hex(crypto.getRandomValues(new Uint8Array(16)));
   const hash = hex(await crypto.subtle.digest('SHA-256', body));
   const key = await crypto.subtle.importKey('raw', enc.encode(env.PIT_EDGE_HMAC_KEY), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const signature = hex(await crypto.subtle.sign('HMAC', key, enc.encode(`${timestamp}\n${request.method}\n${path}\n${hash}`)));
+  const signature = hex(await crypto.subtle.sign('HMAC', key, enc.encode(`${timestamp}\n${nonce}\n${request.method}\n${path}\n${hash}`)));
   const headers = new Headers();
   for (const name of ['Content-Type','Authorization','X-PIT-Invite','Idempotency-Key','Origin']) {
     const value = request.headers.get(name); if (value) headers.set(name, value);
   }
-  headers.set('X-PIT-Edge-Timestamp', timestamp); headers.set('X-PIT-Edge-Signature', signature);
+  headers.set('X-PIT-Edge-Timestamp', timestamp); headers.set('X-PIT-Edge-Nonce', nonce); headers.set('X-PIT-Edge-Signature', signature);
   const target = new URL(path, origin);
   return new Request(target, { method: request.method, headers, body: ['GET','HEAD'].includes(request.method) ? undefined : body, redirect: 'manual' });
 }

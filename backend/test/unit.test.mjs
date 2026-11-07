@@ -62,18 +62,20 @@ test('request validation fails closed on range, extra fields and unsupported cha
 test('tokens are hashed and compared without plaintext persistence',()=>{
   const hash=hashToken('test-capability');assert.equal(safeTokenMatch(hash,'test-capability'),true);assert.equal(safeTokenMatch(hash,'other'),false);
 });
-test('edge HMAC binds method, path, body and timestamp',async()=>{
+test('edge HMAC binds method, path, body, nonce and timestamp',async()=>{
   const secret='a-local-test-secret-with-at-least-32-bytes';
   const request=new Request('https://private.example/pit/api/v1/jobs?format=json',{method:'POST',body:'{"kind":"events"}'});
   const signed=await signOriginRequest(request,{PIT_BACKEND_ORIGIN:'https://api.example',PIT_EDGE_HMAC_KEY:secret});
+  await assert.rejects(signOriginRequest(request,{PIT_BACKEND_ORIGIN:'https://94.16.113.122',PIT_EDGE_HMAC_KEY:secret}),/EDGE_CONFIG_INVALID/);
   const body=Buffer.from(await signed.arrayBuffer());
-  const req={method:'POST',url:'/pit/api/v1/jobs?format=json',headers:{'x-pit-edge-timestamp':signed.headers.get('x-pit-edge-timestamp'),'x-pit-edge-signature':signed.headers.get('x-pit-edge-signature')}};
+  const req={method:'POST',url:'/pit/api/v1/jobs?format=json',headers:{'x-pit-edge-timestamp':signed.headers.get('x-pit-edge-timestamp'),'x-pit-edge-nonce':signed.headers.get('x-pit-edge-nonce'),'x-pit-edge-signature':signed.headers.get('x-pit-edge-signature')}};
   assert(verifyEdgeRequest(req,body,secret));
   assert(!verifyEdgeRequest({...req,url:'/pit/api/v1/other'},body,secret));
   assert(!verifyEdgeRequest({...req,method:'DELETE'},body,secret));
   assert(!verifyEdgeRequest(req,Buffer.from('{}'),secret));
   assert(!verifyEdgeRequest(req,body,secret,Date.now()+120_000));
-  assert.equal(edgeSignature(secret,req.headers['x-pit-edge-timestamp'],req.method,req.url,body),req.headers['x-pit-edge-signature']);
+  assert(!verifyEdgeRequest({...req,headers:{...req.headers,'x-pit-edge-nonce':'0'.repeat(32)}},body,secret));
+  assert.equal(edgeSignature(secret,req.headers['x-pit-edge-timestamp'],req.headers['x-pit-edge-nonce'],req.method,req.url,body),req.headers['x-pit-edge-signature']);
 });
 test('edge rejects unsigned or wrong-audience Access JWT',async()=>{
   const {privateKey,publicKey}=generateKeyPairSync('rsa',{modulusLength:2048});
