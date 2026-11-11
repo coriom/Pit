@@ -119,5 +119,15 @@ suite('PostgreSQL + Anvil: five real workflows and private API',async t=>{
     const oldWorker=(await pool.query('SELECT * FROM pit_jobs WHERE id=$1',[id])).rows[0];const recovered=await claimJob(pool);assert.equal(recovered.id,id);assert.notEqual(recovered.claim_token,oldClaim);assert.equal((await claimJob(pool)),null);
     assert.equal(await processJob(pool,oldWorker,{client}),'STALE_LEASE');assert.equal((await pool.query('SELECT status FROM pit_jobs WHERE id=$1',[id])).rows[0].status,'RUNNING');await pool.query('DELETE FROM pit_jobs WHERE id=$1',[id]);
   });
+  await t.test('hosted NFT refusal persists FAILED status and exact error without a fetch',async()=>{
+    const id=newId();
+    await pool.query(`INSERT INTO pit_jobs(id,kind,access_hash,invite_hash,input_json) VALUES($1,'nft',$2,$3,$4)`,[id,hashToken(newAccess()),hashToken(invite),JSON.stringify({chain:'base-sepolia',contract:nft,tokenIds:['1']})]);
+    const job=await claimJob(pool);
+    assert.equal(job.id,id);
+    assert.equal(await processJob(pool,job,{nftEnabled:false,fetcher:()=>{throw Error('FETCH_CALLED');}}),'FAILED');
+    const {rows}=await pool.query('SELECT status,error_code FROM pit_jobs WHERE id=$1',[id]);
+    assert.deepEqual(rows[0],{status:'FAILED',error_code:'NFT_FETCH_DISABLED'});
+    await pool.query('DELETE FROM pit_jobs WHERE id=$1',[id]);
+  });
   await new Promise(resolve=>api.close(resolve));await pool.query('DELETE FROM pit_monitors WHERE id=$1',[monId]);await pool.query('DELETE FROM pit_jobs WHERE id=$1',[created.id]);await pool.end();
 });

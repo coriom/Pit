@@ -6,12 +6,14 @@ export function getStaticPaths() { return backendEnabled() ? BACKEND_TOOLS.map((
 const { tool } = Astro.props;
 const origin = process.env.PIT_BACKEND_API_ORIGIN;
 if (!origin || !/^https:\/\/[^/]+$|^http:\/\/127\.0\.0\.1:\d+$/.test(origin)) throw Error("PIT_BACKEND_API_ORIGIN is required for backend build");
+const hostedNftUnavailable = tool.kind === "nft" && !origin.startsWith("http://127.0.0.1:");
 const label = V2_CATEGORIES.find((category) => category.id === tool.category)?.label ?? "Blockchain tools";
 ---
 <Layout title={tool.title} description={tool.description}>
   <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">PIT</a><span aria-hidden="true">/</span><a href="/#directory">{label}</a><span aria-hidden="true">/</span><span aria-current="page">{tool.title}</span></nav>
   <section class="detail-intro" data-category={tool.category}><p class="eyebrow">{label}</p><h1>{tool.title}</h1><p>{tool.description}</p><div class="detail-meta"><span>Read-only blockchain data</span><span aria-hidden="true">·</span><span>No wallet or payment</span></div></section>
   <div class="preview-state"><strong>Private backend preview</strong><p>Reports and monitors use public blockchain data. Public RPC coverage can be incomplete. Distribution CSVs and alert email addresses are retained temporarily on the PIT backend. No transaction is signed or sent.</p></div>
+  {hostedNftUnavailable && <div class="preview-state" role="status"><strong>Metadata fetch unavailable in this private beta</strong><p>External NFT metadata checks will open after the outbound network protection is verified. No scan can be submitted here yet.</p></div>}
   <section class="backend-tool" data-backend-tool={tool.kind} data-api-origin={origin}>
     <form id="backend-form" class="backend-form">
       <label>Access code<input name="invite" type="password" autocomplete="off" required placeholder="Private beta access code" /></label>
@@ -22,7 +24,7 @@ const label = V2_CATEGORIES.find((category) => category.id === tool.category)?.l
       {tool.kind === "distribution" && <><label>Expected recipients CSV<textarea name="csv" rows="6" required placeholder="recipient,amount&#10;0x…,1.5"></textarea></label><label>Transaction hashes (one per line)<textarea name="transactionHashes" rows="4" required></textarea></label></>}
       {tool.kind === "nft" && <label>Token IDs (comma separated, maximum 25)<textarea name="tokenIds" rows="3" required placeholder="1,2,3"></textarea></label>}
       {tool.kind === "monitor" && <><label>Start block<input name="startBlock" type="number" min="0" required /></label><label>Rule<select name="rule"><option value="transfer-threshold">ERC-20 transfer threshold</option><option value="mint">Mint</option><option value="burn">Burn</option><option value="ownership">Ownership transfer</option><option value="roles">Role change</option><option value="pause">Pause state event</option><option value="proxy-upgrade">Proxy upgrade event</option></select></label><label>Threshold in token base units<input name="minimum" type="text" value="1" inputmode="numeric" /></label><label>Email alerts (optional)<input name="email" type="email" autocomplete="email" /></label></>}
-      <button type="submit">{tool.kind === "monitor" ? "Create monitor" : "Run report"}</button>
+      <button type="submit" disabled={hostedNftUnavailable}>{tool.kind === "monitor" ? "Create monitor" : "Run report"}</button>
     </form>
     <p id="backend-status" role="status" aria-live="polite"></p>
     <details id="backend-access" hidden><summary>Private result access</summary><p>Keep this ID and token if you need to reopen the result. The token is shown only here and is deleted with the result.</p><code id="backend-credentials"></code></details>

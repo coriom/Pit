@@ -1,6 +1,6 @@
 import http from 'node:http';
 import { createPool, hashToken, newAccess, newId, safeTokenMatch } from './db.mjs';
-import { limits, validateJob } from './config.mjs';
+import { limits, nftFetchAllowed, validateJob } from './config.mjs';
 import { monitorSchema } from './monitor.mjs';
 import { clientFor, assertChain } from './rpc.mjs';
 import { verifyEdgeRequest } from './edge-auth.mjs';
@@ -17,12 +17,17 @@ async function rawBody(req){if(req.pitRawBody)return req.pitRawBody;let size=0,c
 async function body(req){try{return JSON.parse((await rawBody(req)).toString('utf8'));}catch{throw new Error('INVALID_JSON');}}
 async function authorized(pool,table,id,token){if(!token)return null;const {rows}=await pool.query(`SELECT * FROM ${table} WHERE id=$1`,[id]);return rows[0]&&safeTokenMatch(rows[0].access_hash,token)?rows[0]:null;}
 async function withInviteLock(pool,inviteHash,task){const db=await pool.connect();try{await db.query('BEGIN');await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[inviteHash]);const result=await task(db);await db.query('COMMIT');return result;}catch(error){await db.query('ROLLBACK');throw error;}finally{db.release();}}
-export function createApi(pool,{inviteHash=process.env.PIT_BACKEND_INVITE_SHA256,allowedOrigin=process.env.PIT_ALLOWED_ORIGIN,allowedEmails=process.env.PIT_EMAIL_ALLOWED_RECIPIENTS?.split(',').map(x=>x.trim().toLowerCase()).filter(Boolean)??[],edgeSecret=process.env.PIT_EDGE_HMAC_KEY,clientFactory=clientFor}={}){
+export function createApi(pool,{inviteHash=process.env.PIT_BACKEND_INVITE_SHA256,allowedOrigin=process.env.PIT_ALLOWED_ORIGIN,allowedEmails=process.env.PIT_EMAIL_ALLOWED_RECIPIENTS?.split(',').map(x=>x.trim().toLowerCase()).filter(Boolean)??[],edgeSecret=process.env.PIT_EDGE_HMAC_KEY,clientFactory=clientFor,nftEnabled=nftFetchAllowed(),maxActiveRequests=limits.maxActiveRequests}={}){
   if(!/^[a-f0-9]{64}$/.test(inviteHash??''))throw new Error('INVITE_HASH_REQUIRED');
   if(!/^https:\/\/[^/]+$|^http:\/\/127\.0\.0\.1:\d+$/.test(allowedOrigin??''))throw new Error('ALLOWED_ORIGIN_REQUIRED');
   if(process.env.NODE_ENV==='production' && (!edgeSecret || edgeSecret.length<32))throw new Error('EDGE_AUTH_REQUIRED');
   if(edgeSecret && edgeSecret.length<32)throw new Error('EDGE_AUTH_WEAK');
-  return http.createServer(async(req,res)=>{try{
+  let activeRequests=0;
+  return http.createServer(async(req,res)=>{
+    if(activeRequests>=maxActiveRequests)return send(res,503,{code:'SERVER_BUSY'},{'Retry-After':'5'});
+    activeRequests++;
+    res.once('close',()=>activeRequests--);
+    try{
     const url=new URL(req.url,'http://localhost');const path=url.pathname;
     const localHealth = ['/pit/api/v1/health','/pit/api/v1/ready'].includes(path) && ['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress);
     if(edgeSecret && !localHealth){
@@ -40,6 +45,7 @@ export function createApi(pool,{inviteHash=process.env.PIT_BACKEND_INVITE_SHA256
     if(req.method==='POST'&&parts[0]==='jobs'&&parts.length===1){
       const invite=req.headers['x-pit-invite'];if(!safeTokenMatch(inviteHash,invite))return send(res,403,{code:'INVITE_REQUIRED'});
       const payload=await body(req),input=validateJob(payload.kind,payload.input);
+      if(payload.kind==='nft'&&!nftEnabled)return send(res,503,{code:'NFT_FETCH_DISABLED'});
       const idempotency=req.headers['idempotency-key'];if(typeof idempotency!=='string'||!/^[A-Za-z0-9_-]{16,100}$/.test(idempotency))return send(res,400,{code:'IDEMPOTENCY_REQUIRED'});
       const created=await withInviteLock(pool,inviteHash,async db=>{
         if(idempotency){const {rows}=await db.query(`SELECT id FROM pit_jobs WHERE invite_hash=$1 AND idempotency_key=$2`,[inviteHash,idempotency]);if(rows.length)return {status:409,body:{code:'ALREADY_SUBMITTED',jobId:rows[0].id}};}

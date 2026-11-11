@@ -2,9 +2,12 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const hosted = process.env.PIT_HOSTED_STAGING === "1";
+const backend = process.env.PIT_BACKEND_ENABLED === "1" && !hosted;
+const backendOrigin = backend ? process.env.PIT_BACKEND_API_ORIGIN : "";
 if (hosted && process.env.PIT_OPERATIONS_MODE && process.env.PIT_OPERATIONS_MODE !== "local") throw Error("Hosted staging cannot be a testnet wallet build");
 const walletPreview = process.env.PIT_OPERATIONS_MODE === "base-sepolia-wallet";
 const testnet = process.env.PIT_OPERATIONS_MODE === "base-sepolia" || walletPreview;
+if (backend && (!/^https:\/\/[^/]+$|^http:\/\/127\.0\.0\.1:\d+$/.test(backendOrigin ?? "") || testnet)) throw Error("Unsafe backend artifact configuration");
 if (process.env.PIT_OPERATIONS_MODE && !["local", "base-sepolia", "base-sepolia-wallet"].includes(process.env.PIT_OPERATIONS_MODE)) throw Error("Unsupported operations artifact mode");
 const root = walletPreview ? "dist-operations-sepolia-wallet" : testnet ? "dist-operations-sepolia" : "dist-operations";
 const allowedPageConnect = hosted ? "'none'" : (testnet ? "https://sepolia.base.org" : "http://127.0.0.1:8545 https:");
@@ -18,7 +21,8 @@ function walk(dir) {
   }
 }
 walk(root);
-const expected = ["index.html", "404.html", ...(!testnet ? ["guide/index.html"] : []), "operations/token-creator/index.html", "operations/multisender/index.html", "operations/token-locker/index.html", "operations/token-vesting/index.html",
+const backendPages = ["event-history", "contract-permissions", "distribution-verifier", "nft-metadata-checker", "contract-monitor"].map((id) => `backend/${id}/index.html`);
+const expected = ["index.html", "404.html", ...(!testnet ? ["guide/index.html"] : []), ...(backend ? backendPages : []), "operations/token-creator/index.html", "operations/multisender/index.html", "operations/token-locker/index.html", "operations/token-vesting/index.html",
   ...(!testnet ? ["token-management", "allowance-manager", "batch-balance-checker", "native-multisender", "nft-creator", "nft-batch-sender", "locker-manager", "vesting-manager", "nft-manager", "erc1155-creator", "erc1155-manager", "erc1155-multisender", "metadata-studio", "airdrop-composer"].map((id) => `operations/${id}/index.html`) : [])].sort();
 const html = files.filter((name) => name.endsWith(".html")).sort();
 if (JSON.stringify(html) !== JSON.stringify(expected)) throw Error(`Unexpected operation routes: ${html.join(", ")}`);
@@ -29,11 +33,12 @@ if (!headers.includes(`connect-src ${allowedConnect};`) || !headers.includes("X-
 if (testnet ? /http:\/\/127\.0\.0\.1:8545|connect-src [^;]*\s/.test(headers) : /https:\/\/(?!ipfs\.io)/.test(headers)) throw Error("Unexpected operation connect origin");
 for (const name of html) {
   const source = readFileSync(join(root, name), "utf8");
-  if (!/noindex,nofollow/.test(source) || !source.includes(`connect-src ${allowedPageConnect};`) || /https:\/\/(?:api\.cow\.fi|api\.hyperliquid|.*\.rpc\.)/.test(source)) throw Error(`Unsafe operation page: ${name}`);
+  const pageConnect = backend ? `${allowedPageConnect} ${backendOrigin}` : allowedPageConnect;
+  if (!/noindex,nofollow/.test(source) || !source.includes(`connect-src ${pageConnect};`) || /https:\/\/(?:api\.cow\.fi|api\.hyperliquid|.*\.rpc\.)/.test(source)) throw Error(`Unsafe operation page: ${name}`);
 }
 if (files.some((name) => /(?:premium-worker|taxlot|\.map$)/i.test(name))) throw Error("Forbidden operation artifact");
 const scripts = files.filter((name) => name.endsWith(".js"));
-if (scripts.length < 1 || scripts.length > (hosted ? 4 : testnet ? 3 : 12)) throw Error(`Unexpected operations JavaScript asset count: ${scripts.length}`);
+if (scripts.length < 1 || scripts.length > (hosted ? 4 : testnet ? 3 : backend ? 13 : 12)) throw Error(`Unexpected operations JavaScript asset count: ${scripts.length}`);
 if (hosted) {
   const code = scripts.map((name) => readFileSync(join(root, name), "utf8")).join("\n");
   if (/eth_sendTransaction|eth_sendRawTransaction|eth_requestAccounts|writeContract|deployContract|sendTransaction|createWalletClient|127\.0\.0\.1:8545|LOCAL MOCK USDC/.test(code))

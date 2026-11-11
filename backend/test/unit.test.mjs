@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { parseAllocations } from '../src/distribution.mjs';
 import { publicAddress, resolvePublic, normalizeMetadataUri, ensureResponseStatus, safeFetch } from '../src/safe-http.mjs';
 import { matchesRule } from '../src/monitor.mjs';
-import { validateJob } from '../src/config.mjs';
+import { nftFetchAllowed, validateJob } from '../src/config.mjs';
+import { createApi } from '../src/api.mjs';
+import { processJob } from '../src/worker.mjs';
 import { scanEvents } from '../src/events.mjs';
 import { hashToken,safeTokenMatch } from '../src/db.mjs';
 import { edgeSignature, verifyEdgeRequest } from '../src/edge-auth.mjs';
@@ -58,6 +60,46 @@ test('request validation fails closed on range, extra fields and unsupported cha
   assert.throws(()=>validateJob('events',{...base,toBlock:100000}),/BLOCK_RANGE_LIMIT/);
   assert.throws(()=>validateJob('events',{...base,signingKey:'bad'}));
   assert.throws(()=>validateJob('events',{...base,chain:'anvil'}));
+});
+test('hosted NFT fetching is disabled at both the configuration and API boundary',async()=>{
+  assert.equal(nftFetchAllowed({NODE_ENV:'production',PIT_NFT_FETCH_ENABLED:'1'}),false);
+  assert.equal(nftFetchAllowed({NODE_ENV:'test',PIT_NFT_FETCH_ENABLED:'0'}),false);
+  const server=createApi({}, {inviteHash:hashToken('private-invite'),allowedOrigin:'http://127.0.0.1:4000',nftEnabled:false});
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  try{
+    const response=await fetch(`http://127.0.0.1:${server.address().port}/pit/api/v1/jobs`,{
+      method:'POST',headers:{'content-type':'application/json','x-pit-invite':'private-invite'},
+      body:JSON.stringify({kind:'nft',input:{chain:'base-sepolia',contract:a,tokenIds:['1']}})
+    });
+    assert.equal(response.status,503);
+    assert.equal((await response.json()).code,'NFT_FETCH_DISABLED');
+  }finally{await new Promise(resolve=>server.close(resolve));}
+});
+test('worker rejects a queued NFT job when hosted fetching is disabled',async()=>{
+  let savedStatus,savedCode;
+  const pool={query:async(_sql,args)=>{savedStatus=args[1];savedCode=args[2];return {rowCount:1};}};
+  const status=await processJob(pool,{id:'job',kind:'nft',input_json:{},claim_token:'lease',attempts:1},{nftEnabled:false,fetcher:()=>{throw Error('FETCH_CALLED');}});
+  assert.equal(status,'FAILED');
+  assert.equal(savedStatus,'FAILED');
+  assert.equal(savedCode,'NFT_FETCH_DISABLED');
+});
+test('API bounds simultaneous requests and returns an explicit overload response',async()=>{
+  let release,entered;
+  const enteredPromise=new Promise(resolve=>entered=resolve);
+  const pool={query:()=>new Promise(resolve=>{release=resolve;entered();})};
+  const server=createApi(pool,{inviteHash:hashToken('private-invite'),allowedOrigin:'http://127.0.0.1:4000',maxActiveRequests:1});
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  try{
+    const url=`http://127.0.0.1:${server.address().port}/pit/api/v1/ready`;
+    const first=fetch(url);
+    await enteredPromise;
+    const busy=await fetch(url);
+    assert.equal(busy.status,503);
+    assert.equal(busy.headers.get('retry-after'),'5');
+    assert.equal((await busy.json()).code,'SERVER_BUSY');
+    release({rows:[{live:true}]});
+    assert.equal((await first).status,200);
+  }finally{await new Promise(resolve=>server.close(resolve));}
 });
 test('tokens are hashed and compared without plaintext persistence',()=>{
   const hash=hashToken('test-capability');assert.equal(safeTokenMatch(hash,'test-capability'),true);assert.equal(safeTokenMatch(hash,'other'),false);
