@@ -88,6 +88,10 @@ test('API bounds simultaneous requests and returns an explicit overload response
   const enteredPromise=new Promise(resolve=>entered=resolve);
   const pool={query:()=>new Promise(resolve=>{release=resolve;entered();})};
   const server=createApi(pool,{inviteHash:hashToken('private-invite'),allowedOrigin:'http://127.0.0.1:4000',maxActiveRequests:1});
+  assert.equal(server.headersTimeout,10_000);
+  assert.equal(server.requestTimeout,15_000);
+  assert.equal(server.timeout,30_000);
+  assert.equal(server.maxConnections,64);
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   try{
     const url=`http://127.0.0.1:${server.address().port}/pit/api/v1/ready`;

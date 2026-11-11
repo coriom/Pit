@@ -23,7 +23,7 @@ export function createApi(pool,{inviteHash=process.env.PIT_BACKEND_INVITE_SHA256
   if(process.env.NODE_ENV==='production' && (!edgeSecret || edgeSecret.length<32))throw new Error('EDGE_AUTH_REQUIRED');
   if(edgeSecret && edgeSecret.length<32)throw new Error('EDGE_AUTH_WEAK');
   let activeRequests=0;
-  return http.createServer(async(req,res)=>{
+  const server=http.createServer({headersTimeout:10_000,requestTimeout:15_000,keepAliveTimeout:5_000,maxHeaderSize:8192},async(req,res)=>{
     if(activeRequests>=maxActiveRequests)return send(res,503,{code:'SERVER_BUSY'},{'Retry-After':'5'});
     activeRequests++;
     res.once('close',()=>activeRequests--);
@@ -85,5 +85,8 @@ export function createApi(pool,{inviteHash=process.env.PIT_BACKEND_INVITE_SHA256
     }
     return send(res,404,{code:'NOT_FOUND'});
   }catch(error){const raw=error?.issues?'VALIDATION_ERROR':String(error.message??'INTERNAL_ERROR');const clientError=/^(BODY_LIMIT|VALIDATION_ERROR|CSV_[A-Z_]+|TOKEN_[A-Z_]+|BLOCK_[A-Z_]+|INVALID_[A-Z_]+|UNSUPPORTED_[A-Z_]+|IDEMPOTENCY_REQUIRED|EMPTY_CSV|DUPLICATE_RECIPIENT)$/.test(raw);const code=clientError?raw:'INTERNAL_ERROR';const status=code==='BODY_LIMIT'?413:clientError?400:500;return send(res,status,{code});}});
+  server.setTimeout(30_000);
+  server.maxConnections=64;
+  return server;
 }
 if(import.meta.url===`file://${process.argv[1]}`){const pool=createPool(),server=createApi(pool);server.listen(Number(process.env.PIT_API_PORT||8789),'0.0.0.0');const stop=()=>server.close(()=>pool.end());process.on('SIGTERM',stop);process.on('SIGINT',stop);}
