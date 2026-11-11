@@ -1,0 +1,198 @@
+{
+  "canonicalization": "UTF-8 JSON, recursively lexicographic keys, two-space indentation, one trailing LF; SHA-256 over exact file bytes",
+  "compose": {
+    "coolifyResourceName": "pit-crypto-backend-canary",
+    "generatedConfigMustPass": "backend/ops/check-canary-config.mjs",
+    "noAutomaticDeployment": true,
+    "path": "backend/compose.canary.yml",
+    "project": "pit-crypto-backend-canary",
+    "resourceMustNotExistBefore": true,
+    "sha256": "7644907195bccac2cbf4764275175487eb533031f8b85cfd861364438481e2df"
+  },
+  "cost": {
+    "assumptions": "existing VPS and Coolify capacity; no paid services or new host ports",
+    "newFixedMonthlyEUR": 0,
+    "resourceUseObservedAfterDeployment": false
+  },
+  "database": {
+    "backupSchedule": "none-for-disposable-canary",
+    "dataClass": "disposable-synthetic-and-public-chain",
+    "migrations": [
+      {
+        "name": "001_init.sql",
+        "sha256": "89817d8bc9988c6edbf2b3debadd6ee4073b626ba5b042e8700929c4bbe4cddb"
+      },
+      {
+        "name": "002_edge_nonces.sql",
+        "sha256": "047b161767b4b21b8d060ee698dc21f1ba8c565d6bec8a0ae6e37ab87e068f29"
+      }
+    ],
+    "name": "pit_crypto",
+    "realUserBackupRequiredBeforePrivateBeta": true,
+    "role": "pit_api",
+    "volume": "pit-crypto-backend-canary_pit-db-data"
+  },
+  "monitoring": {
+    "metrics": [
+      "PIT and neighbor health",
+      "PIT CPU/RAM/restarts/OOM",
+      "host available RAM and CPU pressure",
+      "disk free and growth",
+      "job queue age and worker duration",
+      "HTTP 429/503"
+    ],
+    "samplesAfterStartMinutes": [
+      5,
+      15,
+      60,
+      1440
+    ],
+    "stopConditions": [
+      "any public exposure or foreign network attachment",
+      "neighbor health regression",
+      "any PIT OOM or unexpected restart",
+      "available RAM below 2 GiB for 5 min",
+      "disk free below 25 GiB",
+      "CPU busy above 85 percent for 15 min",
+      "synthetic job partial or failed or queue age over 10 min"
+    ]
+  },
+  "networks": {
+    "neighborProjectAttachment": false,
+    "pit-data": {
+      "fullName": "pit-crypto-backend-canary_pit-data",
+      "internal": true
+    },
+    "pit-rpc": {
+      "fullName": "pit-crypto-backend-canary_pit-rpc",
+      "notACompleteEgressFirewall": true,
+      "outbound": true
+    },
+    "sharedProxyAttachment": false
+  },
+  "postgresImage": "postgres@sha256:43f9275df91e012c3da3d86bea5d7bb5e67a473296cc906c5f9e80b8176b1a37",
+  "postgresPlatform": "linux/amd64",
+  "rollback": {
+    "final": "after evidence review, remove only pit-crypto-backend-canary containers/networks/volume and destroy its disposable secrets",
+    "first": "stop only PIT API and worker; collect sanitized PIT evidence; preserve PIT volume pending review",
+    "neighborServicesUntouched": true,
+    "sharedTraefikUntouched": true
+  },
+  "rpc": {
+    "allowlistedHttpsProviders": [
+      "ethereum-rpc.publicnode.com",
+      "base-rpc.publicnode.com",
+      "base-sepolia-rpc.publicnode.com"
+    ],
+    "chains": [
+      1,
+      8453,
+      84532
+    ],
+    "expectedEventCount": 2,
+    "smokeBlock": 51698212,
+    "smokeChainId": 84532,
+    "smokeContract": "0xF2c716A5EA0240C3D3A49cA1aad81d98e2947475",
+    "writes": false
+  },
+  "runtimeImage": "ghcr.io/coriom/pit-backend@sha256:b9e9c812e00b0a782c92579c22254941dddc81ca7b24fd49077acb7525486000",
+  "runtimeImageSourceCommit": "a4333fcaf2c6d9987702d80305abc7a98256f010",
+  "schema": "pit.backend.netcup.internal-canary.v1",
+  "secretInjection": {
+    "invite": "raw disposable invite held only in operator-owned mode-0600 file for smoke, transmitted by stdin",
+    "method": "new PIT-only Coolify private environment values outside Git",
+    "required": [
+      "PIT_DB_PASSWORD",
+      "PIT_DATABASE_URL",
+      "PIT_BACKEND_INVITE_SHA256",
+      "PIT_EDGE_HMAC_KEY"
+    ],
+    "reuseNeighborCredentials": false
+  },
+  "security": {
+    "anonymousApiAccess": false,
+    "apiHmacNonceReplayProtection": true,
+    "blockchainSigning": false,
+    "capabilityScopedResults": true,
+    "cloudflareGateway": false,
+    "externalBlockchainWrites": false,
+    "hostPorts": [],
+    "hostedNftFetch": false,
+    "mainnetExecution": false,
+    "productionPayments": false,
+    "publicHostname": null,
+    "publicRoute": false,
+    "realUserCsv": false,
+    "smtp": false
+  },
+  "separatePrivateBetaPrerequisites": [
+    "operator-controlled origin DNS",
+    "hostname-matching trusted TLS",
+    "reviewed /pit/api/v1/ proxy route",
+    "Cloudflare Access gateway and HMAC bypass tests",
+    "PIT-only backup destination/retention and restore verification"
+  ],
+  "services": {
+    "pit-api": {
+      "cpu": 0.25,
+      "memoryMiB": 256,
+      "networks": [
+        "pit-data",
+        "pit-rpc"
+      ],
+      "publishedHostPorts": [],
+      "replicas": 1,
+      "traefik": false
+    },
+    "pit-db": {
+      "cpu": 0.5,
+      "memoryMiB": 512,
+      "networks": [
+        "pit-data"
+      ],
+      "publishedHostPorts": [],
+      "replicas": 1,
+      "traefik": false
+    },
+    "pit-migrate": {
+      "cpu": 0.25,
+      "memoryMiB": 192,
+      "networks": [
+        "pit-data"
+      ],
+      "oneShot": true,
+      "publishedHostPorts": [],
+      "traefik": false
+    },
+    "pit-worker": {
+      "cpu": 0.5,
+      "memoryMiB": 512,
+      "networks": [
+        "pit-data",
+        "pit-rpc"
+      ],
+      "publishedHostPorts": [],
+      "replicas": 1,
+      "traefik": false
+    }
+  },
+  "smoke": {
+    "assertions": [
+      "generated Compose has no route/port/proxy network",
+      "runtime Docker labels/networks/port bindings/cgroups match",
+      "migrations and API/worker/database health",
+      "unsigned and replay requests denied",
+      "read-only RPC chain ID",
+      "queued job persists while PIT worker stopped",
+      "only PIT worker restarts",
+      "canonical complete two-log result, exports, capability denial, expiry and deletion",
+      "neighbor health unchanged"
+    ],
+    "runner": "backend/ops/run-internal-canary.mjs",
+    "runnerSha256": "627d97c537f64fb69ca873b68e097743c5f72299a43094f73d1cee40f182cee7",
+    "script": "backend/ops/internal-canary-smoke.mjs",
+    "scriptSha256": "96862943652b14485207dce6ea51496b3673cba5ae97d6e8f3917176274aed2b"
+  },
+  "sourceCommit": "7ecadb5297c7848960a3bcf27d4f96afa3b17b99",
+  "status": "PREPARED_NOT_AUTHORIZED"
+}
