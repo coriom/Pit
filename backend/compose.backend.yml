@@ -48,9 +48,10 @@ services:
       PIT_EDGE_HMAC_KEY: ${PIT_EDGE_HMAC_KEY:?edge signing key required}
       PIT_ALLOWED_ORIGIN: ${PIT_ALLOWED_ORIGIN:?approved origin required}
       PIT_EMAIL_ALLOWED_RECIPIENTS: ${PIT_EMAIL_ALLOWED_RECIPIENTS:-}
+      PIT_NFT_FETCH_ENABLED: "0"
       PIT_API_PORT: "8789"
     expose: ["8789"]
-    networks: [pit-internal, pit-egress]
+    networks: [pit-internal, pit-egress, pit-proxy]
     depends_on:
       pit-migrate: { condition: service_completed_successfully }
     healthcheck:
@@ -69,7 +70,16 @@ services:
     stop_grace_period: 30s
     logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
     restart: unless-stopped
-    labels: { traefik.enable: "false" }
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${PIT_PROXY_NETWORK:?reviewed shared proxy network required}
+      traefik.http.routers.pit-api.rule: "Host(`${PIT_API_HOSTNAME:?approved DNS hostname required}`) && PathPrefix(`/pit/api/v1/`)"
+      traefik.http.routers.pit-api.entrypoints: websecure
+      traefik.http.routers.pit-api.priority: "250"
+      traefik.http.routers.pit-api.tls: "true"
+      traefik.http.routers.pit-api.tls.certresolver: ${PIT_TLS_RESOLVER:?existing production resolver required}
+      traefik.http.routers.pit-api.service: pit-api
+      traefik.http.services.pit-api.loadbalancer.server.port: "8789"
   pit-worker:
     image: ghcr.io/coriom/pit-backend@sha256:${PIT_BACKEND_IMAGE_DIGEST:?published immutable backend digest required}
     command: ["node", "--max-old-space-size=384", "src/worker.mjs"]
@@ -81,6 +91,7 @@ services:
       PIT_SMTP_SECURE: ${PIT_SMTP_SECURE:-1}
       PIT_SMTP_USER: ${PIT_SMTP_USER:-}
       PIT_SMTP_PASSWORD: ${PIT_SMTP_PASSWORD:-}
+      PIT_NFT_FETCH_ENABLED: "0"
     networks: [pit-internal, pit-egress]
     depends_on:
       pit-migrate: { condition: service_completed_successfully }
@@ -108,6 +119,9 @@ networks:
     name: pit-crypto-backend-internal
   pit-egress:
     name: pit-crypto-backend-egress
+  pit-proxy:
+    external: true
+    name: ${PIT_PROXY_NETWORK:?reviewed shared proxy network required}
 volumes:
   pit-db-data:
     name: pit-crypto-backend-db
