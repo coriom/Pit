@@ -26,6 +26,7 @@ Status: **FAILED security gate; all PIT containers stopped**. This record does n
 - Before start: 6,225 MiB RAM available; 142 GiB disk free; load average 0.34/0.36/0.36.
 - After start: 6,135 MiB RAM available; 141 GiB disk free; load average 0.70/0.78/0.65; CPU full pressure 0.
 - DeOpt and HBI HTTPS health endpoints returned HTTP 200 with normal TLS verification after start.
+- After rollback, DeOpt and HBI still returned HTTP 200 with normal TLS verification; Coolify showed Toolio Commerce Preview `Running`. Host available RAM was 6,242 MiB.
 - External port 8789 refused connections. `/pit/api/v1/health` and an unrelated nonexistent path both returned the same shared-proxy 503 response (3,492 bytes); this is consistent with no PIT route, but Docker router labels still require inspection.
 
 ## Verification failure
@@ -40,4 +41,4 @@ The runtime project identity and network attachments differ materially from the 
 
 ## Next gate
 
-The existing Coolify Service cannot be restarted under the V1.4 authorization. The Service remains configured but stopped; PIT-only volumes and networks remain for evidence review. A new deployment design must avoid Coolify's automatic proxy attachment to the resource network. A directly managed Docker Compose stack is a possible minimal alternative, but requires a new, explicit hash-bound authorization and its own pre-start validation. Browser-accessible beta remains a separate, unauthorised milestone.
+The existing Coolify Service cannot be restarted under the V1.4 authorization. The Service remains configured but stopped; PIT-only volumes and networks remain for evidence review. A new deployment design must avoid Coolify's automatic proxy attachment to the resource network. The distinct candidate at `deployments/netcup-internal-canary-direct-v141.json` uses the same approved Compose and image under a directly managed PIT-only Docker Compose project; it requires a new, explicit hash-bound authorization and its own pre-start validation. Browser-accessible beta remains a separate, unauthorised milestone.

@@ -1,0 +1,115 @@
+{
+  "canonicalization": "UTF-8 JSON with recursively sorted keys, two-space indentation and one trailing LF; SHA-256 over exact bytes",
+  "compose": {
+    "pathOnVps": "/home/deoptops/.config/pit-canary-v14/compose.canary.yml",
+    "repositoryPath": "backend/compose.canary.yml",
+    "sha256": "7644907195bccac2cbf4764275175487eb533031f8b85cfd861364438481e2df",
+    "validation": "docker compose config --format json piped privately to backend/ops/check-canary-config.mjs"
+  },
+  "coolifyPreviousAttempt": {
+    "reasonForReplacement": "Coolify attached its shared proxy to a non-internal resource network containing PIT PostgreSQL",
+    "resourceUuid": "d47gm6kkdopzfurtmcd4lgpo",
+    "stateRequiredBeforeStart": "all four containers exited; no Coolify deployment or restart during direct canary",
+    "volumePolicy": "preserve the stopped Coolify PIT-only volume for evidence review"
+  },
+  "database": {
+    "dataClass": "disposable synthetic and public-chain only",
+    "migrations": [
+      "001_init.sql",
+      "002_edge_nonces.sql"
+    ],
+    "name": "pit_crypto",
+    "role": "pit_api",
+    "volume": "pit-crypto-backend-canary_pit-db-data"
+  },
+  "deployment": {
+    "method": "operator-approved direct Docker Compose on the existing Netcup VPS; not Coolify-managed",
+    "prestart": [
+      "verify source and image digests, secret-file mode 0600 and existing PIT Coolify containers exited",
+      "render Compose with PIT-only private values and require PIT_INTERNAL_CANARY_COMPOSE_PASS",
+      "verify no direct-project containers, networks or volume already exist",
+      "verify host RAM, disk, DeOpt/HBI/Toolio health and normal TLS trust"
+    ],
+    "project": "pit-crypto-backend-canary",
+    "start": "docker compose --project-name pit-crypto-backend-canary --env-file /home/deoptops/.config/pit-canary-v14/coolify.env -f /home/deoptops/.config/pit-canary-v14/compose.canary.yml up -d --no-build",
+    "stopOnFailure": "stop only pit-crypto-backend-canary API and worker immediately; preserve PIT-only volume for review"
+  },
+  "expectedIncrementalFixedMonthlyEUR": 0,
+  "externalExposure": {
+    "cloudflareGateway": false,
+    "hostPorts": [],
+    "hostname": null,
+    "proxyNetworks": [],
+    "traefikRouters": [],
+    "unauthenticatedJobs": false
+  },
+  "image": "ghcr.io/coriom/pit-backend@sha256:b9e9c812e00b0a782c92579c22254941dddc81ca7b24fd49077acb7525486000",
+  "networks": {
+    "pit-data": {
+      "internal": true,
+      "name": "pit-crypto-backend-canary_pit-data"
+    },
+    "pit-rpc": {
+      "internal": false,
+      "name": "pit-crypto-backend-canary_pit-rpc"
+    }
+  },
+  "postgresImage": "postgres@sha256:43f9275df91e012c3da3d86bea5d7bb5e67a473296cc906c5f9e80b8176b1a37",
+  "poststartAcceptance": [
+    "inspect four PIT-only Docker containers and effective cgroup CPU/RAM",
+    "prove proxy is not a member of either direct PIT network and no foreign members exist",
+    "prove no PIT host ports or Traefik routers exist",
+    "prove migration success, API/worker/database health and NFT fetching disabled",
+    "run exact existing internal-canary smoke runner for Base Sepolia read-only job, HMAC replay, scope, exports, worker recovery and deletion",
+    "measure host resources and recheck DeOpt/HBI/Toolio health"
+  ],
+  "resourceLimits": {
+    "pit-api": {
+      "cpu": 0.25,
+      "memoryMiB": 256
+    },
+    "pit-db": {
+      "cpu": 0.5,
+      "memoryMiB": 512
+    },
+    "pit-migrate": {
+      "cpu": 0.25,
+      "memoryMiB": 192
+    },
+    "pit-worker": {
+      "cpu": 0.5,
+      "memoryMiB": 512
+    }
+  },
+  "rollback": {
+    "complete": "docker compose down without -v for only pit-crypto-backend-canary; no global Docker cleanup",
+    "initial": "stop only direct-project PIT API and worker; preserve PIT volume and sanitized evidence",
+    "neighborServices": "never stop, restart or reconfigure",
+    "sharedProxy": "never modify, restart or reconnect"
+  },
+  "runtimeImageSourceCommit": "a4333fcaf2c6d9987702d80305abc7a98256f010",
+  "runtimeRestrictions": {
+    "customerData": false,
+    "emailDelivery": false,
+    "externalBlockchainWrites": false,
+    "hostedNftFetch": false,
+    "payments": false,
+    "signing": false
+  },
+  "secretInjection": {
+    "fileOnVps": "/home/deoptops/.config/pit-canary-v14/coolify.env",
+    "inviteFileOnVps": "/home/deoptops/.config/pit-canary-v14/invite",
+    "noSecretValuesInManifest": true,
+    "requiredFileMode": "0600"
+  },
+  "smokeRunner": {
+    "operatorWrapperOnVps": "/home/deoptops/.config/pit-canary-v14/verify-and-smoke.sh",
+    "operatorWrapperSha256": "1e5f389785a7b3557bd3b287af1ffd7e422fa5b2f4657caf99efff7093d5cff8",
+    "path": "backend/ops/run-internal-canary.mjs",
+    "sha256": "627d97c537f64fb69ca873b68e097743c5f72299a43094f73d1cee40f182cee7",
+    "smokeScriptSha256": "96862943652b14485207dce6ea51496b3673cba5ae97d6e8f3917176274aed2b"
+  },
+  "sourceCommit": "cb3362694b9ab0d551af896ca9870e0d60491387",
+  "status": "CANDIDATE_NOT_AUTHORIZED",
+  "vps": "94.16.113.122"
+}
