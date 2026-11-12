@@ -1,0 +1,36 @@
+{
+  "status": "PROPOSED_NOT_AUTHORIZED",
+  "purpose": "Materialize and validate Coolify's actual Raw Compose without starting PIT containers",
+  "sourceCommit": "7491452b31efe6e8465447ee3760a2dbef553a8f",
+  "composePath": "backend/compose.canary.coolify-raw.yml",
+  "composeSha256": "cb1c27b8ff48c11cde2ac77abcbd7e85cb8f02017684fd2e9aa53f494dc506f1",
+  "backendImage": "ghcr.io/coriom/pit-backend@sha256:b9e9c812e00b0a782c92579c22254941dddc81ca7b24fd49077acb7525486000",
+  "coolifyVersion": "4.7.5",
+  "coolifyApplicationUuid": "c1fsywygziaxxyz2aeks8ktt",
+  "coolifyProjectUuid": "gdzyjsit2cpznnv0kvisqnsk",
+  "coolifyEnvironmentUuid": "n34msfdthposcwlsy5hd0luj",
+  "oldStoppedServiceUuid": "d47gm6kkdopzfurtmcd4lgpo",
+  "allowedPreparation": [
+    "Operator imports the four existing PIT-only private values into the new Application without disclosing them",
+    "Verify Raw mode, manual deployment, no domain, no preview deployment, no predefined network",
+    "Verify the custom start command is docker compose config --quiet",
+    "Run one Coolify job with that non-starting custom command solely to materialize its actual Compose",
+    "Read and validate the generated Compose privately without printing secret values",
+    "Inspect the new Application management network and confirm it contains no PIT container"
+  ],
+  "anticipatedCoolifySideEffects": [
+    "Coolify may clone the pinned Git source and pull the pinned images",
+    "Coolify may create an empty Application management network and attach coolify-proxy to it",
+    "Coolify may create deployment records and temporary files"
+  ],
+  "prohibited": [
+    "docker compose up or any PIT container startup",
+    "public ports, domains or Traefik routers",
+    "starting, deleting or attaching the old PIT Service or its volume",
+    "modifying shared proxy configuration or neighboring applications",
+    "Cloudflare changes, payments, signing or blockchain writes"
+  ],
+  "stopCondition": "If any PIT container starts or any PIT data or RPC network becomes proxy-accessible, stop the new PIT-only resources and preserve all volumes",
+  "acceptance": "Generated Compose is captured with 0600 permissions, rendered privately and passes check-coolify-raw-canary.mjs for the Application UUID; effective volume name and network topology are recorded; no PIT service has started",
+  "subsequentGate": "A separate final manifest and GO PIT INTERNAL CANARY RAW authorization are required before starting any PIT container"
+}
