@@ -1,0 +1,119 @@
+name: pit-crypto-backend-canary
+
+# Coolify Raw Compose variant of compose.canary.yml. All service settings are
+# identical; labels use list syntax because oldRawParser appends list labels.
+services:
+  pit-db:
+    image: postgres@sha256:43f9275df91e012c3da3d86bea5d7bb5e67a473296cc906c5f9e80b8176b1a37
+    platform: linux/amd64
+    environment:
+      POSTGRES_DB: pit_crypto
+      POSTGRES_USER: pit_api
+      POSTGRES_PASSWORD: ${PIT_DB_PASSWORD:?PIT-only database password required}
+    volumes:
+      - pit-db-data:/var/lib/postgresql/data
+    networks: [pit-data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pit_api -d pit_crypto"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+    mem_limit: 512m
+    cpus: 0.5
+    pids_limit: 100
+    security_opt: [no-new-privileges:true]
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+    restart: unless-stopped
+    labels:
+      - traefik.enable=false
+
+  pit-migrate:
+    image: ghcr.io/coriom/pit-backend@sha256:b9e9c812e00b0a782c92579c22254941dddc81ca7b24fd49077acb7525486000
+    command: ["node", "src/migrate.mjs"]
+    environment:
+      PIT_DATABASE_URL: ${PIT_DATABASE_URL:?PIT-only database URL required}
+    networks: [pit-data]
+    depends_on:
+      pit-db: { condition: service_healthy }
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 192m
+    cpus: 0.25
+    pids_limit: 50
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+    restart: "no"
+    labels:
+      - traefik.enable=false
+
+  pit-api:
+    image: ghcr.io/coriom/pit-backend@sha256:b9e9c812e00b0a782c92579c22254941dddc81ca7b24fd49077acb7525486000
+    command: ["node", "--max-old-space-size=192", "src/api.mjs"]
+    environment:
+      PIT_DATABASE_URL: ${PIT_DATABASE_URL:?PIT-only database URL required}
+      PIT_BACKEND_INVITE_SHA256: ${PIT_BACKEND_INVITE_SHA256:?canary invite hash required}
+      PIT_EDGE_HMAC_KEY: ${PIT_EDGE_HMAC_KEY:?canary HMAC key required}
+      PIT_ALLOWED_ORIGIN: http://127.0.0.1:8790
+      PIT_NFT_FETCH_ENABLED: "0"
+      PIT_EMAIL_ALLOWED_RECIPIENTS: ""
+      PIT_API_PORT: "8789"
+    networks: [pit-data, pit-rpc]
+    depends_on:
+      pit-migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8789/pit/api/v1/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 256m
+    cpus: 0.25
+    pids_limit: 80
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    init: true
+    stop_grace_period: 30s
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+    restart: unless-stopped
+    labels:
+      - traefik.enable=false
+
+  pit-worker:
+    image: ghcr.io/coriom/pit-backend@sha256:b9e9c812e00b0a782c92579c22254941dddc81ca7b24fd49077acb7525486000
+    command: ["node", "--max-old-space-size=384", "src/worker.mjs"]
+    environment:
+      PIT_DATABASE_URL: ${PIT_DATABASE_URL:?PIT-only database URL required}
+      PIT_NFT_FETCH_ENABLED: "0"
+    networks: [pit-data, pit-rpc]
+    depends_on:
+      pit-migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "node", "src/worker-health.mjs"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 512m
+    cpus: 0.5
+    pids_limit: 80
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    init: true
+    stop_grace_period: 30s
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+    restart: unless-stopped
+    labels:
+      - traefik.enable=false
+
+networks:
+  pit-data:
+    internal: true
+  pit-rpc: {}
+
+volumes:
+  pit-db-data: {}

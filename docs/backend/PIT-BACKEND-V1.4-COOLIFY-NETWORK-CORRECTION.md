@@ -1,0 +1,35 @@
+# PIT V1.4 — correction du réseau Coolify (candidat, non déployé)
+
+Dernier contrôle privilégié transmis par l'opérateur le 12 novembre 2026 : **tous les conteneurs PIT étaient arrêtés**. La base et son volume de la première tentative ont été conservés. L'état Docker présent devra être revérifié avant toute nouvelle opération. Ce document ne donne aucune autorisation de démarrage.
+
+## Cause vérifiée
+
+Le serveur observé exécute Coolify **4.7.5** (la mention historique 4.5.3 est périmée). Dans les deux versions, `StartService.php` lance les Services avec `--project-name <UUID>` puis connecte **sans condition de domaine** `coolify-proxy` au réseau `<UUID>`. Le parseur Service ajoute ce réseau à chaque service du Compose, y compris `pit-db`, même quand la source déclare `pit-data` et `pit-rpc` et quand « Connect To Predefined Network » est désactivé. Cette option ne contrôle que le réseau de destination prédéfini, pas le réseau du Service.
+
+Les observations Docker de la tentative ont confirmé ce mécanisme : le proxy et `pit-db-d47gm6kkdopzfurtmcd4lgpo` partageaient le réseau non interne `d47gm6kkdopzfurtmcd4lgpo`. Les réseaux `..._pit-data` et `..._pit-rpc` n'étaient pas attachés au proxy. Aucun port PIT ni routeur Traefik PIT n'a été observé ; l'accès réseau interne du proxy à PostgreSQL suffit néanmoins à faire échouer l'isolement approuvé.
+
+Sources de la version du code utilisée : [Coolify 4.7.5 `StartService.php`](https://github.com/coollabsio/coolify/blob/v4.7.5/app/Actions/Service/StartService.php), [parseur Compose](https://github.com/coollabsio/coolify/blob/v4.7.5/bootstrap/helpers/parsers.php), [même connexion en 4.5.3](https://github.com/coollabsio/coolify/blob/v4.5.3/app/Actions/Service/StartService.php). La [documentation réseau Coolify](https://coolify.io/docs/core/networking-in-coolify) confirme que son proxy rejoint les réseaux propres aux ressources Compose.
+
+## Correction compatible avec Coolify
+
+Créer dans le projet PIT existant une **Application Git avec stratégie Docker Compose et mode Raw (deploy file as-is)**, au lieu d'un Service « Docker Compose Empty ». Le fichier approuvé `backend/compose.canary.yml` reste inchangé. Sa variante `backend/compose.canary.coolify-raw.yml` ne change que la syntaxe des quatre labels `traefik.enable=false`, de dictionnaire vers liste. C'est nécessaire parce que `oldRawParser()` de Coolify ajoute ses propres labels en liste ; un mélange de clés et d'éléments de liste peut rendre le Compose invalide. Le rendu normalisé des deux fichiers est exactement identique dans le test local. La variante déclare explicitement `pit-data` (interne) et `pit-rpc` ; aucun conteneur n'utilise le réseau implicite de l'Application. Désactiver le déploiement automatique, les previews, la connexion au réseau prédéfini et ne configurer aucun domaine ni port hôte.
+
+Coolify crée et connecte toujours son proxy au réseau `<UUID de l'Application>`, même en mode Raw. Le point de sécurité est que **ce réseau doit rester sans conteneur PIT**. Le mode Raw évite l'injection du réseau UUID dans les services : le code Coolify ne rajoute que des labels de gestion. Le proxy n'accède donc pas à `pit-data` ni à PostgreSQL. Cette conclusion est étayée par le [code Application 4.7.5](https://github.com/coollabsio/coolify/blob/v4.7.5/app/Jobs/ApplicationDeploymentJob.php), son [`oldRawParser`](https://github.com/coollabsio/coolify/blob/v4.7.5/app/Models/Application.php) et la [documentation du mode Raw](https://coolify.io/docs/applications/builds/docker-compose). Elle doit encore être validée sur le Compose réellement généré et sur les réseaux Docker effectifs avant de qualifier le canari.
+
+Le Service `d47gm6kkdopzfurtmcd4lgpo` reste arrêté pour conserver les preuves et son volume. La nouvelle Application utilisera un projet Compose et des volumes distincts. Ne pas le redémarrer, le supprimer ou le cloner comme correction.
+
+## Deux portes avant démarrage
+
+1. **Préparer sans conteneurs PIT** : créer la nouvelle Application sans domaine, verrouiller le commit Git et le chemin `/backend/compose.canary.coolify-raw.yml`, importer les quatre variables PIT depuis le stockage privé, désactiver autodeploy/previews/prédéfinis, sélectionner Raw et fixer temporairement la commande de démarrage à `docker compose config --quiet`. Cette commande permet à Coolify de préparer son Compose effectif sans lancer les quatre services PIT. Ce premier déploiement de validation demande une nouvelle autorisation liée au manifeste révisé ; il n'est pas couvert par le GO V1.4 initial.
+2. **Valider le généré** : récupérer le fichier Compose et l'environnement réellement écrits par Coolify, les rendre en JSON en mémoire, puis exécuter `backend/ops/check-coolify-raw-canary.mjs <UUID Application>`. Le validateur ne montre aucune valeur. Vérifier en lecture seule que le proxy n'est membre d'aucun réseau PIT déclaré, que le réseau UUID n'a aucun membre PIT, et que l'ancien Service est toujours arrêté. Si un écart apparaît, ne pas passer à la suite.
+3. **Démarrage conditionnel** : seulement après le contrôle précédent et le nouveau GO exact, retirer la commande temporaire, lancer le Compose brut épinglé, inspecter le réseau réel, les limites CPU/RAM, les ports, les labels, la santé et les tests fonctionnels. Arrêter uniquement les nouveaux conteneurs PIT en cas d'écart. Les services voisins et le proxy ne sont jamais modifiés.
+
+Le mode Raw n'est pas une preuve de sécurité à lui seul. Le rendu réel, la topologie après démarrage et la portée de l'autorisation restent des portes distinctes.
+
+## Test local de la correction
+
+Le 12 novembre, `node backend/ops/check-coolify-raw-canary.test.mjs` a passé **4/4** scénarios, sans daemon Docker : égalité exacte des rendus normalisés ancien/nouveau Compose avec données synthétiques, ajout de labels de gestion Coolify en syntaxe liste, rejet de l'injection réseau du Service, rejet d'un port ou routeur public. Le test démontre la règle de validation et la compatibilité locale du Compose ; il ne démontre pas encore le comportement de la nouvelle Application sur le VPS.
+
+## Action manquante
+
+La session d'automatisation navigateur Coolify est indisponible (`Transport closed`) et aucun jeton API n'est présent. L'Application Git Raw n'a donc pas été créée ; son UUID, son Compose généré et les variables importées restent inconnus. Le manifeste `deployments/netcup-internal-canary-coolify-raw-v142-candidate.json` est un **candidat non autorisable** jusqu'à vérification de ces champs. La variante Docker Compose directe antérieure n'est plus retenue à la demande de l'opérateur.

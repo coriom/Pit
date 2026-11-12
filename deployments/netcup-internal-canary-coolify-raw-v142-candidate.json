@@ -1,0 +1,64 @@
+{
+  "status": "CANDIDATE_NOT_AUTHORIZABLE",
+  "reason": "Coolify Application UUID and actual generated Compose are not yet verified; no deployment authorization requested",
+  "sourceRevision": null,
+  "runtimeImageSourceCommit": "a4333fcaf2c6d9987702d80305abc7a98256f010",
+  "image": "ghcr.io/coriom/pit-backend@sha256:b9e9c812e00b0a782c92579c22254941dddc81ca7b24fd49077acb7525486000",
+  "postgresImage": "postgres@sha256:43f9275df91e012c3da3d86bea5d7bb5e67a473296cc906c5f9e80b8176b1a37",
+  "composePath": "backend/compose.canary.coolify-raw.yml",
+  "composeSha256": "cb1c27b8ff48c11cde2ac77abcbd7e85cb8f02017684fd2e9aa53f494dc506f1",
+  "coolify": {
+    "observedVersion": "4.7.5",
+    "projectUuid": "gdzyjsit2cpznnv0kvisqnsk",
+    "environmentUuid": "n34msfdthposcwlsy5hd0luj",
+    "newResourceType": "Git-based Docker Compose Application",
+    "newResourceUuid": null,
+    "composeDeployment": "Raw",
+    "composeLocation": "/backend/compose.canary.coolify-raw.yml",
+    "autoDeploy": false,
+    "previewDeployments": false,
+    "connectToPredefinedNetwork": false,
+    "domains": [],
+    "hostPorts": [],
+    "generatedComposeSha256": null,
+    "firstStageCustomStartCommand": "docker compose config --quiet",
+    "oldStoppedServiceUuid": "d47gm6kkdopzfurtmcd4lgpo"
+  },
+  "networkContract": {
+    "database": ["pit-data"],
+    "migration": ["pit-data"],
+    "api": ["pit-data", "pit-rpc"],
+    "worker": ["pit-data", "pit-rpc"],
+    "pitDataInternal": true,
+    "coolifyProxyMayJoinEmptyApplicationUuidNetwork": true,
+    "pitContainersOnApplicationUuidNetwork": false,
+    "coolifyProxyOnPitDataOrPitRpc": false,
+    "publishedPorts": false,
+    "traefikRouters": false
+  },
+  "limits": {
+    "pit-api": {"cpu": 0.25, "memoryMiB": 256},
+    "pit-worker": {"cpu": 0.5, "memoryMiB": 512},
+    "pit-migrate": {"cpu": 0.25, "memoryMiB": 192},
+    "pit-db": {"cpu": 0.5, "memoryMiB": 512}
+  },
+  "capabilities": {
+    "nftFetch": false,
+    "externalEmail": false,
+    "payments": false,
+    "signing": false,
+    "externalBlockchainWrites": false,
+    "customerData": false
+  },
+  "secrets": "PIT-only credentials injected privately into new Coolify Application; values excluded from manifest and reports",
+  "validationGates": [
+    "verify the exact Git commit, image and Compose SHA before any start",
+    "first-stage Coolify deployment runs docker compose config --quiet only; no PIT services start",
+    "validate actual generated Compose using check-coolify-raw-canary.mjs with new Application UUID",
+    "verify proxy is absent from pit-data and pit-rpc and no PIT container joins Application UUID network",
+    "start only after matching new GO and successful prestart checks",
+    "verify actual networks, effective limits, no ports or routes, health, read-only smoke tests and neighbor health"
+  ],
+  "rollback": "Stop only new PIT Application containers in Coolify; preserve PIT-only volumes and the old stopped Service for evidence; do not touch shared proxy or neighbors",
+  "expectedIncrementalFixedMonthlyEUR": 0
+}
