@@ -1,6 +1,8 @@
 {
-  "status": "PROPOSED_NOT_AUTHORIZED",
-  "purpose": "Materialize and validate Coolify's actual Raw Compose without starting PIT containers",
+  "status": "REJECTED_NO_START_AND_NO_PROXY_GUARANTEES_FAIL",
+  "previousSha256": "6e67b021878b8c7e4c6d79a1675591667f7a19fc710479a0b33006c305e8df1b",
+  "purpose": "Historical proposed preflight; do not authorize or execute",
+  "rejection": "Coolify 4.7.5 starts a Docker helper, pulls images, enters startDeployPhase, creates an Application network and connects coolify-proxy before executing the custom start command docker compose config --quiet. The command is not a pre-start interrupt.",
   "sourceCommit": "7491452b31efe6e8465447ee3760a2dbef553a8f",
   "composePath": "backend/compose.canary.coolify-raw.yml",
   "composeSha256": "cb1c27b8ff48c11cde2ac77abcbd7e85cb8f02017684fd2e9aa53f494dc506f1",
@@ -10,7 +12,7 @@
   "coolifyProjectUuid": "gdzyjsit2cpznnv0kvisqnsk",
   "coolifyEnvironmentUuid": "n34msfdthposcwlsy5hd0luj",
   "oldStoppedServiceUuid": "d47gm6kkdopzfurtmcd4lgpo",
-  "allowedPreparation": [
+  "historicallyProposedPreparationNotAuthorized": [
     "Operator imports the four existing PIT-only private values into the new Application without disclosing them",
     "Verify Raw mode, manual deployment, no domain, no preview deployment, no predefined network",
     "Verify the custom start command is docker compose config --quiet",
@@ -32,5 +34,5 @@
   ],
   "stopCondition": "If any PIT container starts or any PIT data or RPC network becomes proxy-accessible, stop the new PIT-only resources and preserve all volumes",
   "acceptance": "Generated Compose is captured with 0600 permissions, rendered privately and passes check-coolify-raw-canary.mjs for the Application UUID; effective volume name and network topology are recorded; no PIT service has started",
-  "subsequentGate": "A separate final manifest and GO PIT INTERNAL CANARY RAW authorization are required before starting any PIT container"
+  "subsequentGate": "Do not use this manifest for a Coolify job. A separately reviewed procedure accepting explicit side effects is required. No PIT service may start under this historical manifest."
 }

@@ -1,0 +1,47 @@
+{
+  "status": "CANDIDATE_REQUIRES_SEPARATE_OPERATOR_APPROVAL",
+  "purpose": "One Coolify Raw job to materialize and validate its effective Compose; no PIT service containers may start",
+  "sourceCommit": "7491452b31efe6e8465447ee3760a2dbef553a8f",
+  "composePath": "backend/compose.canary.coolify-raw.yml",
+  "composeSha256": "cb1c27b8ff48c11cde2ac77abcbd7e85cb8f02017684fd2e9aa53f494dc506f1",
+  "backendImage": "ghcr.io/coriom/pit-backend@sha256:b9e9c812e00b0a782c92579c22254941dddc81ca7b24fd49077acb7525486000",
+  "coolifyVersion": "4.7.5",
+  "applicationUuid": "c1fsywygziaxxyz2aeks8ktt",
+  "projectUuid": "gdzyjsit2cpznnv0kvisqnsk",
+  "environmentUuid": "n34msfdthposcwlsy5hd0luj",
+  "oldStoppedServiceUuid": "d47gm6kkdopzfurtmcd4lgpo",
+  "oldPreservedVolume": "d47gm6kkdopzfurtmcd4lgpo_pit-db-data",
+  "customStartCommand": "docker compose config --quiet",
+  "unverifiedPreJobField": "Pre-deployment and post-deployment commands could not be rechecked after the authenticated browser session became unavailable; verify both are empty before any approval is exercised",
+  "preflightConditions": [
+    "The Application remains Raw, pinned to the source commit and Compose SHA above",
+    "Auto deploy and previews are disabled; no domain, public port, router or predefined network is configured",
+    "Pre-deployment and post-deployment commands are empty",
+    "The four required PIT-only private variables are present and nonempty; values are never printed",
+    "Old PIT Service and all its containers remain stopped; its volume remains detached and preserved",
+    "Host and neighboring service health are normal immediately before the job"
+  ],
+  "explicitlyPermittedSideEffects": [
+    "One temporary Coolify helper container starts with access to the Docker socket and is removed after the job",
+    "Coolify clones the pinned source, writes private deployment files and may pull pinned images",
+    "Coolify records a deployment and enters startDeployPhase",
+    "Coolify creates the new Application UUID management network if absent and connects coolify-proxy to it",
+    "The exact custom start command runs docker compose config --quiet inside the helper"
+  ],
+  "prohibited": [
+    "docker compose up or PIT API, worker, migration or PostgreSQL service startup",
+    "Connecting coolify-proxy to pit-data or pit-rpc",
+    "Public hostname, port or Traefik router for PIT",
+    "Starting, deleting, attaching or migrating the old PIT Service or its volume",
+    "Shared proxy configuration changes, neighboring service changes, Cloudflare changes, payments, signing or blockchain writes"
+  ],
+  "requiredPostJobChecks": [
+    "Capture the actual generated Compose privately with mode 0600; never print secret values",
+    "Render and validate it with backend/ops/check-coolify-raw-canary.mjs and record its SHA-256",
+    "Inspect actual Docker networks, members, published ports, labels, volumes and running states",
+    "Confirm coolify-proxy is absent from pit-data and pit-rpc and no PIT service is running",
+    "Confirm old PIT volume and neighboring services are unchanged"
+  ],
+  "failureResponse": "Stop only new PIT Application resources if any PIT service starts or any private PIT network becomes proxy-accessible; preserve all PIT volumes; stop the campaign and report the deviation",
+  "subsequentGate": "A new final manifest and separate GO PIT INTERNAL CANARY RAW authorization are required before starting PIT service containers"
+}
