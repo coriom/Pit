@@ -1,0 +1,73 @@
+name: Publish PIT Rust backend image (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact reviewed main commit to package
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Verify immutable source
+        env:
+          EXPECTED_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$EXPECTED_SHA" = "$GITHUB_SHA"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Build and review image
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          image="ghcr.io/coriom/pit-rust-backend:${GITHUB_SHA}"
+          docker build --label "org.opencontainers.image.revision=${GITHUB_SHA}" -t "$image" -f backend-rust/Dockerfile .
+          docker save "$image" -o artifacts/rust-image.tar
+          docker run --rm --mount "type=bind,src=${PWD}/artifacts,dst=/work" \
+            aquasec/trivy@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb \
+            image --input /work/rust-image.tar --scanners vuln --severity HIGH,CRITICAL \
+            --format json --no-progress --output /work/trivy.json
+          jq -e '[.Results[]?.Vulnerabilities[]?] | length == 0' artifacts/trivy.json
+          docker run --rm --mount "type=bind,src=${PWD}/artifacts,dst=/work" \
+            aquasec/trivy@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb \
+            image --input /work/rust-image.tar --format cyclonedx --no-progress --output /work/sbom.cdx.json
+          rm artifacts/rust-image.tar
+      - name: Publish immutable source tag
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          image="ghcr.io/coriom/pit-rust-backend:${GITHUB_SHA}"
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker push "$image"
+          docker buildx imagetools inspect "$image" > artifacts/registry-inspection.txt
+          digest="$(sed -n 's/^Digest:[[:space:]]*//p' artifacts/registry-inspection.txt | head -1)"
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          printf '%s@%s\n' 'ghcr.io/coriom/pit-rust-backend' "$digest" > artifacts/image-digest.txt
+          cat artifacts/image-digest.txt >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve review evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: pit-rust-backend-image-${{ github.sha }}
+          path: |
+            artifacts/sbom.cdx.json
+            artifacts/trivy.json
+            artifacts/registry-inspection.txt
+            artifacts/image-digest.txt
+          if-no-files-found: warn
+          retention-days: 14

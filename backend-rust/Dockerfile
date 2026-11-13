@@ -9,7 +9,8 @@ COPY backend-rust/src/ /src/backend-rust/src/
 # COPY can preserve source mtimes older than the cached placeholder binary.
 RUN touch src/main.rs && cargo build --release --locked
 
-FROM gcr.io/distroless/cc-debian12:nonroot@sha256:9dac0a79194e45a7da0158a9c6da57b217585af0786db3845d1f0ec1a0dd182f
+FROM gcr.io/distroless/base-nossl-debian12:nonroot@sha256:be40c00dfabd86576d92666e87e406714d5618342de1a0c213ad232de255172e
+COPY --from=builder /lib/x86_64-linux-gnu/libgcc_s.so.1 /lib/x86_64-linux-gnu/libgcc_s.so.1
 COPY --from=builder /src/backend-rust/target/release/pit-crypto-backend-v2 /usr/local/bin/pit-crypto-backend-v2
 USER 65532:65532
 WORKDIR /tmp

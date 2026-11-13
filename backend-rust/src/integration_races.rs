@@ -9,7 +9,7 @@ async fn rpc(url: &str, method: &str, params: Value) -> Value {
     assert!(response.get("error").is_none(), "local Anvil {method}: {response}");
     response["result"].clone()
 }
-fn app(pool: PgPool, url: &str) -> Arc<App> {
+fn test_app(pool: PgPool, url: &str) -> Arc<App> {
     Arc::new(App {
         pool, config: Config {database_url:"postgres://corio@127.0.0.1:55439/pit_v21_races".into(),
             invite_hash:auth::hash("race-test-invitation"),edge_key:"race_test_hmac_secret_32_bytes_000000".into(),
@@ -54,7 +54,7 @@ async fn local_concurrent_claim_checkpoint_recovery_and_replay(){
     let first=Uuid::new_v4();
     let input=json!({"chain":"base-sepolia","contract":contract,"fromBlock":1,"toBlock":1});
     insert(&pool,first,input.clone(),"QUEUED",None).await;
-    let app=app(pool.clone(),&url);
+    let app=test_app(pool.clone(),&url);
     let (one,two)=tokio::join!(worker::tick(&app),worker::tick(&app));one.unwrap();two.unwrap();
     let state=sqlx::query("SELECT status,attempts FROM pit_jobs WHERE id=$1").bind(first).fetch_one(&pool).await.unwrap();
     assert_eq!(state.get::<String,_>("status"),"COMPLETED");assert_eq!(state.get::<i32,_>("attempts"),1);
@@ -124,5 +124,81 @@ async fn local_concurrent_claim_checkpoint_recovery_and_replay(){
     for _ in 0..20 {insert(&pool,Uuid::new_v4(),input.clone(),"QUEUED",None).await;}
     let quota=signed_post(jobs,&Uuid::new_v4().simple().to_string(),&body,"race_quota_key_0000001").await;
     assert_eq!(quota.status(),429);
-    server.abort();pool.close().await;
+    let guessed=Uuid::new_v4();let guessed_url=format!("{jobs}/{guessed}");let guessed_path=format!("/pit/api/v1/jobs/{guessed}");
+    assert_eq!(signed_access(&guessed_url,&guessed_path,reqwest::Method::GET,"race-capability").await.status(),404);
+    let malicious=json!({"kind":"events'; DROP TABLE pit_jobs; --","input":input}).to_string();
+    let rejected=signed_post(jobs,&Uuid::new_v4().simple().to_string(),&malicious,"race_injection_key_0001").await;
+    assert_eq!(rejected.status(),400);
+    let wrong_chain=json!({"kind":"events","input":{"chain":"https://internal.invalid/rpc","contract":contract,"fromBlock":1,"toBlock":1}}).to_string();
+    assert_eq!(signed_post(jobs,&Uuid::new_v4().simple().to_string(),&wrong_chain,"race_chain_key_0000001").await.status(),400);
+    sqlx::query("UPDATE pit_jobs SET access_hash=$2 WHERE id=$1").bind(first).bind(auth::hash("revoked-capability")).execute(&pool).await.unwrap();
+    assert_eq!(signed_access(&first_url,&first_path,reqwest::Method::GET,"race-capability").await.status(),404);
+    sqlx::query("UPDATE pit_jobs SET expires_at=now()-interval '1 second' WHERE id=$1").bind(first).execute(&pool).await.unwrap();
+    assert_eq!(signed_access(&first_url,&first_path,reqwest::Method::GET,"revoked-capability").await.status(),404);
+    server.abort();
+    sqlx::query("UPDATE pit_jobs SET status='CANCELLED' WHERE status='QUEUED'").execute(&pool).await.unwrap();
+    let fake=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let fake_url=format!("http://{}",fake.local_addr().unwrap());
+    let fake_server=tokio::spawn(async move {
+        let router=axum::Router::new().route("/",axum::routing::post(||async{(axum::http::StatusCode::TOO_MANY_REQUESTS,"rate limit")}));
+        axum::serve(fake,router).await.unwrap();
+    });
+    let retry_id=Uuid::new_v4();
+    insert(&pool,retry_id,json!({"chain":"base-sepolia","contract":contract,"fromBlock":1,"toBlock":1}),"QUEUED",None).await;
+    let retry_app=test_app(pool.clone(),&fake_url);
+    worker::tick(&retry_app).await.unwrap();
+    let retry=sqlx::query("SELECT status,error_code,attempts,next_attempt_at>now() AS delayed FROM pit_jobs WHERE id=$1")
+        .bind(retry_id).fetch_one(&pool).await.unwrap();
+    assert_eq!(retry.get::<String,_>("status"),"QUEUED");
+    assert_eq!(retry.get::<String,_>("error_code"),"RPC_RATE_LIMIT");
+    assert_eq!(retry.get::<i32,_>("attempts"),1);
+    assert!(retry.get::<bool,_>("delayed"));
+    sqlx::query("UPDATE pit_jobs SET next_attempt_at=now()-interval '1 second' WHERE id=$1").bind(retry_id).execute(&pool).await.unwrap();
+    worker::tick(&retry_app).await.unwrap();
+    let second=sqlx::query("SELECT status,attempts FROM pit_jobs WHERE id=$1").bind(retry_id).fetch_one(&pool).await.unwrap();
+    assert_eq!(second.get::<String,_>("status"),"QUEUED");
+    assert_eq!(second.get::<i32,_>("attempts"),2);
+    sqlx::query("UPDATE pit_jobs SET next_attempt_at=now()-interval '1 second' WHERE id=$1").bind(retry_id).execute(&pool).await.unwrap();
+    worker::tick(&retry_app).await.unwrap();
+    let terminal=sqlx::query("SELECT status,error_code,attempts FROM pit_jobs WHERE id=$1")
+        .bind(retry_id).fetch_one(&pool).await.unwrap();
+    assert_eq!(terminal.get::<String,_>("status"),"FAILED");
+    assert_eq!(terminal.get::<String,_>("error_code"),"RPC_RATE_LIMIT");
+    assert_eq!(terminal.get::<i32,_>("attempts"),3);
+    fake_server.abort();
+    let reached=Arc::new(tokio::sync::Notify::new());
+    let proceed=Arc::new(tokio::sync::Notify::new());
+    let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let delayed_url=format!("http://{}",listener.local_addr().unwrap());
+    let reached_handler=reached.clone();let proceed_handler=proceed.clone();
+    let delayed_server=tokio::spawn(async move {
+        let router=axum::Router::new().route("/",axum::routing::post(move |axum::Json(request):axum::Json<Value>|{
+            let reached=reached_handler.clone();let proceed=proceed_handler.clone();
+            async move {
+                let method=request["method"].as_str().unwrap_or("");
+                let result=match method {
+                    "eth_chainId"=>json!("0x14a34"),"eth_blockNumber"=>json!("0x20"),
+                    "eth_getLogs"=>{reached.notify_one();proceed.notified().await;json!([])},
+                    "eth_getBlockByNumber"=>json!({"hash":format!("0x{}","a".repeat(64))}),
+                    _=>Value::Null,
+                };
+                axum::Json(json!({"jsonrpc":"2.0","id":request["id"],"result":result}))
+            }
+        }));
+        axum::serve(listener,router).await.unwrap();
+    });
+    let cancel_id=Uuid::new_v4();
+    insert(&pool,cancel_id,json!({"chain":"base-sepolia","contract":contract,"fromBlock":1,"toBlock":1}),"QUEUED",None).await;
+    let cancel_app=test_app(pool.clone(),&delayed_url);
+    let processing=tokio::spawn(async move{worker::tick(&cancel_app).await});
+    tokio::time::timeout(Duration::from_secs(5),reached.notified()).await.expect("worker reached held RPC log response");
+    let cancelled=sqlx::query("UPDATE pit_jobs SET status='CANCELLED',lease_until=NULL WHERE id=$1 AND status='RUNNING'")
+        .bind(cancel_id).execute(&pool).await.unwrap();
+    assert_eq!(cancelled.rows_affected(),1);
+    proceed.notify_one();
+    processing.await.unwrap().unwrap();
+    let final_row=sqlx::query("SELECT status,result_json,progress_json FROM pit_jobs WHERE id=$1").bind(cancel_id).fetch_one(&pool).await.unwrap();
+    assert_eq!(final_row.get::<String,_>("status"),"CANCELLED");
+    assert!(final_row.get::<Option<Value>,_>("result_json").is_none(),"cancelled job must not publish a completed result");
+    delayed_server.abort();pool.close().await;
 }

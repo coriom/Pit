@@ -109,5 +109,31 @@ async fn real_anvil_postgres_api_worker_journey(){
     let status=smtp::deliver_once(&fresh,Some(&(String::from("127.0.0.1"),smtp_port,String::from("pit-test@example.com")))).await.unwrap();assert_eq!(status,"SENT");let message=sink.await.unwrap();assert!(message.iter().any(|line|line.contains("PIT Crypto contract alert")));
     let deliveries:i64=sqlx::query_scalar("SELECT count(*) FROM pit_deliveries WHERE status='SENT'").fetch_one(&fresh).await.unwrap();assert_eq!(deliveries,1);
     fresh.close().await;
+    // The two implementations evaluate the same on-chain tokenURI with the
+    // same deterministic HTTPS fixture, independently of local HTTP access.
+    let parity_uri="https://fixture.example/metadata.json";
+    let calldata=format!("0x{}",hex::encode(setTokenURICall{value:parity_uri.into()}.abi_encode()));
+    send(&client,&url,sender,Some(&nft_contract),&calldata).await;
+    let parity_input=json!({"chain":"base-sepolia","contract":nft_contract,"tokenIds":["1","2"]});
+    let parity_nft=tools::nft_with_fetcher(&parity_input,&rpc,|uri,method,_|async move{
+        if uri=="https://fixture.example/metadata.json"&&method==reqwest::Method::GET {
+            Ok(("application/json".into(),b"{\"name\":\"Fixture NFT\",\"description\":\"Parity\",\"image\":\"https://fixture.example/image.png\"}".to_vec()))
+        }else if uri=="https://fixture.example/image.png"&&method==reqwest::Method::HEAD {Ok(("image/png".into(),Vec::new()))}
+        else {Err("HTTP_404".into())}
+    }).await.unwrap();
+    assert_eq!(parity_nft["status"],"PARTIAL");
+    assert_eq!(parity_nft["rows"][0]["status"],"OK");
+    assert_eq!(parity_nft["rows"][1]["status"],"ISSUES");
+    let invalid_nft=tools::nft_with_fetcher(&json!({"chain":"base-sepolia","contract":nft_contract,"tokenIds":["1"]}),&rpc,|_,_,_|async{
+        Ok(("application/json".into(),b"{invalid".to_vec()))
+    }).await.unwrap();
+    assert_eq!(invalid_nft["status"],"PARTIAL");
+    let monitor_event:Value=sqlx::query_scalar("SELECT event_json FROM pit_alerts WHERE monitor_id=$1 LIMIT 1")
+        .bind(monitor_id).fetch_one(&pool).await.unwrap();
+    let mut fixture:Value=serde_json::from_str(&std::fs::read_to_string("/tmp/pit-v2-parity-local.json").unwrap()).unwrap();
+    fixture["nftParity"]=parity_nft;
+    fixture["nftInvalid"]=invalid_nft;
+    fixture["monitorEvent"]=monitor_event;
+    std::fs::write("/tmp/pit-v2-parity-local.json",fixture.to_string()).unwrap();
     metadata_server.abort();server.abort();pool.close().await;
 }

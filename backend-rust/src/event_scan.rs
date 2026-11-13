@@ -22,7 +22,7 @@ impl Checkpoint<'_> {
 
 fn range_error(code: &str) -> bool {
     let code = code.to_ascii_lowercase();
-    ["range", "too many results", "response size", "possibly_truncated", "limit exceeded"].iter().any(|part| code.contains(part))
+    ["rpc_result_limit", "range", "too many results", "response size", "possibly_truncated", "limit exceeded"].iter().any(|part| code.contains(part))
 }
 
 fn gaps(from: u64, to: u64, completed: &[(u64, u64)]) -> Vec<(u64, u64)> {

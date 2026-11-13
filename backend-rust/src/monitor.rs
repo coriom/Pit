@@ -44,7 +44,8 @@ pub async fn poll_one(pool:&PgPool,http:&reqwest::Client,local_rpc:Option<&str>)
     tx.commit().await.map_err(|_|"DB_UNAVAILABLE")?;
     let chain:String=m.get("chain");let contract:String=m.get("contract");let rule:Value=m.get("rule_json");let mut cursor:i64=m.get("cursor_block");let rpc=Rpc::with_local(&chain,http,local_rpc)?;
     rpc.assert_chain().await?;let head=rpc.head().await?;let safe=head.saturating_sub(12);
-    if let Some(previous)=m.get::<Option<String>,_>("cursor_hash") {if cursor>0&&rpc.block_hash(cursor as u64).await?.to_ascii_lowercase()!=previous.to_ascii_lowercase(){cursor=(cursor-12).max(0);sqlx::query("UPDATE pit_alerts SET status='REORGANIZED' WHERE monitor_id=$1 AND block_number>$2").bind(id).bind(cursor).execute(pool).await.map_err(|_|"DB_UNAVAILABLE")?;}}
+    let mut reorg_from=None;
+    if let Some(previous)=m.get::<Option<String>,_>("cursor_hash") {if cursor>0&&rpc.block_hash(cursor as u64).await?.to_ascii_lowercase()!=previous.to_ascii_lowercase(){cursor=(cursor-12).max(0);reorg_from=Some(cursor);}}
     if safe<=cursor.max(0) as u64 {defer(pool,id,lease).await?;return Ok(true)}
     let from=(cursor+1) as u64;let to=(cursor as u64+500).min(safe);
     let result=tools::events(&json!({"chain":chain,"contract":contract,"fromBlock":from,"toBlock":to}),&rpc).await?;
@@ -52,9 +53,15 @@ pub async fn poll_one(pool:&PgPool,http:&reqwest::Client,local_rpc:Option<&str>)
     let matched:Vec<_>=result["events"].as_array().into_iter().flatten().filter(|e|matches(e,&rule)).collect();
     if matched.len()>20 {sqlx::query("UPDATE pit_monitors SET status='PAUSED',lease_until=NULL WHERE id=$1 AND lease_token=$2").bind(id).bind(lease).execute(pool).await.map_err(|_|"DB_UNAVAILABLE")?;return Ok(true)}
     let hash=rpc.block_hash(to).await?;let mut tx=pool.begin().await.map_err(|_|"DB_UNAVAILABLE")?;
+    // Reorganization marks and new alerts commit with the same leased cursor.
+    // A stale worker must not rewrite already confirmed alert history.
+    if let Some(from)=reorg_from {sqlx::query("UPDATE pit_alerts SET status='REORGANIZED' WHERE monitor_id=$1 AND block_number>$2")
+        .bind(id).bind(from).execute(&mut *tx).await.map_err(|_|"DB_UNAVAILABLE")?;}
+    let mut delivery_count:i64=sqlx::query_scalar("SELECT count(*) FROM pit_deliveries d JOIN pit_alerts a ON a.id=d.alert_id WHERE a.monitor_id=$1 AND d.next_attempt_at>now()-interval '1 day'")
+        .bind(id).fetch_one(&mut *tx).await.map_err(|_|"DB_UNAVAILABLE")?;
     for event in matched {let alert_id=Uuid::new_v4();let inserted=sqlx::query("INSERT INTO pit_alerts(id,monitor_id,chain_id,block_hash,block_number,transaction_hash,log_index,event_json) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT DO NOTHING RETURNING id")
             .bind(alert_id).bind(id).bind(rpc.chain_id() as i32).bind(event["blockHash"].as_str().unwrap_or("")).bind(event["blockNumber"].as_i64().unwrap_or(0)).bind(event["transactionHash"].as_str().unwrap_or("")).bind(event["logIndex"].as_i64().unwrap_or(0) as i32).bind(event).fetch_optional(&mut *tx).await.map_err(|_|"DB_UNAVAILABLE")?;
-        if inserted.is_some(){if let Some(email)=m.get::<Option<String>,_>("email"){sqlx::query("INSERT INTO pit_deliveries(id,alert_id,email) VALUES($1,$2,$3) ON CONFLICT DO NOTHING").bind(Uuid::new_v4()).bind(alert_id).bind(email).execute(&mut *tx).await.map_err(|_|"DB_UNAVAILABLE")?;}}
+        if inserted.is_some()&&delivery_count<50 {if let Some(email)=m.get::<Option<String>,_>("email"){let added=sqlx::query("INSERT INTO pit_deliveries(id,alert_id,email) VALUES($1,$2,$3) ON CONFLICT DO NOTHING").bind(Uuid::new_v4()).bind(alert_id).bind(email).execute(&mut *tx).await.map_err(|_|"DB_UNAVAILABLE")?;delivery_count+=added.rows_affected() as i64;}}
     }
     let updated=sqlx::query("UPDATE pit_monitors SET cursor_block=$2,cursor_hash=$3,next_poll_at=now()+interval '30 seconds',lease_until=NULL WHERE id=$1 AND lease_token=$4 AND status='ACTIVE'")
         .bind(id).bind(to as i64).bind(hash).bind(lease).execute(&mut *tx).await.map_err(|_|"DB_UNAVAILABLE")?;

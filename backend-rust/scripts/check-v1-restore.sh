@@ -26,6 +26,16 @@ VALUES('22222222-2222-4222-8222-222222222222',repeat('c',64),repeat('b',64),'bas
 INSERT INTO pit_alerts(id,monitor_id,chain_id,block_hash,block_number,transaction_hash,log_index,event_json)
 VALUES('33333333-3333-4333-8333-333333333333','22222222-2222-4222-8222-222222222222',84532,'0xabc',42,'0xdef',0,'{"event":"Transfer"}');
 INSERT INTO pit_edge_nonces(nonce,expires_at) VALUES('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',now()+interval '1 minute');
+INSERT INTO pit_jobs(id,kind,access_hash,invite_hash,input_json,status,progress_json,result_json,attempts,lease_until,claim_token)
+VALUES
+('44444444-4444-4444-8444-444444444444','events',repeat('d',64),repeat('b',64),'{"chain":"base-sepolia"}','QUEUED','{}',NULL,0,NULL,NULL),
+('55555555-5555-4555-8555-555555555555','events',repeat('e',64),repeat('b',64),'{"chain":"base-sepolia"}','RUNNING','{"coverage":[{"from":1,"to":2,"toHash":"0xabc"}],"events":[]}',NULL,1,now()-interval '1 minute','77777777-7777-4777-8777-777777777777'),
+('66666666-6666-4666-8666-666666666666','permissions',repeat('f',64),repeat('b',64),'{"chain":"base-sepolia"}','FAILED','{}',NULL,2,NULL,NULL),
+('77777777-7777-4777-8777-777777777778','distribution',repeat('1',64),repeat('b',64),'{"chain":"base-sepolia"}','COMPLETED','{}','{"status":"VERIFIED","expectedTotal":"3"}',1,NULL,NULL),
+('88888888-8888-4888-8888-888888888888','nft',repeat('2',64),repeat('b',64),'{"chain":"base-sepolia"}','EXPIRED','{}',NULL,1,NULL,NULL);
+UPDATE pit_jobs SET error_code='RPC_UNAVAILABLE' WHERE id='66666666-6666-4666-8666-666666666666';
+INSERT INTO pit_deliveries(id,alert_id,email,status,attempts)
+VALUES('99999999-9999-4999-8999-999999999999','33333333-3333-4333-8333-333333333333','fixture@example.invalid','QUEUED',1);
 SQL
 pg_dump -Fc -f "$dump" "$source_db"
 createdb "$restored_db"
@@ -33,8 +43,12 @@ pg_restore -e -d "$restored_db" "$dump"
 psql -X -q -v ON_ERROR_STOP=1 -d "$restored_db" -f migrations/003_retry_schedule.sql
 export PIT_TEST_RESTORE_DATABASE_URL="postgres://corio@127.0.0.1:55439/$restored_db"
 CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-/tmp/pit-v2-nextjs-rust/backend-rust/target}" cargo test --offline restored_v1_schema_and_records -- --nocapture
-if psql -X -q -v ON_ERROR_STOP=1 -d "$restored_db" -c 'BEGIN; ALTER TABLE pit_jobs ADD COLUMN id integer; COMMIT;' >/dev/null 2>&1; then
+if psql -X -q -v ON_ERROR_STOP=1 -d "$restored_db" -c 'BEGIN; ALTER TABLE pit_jobs ADD COLUMN migration_probe text; SELECT 1/0; COMMIT;' >/dev/null 2>&1; then
   echo 'MIGRATION_FAILURE_TEST_FAILED' >&2; exit 1
 fi
-psql -X -q -v ON_ERROR_STOP=1 -d "$restored_db" -Atc "SELECT CASE WHEN count(*)=1 THEN 'MIGRATION_FAILURE_RECOVERY_PASS' ELSE 'MIGRATION_FAILURE_RECOVERY_FAIL' END FROM pit_jobs"
+probe="$(psql -X -q -v ON_ERROR_STOP=1 -d "$restored_db" -Atc "SELECT count(*) FROM information_schema.columns WHERE table_name='pit_jobs' AND column_name='migration_probe'")"
+test "$probe" = 0
+psql -X -q -v ON_ERROR_STOP=1 -d "$restored_db" -f migrations/003_retry_schedule.sql
+test "$(psql -X -q -v ON_ERROR_STOP=1 -d "$restored_db" -Atc 'SELECT count(*) FROM pit_jobs')" = 6
+echo 'MIGRATION_FAILURE_RECOVERY_PASS'
 echo 'PIT_V1_BACKUP_RESTORE_V2_ADDITIVE_PASS'
