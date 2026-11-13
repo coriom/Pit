@@ -1,0 +1,67 @@
+{
+  "schema": "pit.netcup.private-canary-candidate.v2",
+  "status": "NOT_AUTHORIZED",
+  "runtime_source_commit": "4d5db9cc4661d39d0833a9ca996c5949e67f04ae",
+  "image": "ghcr.io/coriom/pit-rust-backend@sha256:59e9e5d27f17e0d2b52b3b98dc680d2390e9e1b07674ba2d7b3a3236213d02f2",
+  "compose": {
+    "path": "backend-rust/compose.v2-candidate.yml",
+    "sha256": "d197fd9f4c76f1995d54b8901a5bc2f368f64af58b3f3864c19228f49613e6d2",
+    "mode": "Coolify Git Docker Compose Raw",
+    "generated_compose_sha256": null
+  },
+  "coolify": {
+    "v2_application_uuid": null,
+    "v2_project_environment": null,
+    "automatic_deploy": false,
+    "public_domain": null,
+    "public_ports": [],
+    "traefik_routers": []
+  },
+  "v1_preservation": {
+    "application_uuid": "c1fsywygziaxxyz2aeks8ktt",
+    "shared_writable_database": false,
+    "change_v1_application_or_volume": false
+  },
+  "services": {
+    "pit-v2-api": {"replicas": 1, "cpus": 0.25, "memory_mib": 256, "networks": ["pit-v2-data", "pit-v2-rpc"]},
+    "pit-v2-worker": {"replicas": 1, "cpus": 0.5, "memory_mib": 512, "networks": ["pit-v2-data", "pit-v2-rpc"]},
+    "pit-v2-db": {"replicas": 1, "cpus": 0.5, "memory_mib": 512, "networks": ["pit-v2-data"]},
+    "pit-v2-migrate": {"replicas": 0, "cpus_when_run": 0.25, "memory_mib_when_run": 192, "networks": ["pit-v2-data"]}
+  },
+  "isolation": {
+    "data_network_internal": true,
+    "rpc_network_private_to_v2": true,
+    "shared_proxy_member_of_data_or_rpc_network": false,
+    "database_or_worker_publicly_routed": false,
+    "docker_socket_mount": false,
+    "hosted_nft_fetch": false,
+    "blockchain_signing": false,
+    "commercial_payment_collection": false
+  },
+  "database": {
+    "name": "pit_crypto_v2",
+    "role": "pit_v2_api",
+    "volume": "pit-v2-db-data",
+    "migration_set": ["backend/migrations/001_init.sql", "backend/migrations/002_edge_nonces.sql", "backend-rust/migrations/003_retry_schedule.sql"],
+    "migration_003_sha256": "6ad453a1de5037124d33024fc330995db050751001eeb884d005d82d41f01d55",
+    "v1_database_access": false,
+    "backup_destination": null,
+    "restore_test_on_host": null
+  },
+  "secrets": {
+    "source": "Coolify private runtime variables; separate V2 values required",
+    "values_in_manifest": false
+  },
+  "release_checks": [
+    "Verify exact source commit and immutable GHCR digest",
+    "Inspect actual Coolify generated Compose before startup",
+    "Reject generated proxy routes, published ports, privileged mounts or foreign networks",
+    "Verify actual Docker networks and cgroup limits immediately after startup",
+    "Require proxy absence from V2 data and RPC networks",
+    "Verify API, worker, migrations, database, authentication, replay protection and bounded read-only RPC",
+    "Verify V1 canary and neighboring service health before and after"
+  ],
+  "rollback": "Stop only V2 API and worker on exposure or neighbor health failure; preserve both V1 and V2 database volumes; do not restart shared proxy.",
+  "financial_cost": "No additional paid service is planned; actual VPS capacity and backup cost require host verification before approval.",
+  "authorization": "A separate exact manifest approval is required after Coolify-generated configuration, host capacity, secrets and backup destination are verified."
+}
