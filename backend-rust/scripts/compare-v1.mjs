@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {http} from '../../backend/node_modules/viem/_esm/index.js';
+import {clientFor} from '../../backend/src/rpc.mjs';
+import {scanEvents} from '../../backend/src/events.mjs';
+import {analyzePermissions} from '../../backend/src/permissions.mjs';
+import {verifyDistribution} from '../../backend/src/distribution.mjs';
+
+const url=process.env.PIT_TEST_RPC_URL;
+if(!url?.startsWith('http://127.0.0.1:58545'))throw Error('LOCAL_ANVIL_REQUIRED');
+const fixture=JSON.parse(await readFile('/tmp/pit-v2-parity-local.json','utf8'));
+const client=clientFor('base-sepolia',http(url,{timeout:5000,retryCount:0}));
+const events=await scanEvents({chain:'base-sepolia',contract:fixture.token,fromBlock:fixture.from,toBlock:fixture.last},{client});
+const permissions=await analyzePermissions({chain:'base-sepolia',contract:fixture.control,fromBlock:0,toBlock:fixture.last},{client,sourceLookup:async()=>({status:'UNKNOWN'})});
+const distribution=await verifyDistribution({chain:'base-sepolia',token:fixture.token,csv:`recipient,amount\n${fixture.recipient1},1.5\n${fixture.recipient2},2.25`,transactionHashes:fixture.transactionHashes},{client});
+assert.equal(fixture.events.status,events.status);
+assert.deepEqual(fixture.events.events.map(x=>x.transactionHash.toLowerCase()),events.events.map(x=>x.transactionHash.toLowerCase()));
+assert.deepEqual(fixture.events.completed,events.completed);
+assert.equal(fixture.permissions.status,permissions.status);
+assert.equal(fixture.permissions.facts.owner.toLowerCase(),permissions.facts.owner.toLowerCase());
+assert.equal(fixture.permissions.facts.paused,permissions.facts.paused);
+assert.deepEqual(fixture.permissions.facts.roleAdmins,permissions.facts.roleAdmins);
+assert.equal(fixture.distribution.status,distribution.status);
+assert.equal(fixture.distribution.expectedTotal,distribution.expectedTotal);
+assert.equal(fixture.distribution.observedTotal,distribution.observedTotal);
+assert.deepEqual(fixture.distribution.rows.map(x=>x.status),distribution.rows.map(x=>x.status));
+console.log('PIT_V1_V2_MATERIAL_PARITY_PASS events permissions distribution');
