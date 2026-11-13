@@ -29,4 +29,24 @@ pub async fn fetch(uri:&str,method:reqwest::Method,max_bytes:usize)->Result<(Str
     let mut body=Vec::new();while let Some(chunk)=response.chunk().await.map_err(|_|"FETCH_UNAVAILABLE")?{if body.len()+chunk.len()>max_bytes{return Err("BODY_LIMIT".into())}body.extend(chunk)}Ok((content_type,body))
 }
 
+/// Only the explicitly configured loopback fixture is reachable in local test mode.
+pub async fn fetch_local_fixture(uri:&str,origin:&str,method:reqwest::Method,max_bytes:usize)->Result<(String,Vec<u8>),String>{
+    let url=Url::parse(uri).map_err(|_|"URI_INVALID")?;
+    let configured=Url::parse(origin).map_err(|_|"LOCAL_METADATA_ORIGIN_FORBIDDEN")?;
+    if url.scheme()!="http"||url.host_str()!=Some("127.0.0.1")||url.port()!=configured.port()||
+        configured.host_str()!=Some("127.0.0.1")||configured.scheme()!="http"||
+        !url.username().is_empty()||url.password().is_some()||url.fragment().is_some()||uri.len()>2048 {
+        return Err("LOCAL_METADATA_ORIGIN_FORBIDDEN".into())
+    }
+    let client=reqwest::Client::builder().no_proxy().timeout(Duration::from_secs(3)).redirect(reqwest::redirect::Policy::none()).build().map_err(|_|"FETCH_CONFIG")?;
+    let mut response=client.request(method,url).send().await.map_err(|_|"FETCH_UNAVAILABLE")?;
+    if response.status().is_redirection(){return Err("REDIRECT_FORBIDDEN".into())}
+    if !response.status().is_success(){return Err(format!("HTTP_{}",response.status().as_u16()))}
+    let content_type=response.headers().get("content-type").and_then(|v|v.to_str().ok()).unwrap_or("").to_owned();
+    let mut body=Vec::new();while let Some(chunk)=response.chunk().await.map_err(|_|"FETCH_UNAVAILABLE")?{
+        if body.len()+chunk.len()>max_bytes{return Err("BODY_LIMIT".into())}body.extend(chunk)
+    }
+    Ok((content_type,body))
+}
+
 #[cfg(test)]mod tests{use super::*;#[test]fn addresses(){for ip in ["127.0.0.1","10.0.0.1","172.18.0.3","192.168.1.1","169.254.169.254","::1","fc00::1","fe80::1","::ffff:127.0.0.1"]{assert!(!public_ip(ip.parse().unwrap()),"{ip}")};assert!(public_ip("1.1.1.1".parse().unwrap()));assert!(public_ip("2606:4700:4700::1111".parse().unwrap()));assert!(validate_answers(&["1.1.1.1".parse().unwrap(),"10.0.0.5".parse().unwrap()]).is_err());assert!(validate_answers(&["2606:4700:4700::1111".parse().unwrap(),"::1".parse().unwrap()]).is_err())}#[test]fn urls(){for uri in ["http://example.com/a","https://127.0.0.1/a","https://[::1]/a","https://host.local/a","https://user@example.com/a"]{assert!(normalize(uri).is_err(),"{uri}")}}}

@@ -7,7 +7,7 @@ use std::{sync::Arc,net::SocketAddr};
 use uuid::Uuid;
 
 const PREFIX:&str="/pit/api/v1";
-fn response(status:StatusCode,value:Value)->Response{let mut r=(status,axum::Json(value)).into_response();r.headers_mut().insert(header::CACHE_CONTROL,header::HeaderValue::from_static("no-store"));r.headers_mut().insert(header::X_CONTENT_TYPE_OPTIONS,header::HeaderValue::from_static("nosniff"));r}
+fn response(status:StatusCode,value:Value)->Response{let mut r=(status,axum::Json(value)).into_response();r.headers_mut().insert(header::CACHE_CONTROL,header::HeaderValue::from_static("no-store"));r.headers_mut().insert(header::X_CONTENT_TYPE_OPTIONS,header::HeaderValue::from_static("nosniff"));r.headers_mut().insert(header::REFERRER_POLICY,header::HeaderValue::from_static("no-referrer"));r.headers_mut().insert(header::X_FRAME_OPTIONS,header::HeaderValue::from_static("DENY"));r}
 fn error(status:StatusCode,code:&str)->Response{response(status,json!({"code":code}))}
 fn token()->String{use sha2::{Digest,Sha256};let nonce=Uuid::new_v4();let digest=Sha256::digest(format!("{nonce}:{}",Uuid::new_v4()).as_bytes());base64_url(&digest)}
 fn base64_url(bytes:&[u8])->String{const ABC:&[u8]=b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";let mut out=String::new();let mut n=0u32;let mut bits=0;for b in bytes {n=(n<<8)|(*b as u32);bits+=8;while bits>=6{bits-=6;out.push(ABC[((n>>bits)&63) as usize] as char)}}if bits>0{out.push(ABC[((n<<(6-bits))&63) as usize] as char)}out}
@@ -20,7 +20,30 @@ pub async fn serve(app:Arc<App>)->Result<(),Box<dyn std::error::Error+Send+Sync>
 }
 async fn handle(State(app):State<Arc<App>>,ConnectInfo(addr):ConnectInfo<SocketAddr>,req:Request<Body>)->Response{
     let Ok(_permit)=app.request_gate.clone().try_acquire_owned() else{return error(StatusCode::SERVICE_UNAVAILABLE,"SERVER_BUSY")};
-    match handle_inner(app,addr,req).await {Ok(r)=>r,Err(code)=>{let status=if code=="BODY_LIMIT"{StatusCode::PAYLOAD_TOO_LARGE}else if code=="EDGE_AUTH_REQUIRED"||code=="EDGE_REPLAY_DENIED"||code=="INVITE_REQUIRED"||code=="ORIGIN_DENIED"{StatusCode::FORBIDDEN}else if code=="NFT_FETCH_DISABLED"{StatusCode::SERVICE_UNAVAILABLE}else if code=="SERVER_BUSY"{StatusCode::SERVICE_UNAVAILABLE}else if code=="INTERNAL_ERROR"{StatusCode::INTERNAL_SERVER_ERROR}else{StatusCode::BAD_REQUEST};error(status,code)}}
+    let origin=req.headers().get(header::ORIGIN).and_then(|v|v.to_str().ok()).map(str::to_owned);
+    let allowed=app.config.allowed_origin.clone();
+    let mut result=match handle_inner(app,addr,req).await {Ok(r)=>r,Err(code)=>error(status_for(code),code)};
+    if origin.as_deref()==Some(&allowed) {
+        if let Ok(value)=header::HeaderValue::from_str(&allowed){result.headers_mut().insert(header::ACCESS_CONTROL_ALLOW_ORIGIN,value);}
+    }
+    result
+}
+fn status_for(code:&str)->StatusCode {match code {
+    "BODY_LIMIT"=>StatusCode::PAYLOAD_TOO_LARGE,
+    "EDGE_AUTH_REQUIRED"|"EDGE_REPLAY_DENIED"|"INVITE_REQUIRED"|"ORIGIN_DENIED"=>StatusCode::FORBIDDEN,
+    "NFT_FETCH_DISABLED"|"SERVER_BUSY"=>StatusCode::SERVICE_UNAVAILABLE,
+    "INTERNAL_ERROR"|"DB_UNAVAILABLE"=>StatusCode::INTERNAL_SERVER_ERROR,
+    _=>StatusCode::BAD_REQUEST,
+}}
+fn pagination(query:Option<&str>)->Result<(usize,usize),&'static str>{
+    let mut offset=None;let mut limit=None;
+    if let Some(query)=query {
+        let url=reqwest::Url::parse(&format!("http://local.invalid/?{query}")).map_err(|_|"PAGINATION_INVALID")?;
+        for (key,value) in url.query_pairs(){let parsed=value.parse::<usize>().map_err(|_|"PAGINATION_INVALID")?;
+            match key.as_ref(){"offset" if offset.is_none()&&parsed<=5000=>offset=Some(parsed),"limit" if limit.is_none()&&(1..=100).contains(&parsed)=>limit=Some(parsed),_=>return Err("PAGINATION_INVALID")}
+        }
+    }
+    Ok((offset.unwrap_or(0),limit.unwrap_or(50)))
 }
 async fn handle_inner(app:Arc<App>,addr:SocketAddr,req:Request<Body>)->Result<Response,&'static str>{
     let method=req.method().as_str().to_owned();let path=req.uri().path().to_owned();
@@ -36,7 +59,7 @@ async fn handle_inner(app:Arc<App>,addr:SocketAddr,req:Request<Body>)->Result<Re
         if inserted.rows_affected()!=1{return Err("EDGE_REPLAY_DENIED")}
     }
     if h("origin").is_some_and(|o|o!=app.config.allowed_origin){return Err("ORIGIN_DENIED")}
-    if method=="OPTIONS"{return Ok(response(StatusCode::NO_CONTENT,json!({})))}
+    if method=="OPTIONS"{let mut r=StatusCode::NO_CONTENT.into_response();r.headers_mut().insert(header::ACCESS_CONTROL_ALLOW_METHODS,header::HeaderValue::from_static("GET,POST,DELETE"));r.headers_mut().insert(header::ACCESS_CONTROL_ALLOW_HEADERS,header::HeaderValue::from_static("Content-Type,Authorization,X-PIT-Invite,Idempotency-Key"));return Ok(r)}
     if method=="GET"&&path==format!("{PREFIX}/health"){return Ok(response(StatusCode::OK,json!({"status":"UP"})))}
     if method=="GET"&&path==format!("{PREFIX}/ready"){
         let live:Option<bool>=sqlx::query_scalar("SELECT last_seen>now()-interval '2 minutes' FROM pit_worker_heartbeat WHERE singleton=true").fetch_optional(&app.pool).await.map_err(|_|"INTERNAL_ERROR")?;
@@ -79,8 +102,13 @@ async fn handle_inner(app:Arc<App>,addr:SocketAddr,req:Request<Body>)->Result<Re
             if format!="format=csv"&&format!="format=json"{return Ok(error(StatusCode::BAD_REQUEST,"FORMAT_INVALID"))}
             let (content,content_type)=if format=="format=csv"{(csv_export(&kind,&result),"text/csv; charset=utf-8")}else{(result.to_string(),"application/json; charset=utf-8")};
             let mut response=(StatusCode::OK,content).into_response();response.headers_mut().insert(header::CONTENT_TYPE,header::HeaderValue::from_static(content_type));response.headers_mut().insert(header::CACHE_CONTROL,header::HeaderValue::from_static("no-store"));
+            let filename=format!("attachment; filename=\"pit-{kind}-{id}.{}\"",if format=="format=csv"{"csv"}else{"json"});
+            response.headers_mut().insert(header::CONTENT_DISPOSITION,header::HeaderValue::from_str(&filename).map_err(|_|"INTERNAL_ERROR")?);
             return Ok(response)
         }
+        if parts.len()!=2{return Ok(error(StatusCode::NOT_FOUND,"NOT_FOUND"))}
+        let (offset,limit)=pagination(path_and_query.split_once('?').map(|(_,q)|q))?;
+        let result=result.map(|mut value|{if let Some(events)=value.get_mut("events").and_then(Value::as_array_mut){let total=events.len();let page=events.iter().skip(offset).take(limit).cloned().collect();*events=page;value["totalEvents"]=json!(total)}value});
         let mut progress:Value=job.get("progress_json");if let Some(obj)=progress.as_object_mut(){obj.remove("events");}
         return Ok(response(StatusCode::OK,json!({"id":id,"kind":kind,"status":status,"progress":progress,"result":result,"errorCode":job.get::<Option<String>,_>("error_code"),"expiresAt":job.get::<chrono::DateTime<Utc>,_>("expires_at")})))
     }
@@ -116,13 +144,17 @@ async fn handle_inner(app:Arc<App>,addr:SocketAddr,req:Request<Body>)->Result<Re
     }
     Ok(error(StatusCode::NOT_FOUND,"NOT_FOUND"))
 }
-fn map_validation(code:String)->&'static str{match code.as_str(){"NFT_FETCH_DISABLED"=>"NFT_FETCH_DISABLED","BLOCK_RANGE_LIMIT"=>"BLOCK_RANGE_LIMIT","UNSUPPORTED_CHAIN"=>"UNSUPPORTED_CHAIN","INVALID_ADDRESS"=>"INVALID_ADDRESS","INVALID_HASH"=>"INVALID_HASH","UNSUPPORTED_JOB"=>"UNSUPPORTED_JOB",_=>"VALIDATION_ERROR"}}
+fn map_validation(code:String)->&'static str{match code.as_str(){"NFT_FETCH_DISABLED"=>"NFT_FETCH_DISABLED","BLOCK_RANGE_LIMIT"=>"BLOCK_RANGE_LIMIT","UNSUPPORTED_CHAIN"=>"UNSUPPORTED_CHAIN","INVALID_ADDRESS"=>"INVALID_ADDRESS","INVALID_HASH"=>"INVALID_HASH","INVALID_ABI"=>"INVALID_ABI","UNSUPPORTED_JOB"=>"UNSUPPORTED_JOB",_=>"VALIDATION_ERROR"}}
 fn csv_export(kind:&str,result:&Value)->String{
     let (rows,columns):(&[Value],&[&str])=match kind{"events"=>(result["events"].as_array().map(Vec::as_slice).unwrap_or(&[]),&["chainId","contract","blockNumber","blockHash","transactionHash","logIndex","signature","decoded"]),"distribution"=>(result["rows"].as_array().map(Vec::as_slice).unwrap_or(&[]),&["recipient","amount","observedAmount","transferCount","balanceEvidence","status"]),"permissions"=>(result["history"].as_array().map(Vec::as_slice).unwrap_or(&[]),&["event","blockNumber","transactionHash","args"]),_=>(result["rows"].as_array().map(Vec::as_slice).unwrap_or(&[]),&["tokenId","status","uri","metadataHash","issues","media"])};
     if rows.is_empty(){return String::new()}
-    let mut writer=csv::Writer::from_writer(Vec::new());if writer.write_record(columns).is_err(){return String::new()}
-    for row in rows {let values:Vec<_>=columns.iter().map(|c|{let v=&row[*c];let mut s=v.as_str().map(str::to_owned).unwrap_or_else(||v.to_string());if s.starts_with(['=','+','-','@','\t','\r']){s.insert(0,'\'');}s}).collect();if writer.write_record(values).is_err(){return String::new()}}
-    String::from_utf8(writer.into_inner().unwrap_or_default()).unwrap_or_default()
+    let mut lines=Vec::with_capacity(rows.len()+1);lines.push(columns.join(","));
+    for row in rows {let values:Vec<_>=columns.iter().map(|column|{
+        let value=&row[*column];let mut cell=if value.is_null(){String::new()}else if let Some(text)=value.as_str(){text.to_owned()}else{value.to_string()};
+        if cell.starts_with(['=','+','-','@','\t','\r']){cell.insert(0,'\'');}
+        format!("\"{}\"",cell.replace('"',"\"\""))
+    }).collect();lines.push(values.join(","));}
+    lines.join("\n")
 }
 
 #[cfg(test)] mod tests{use super::*;#[test]fn access_token_entropy_shape(){let t=token();assert_eq!(t.len(),43);assert!(t.bytes().all(|b|b.is_ascii_alphanumeric()||b==b'_'||b==b'-'));}#[test]fn csv_escapes_formula(){let s=csv_export("distribution",&json!({"rows":[{"recipient":"=cmd","amount":"1","status":"MISMATCH"}]}));assert!(s.contains("'=cmd"));}}

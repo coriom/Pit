@@ -1,4 +1,4 @@
-use crate::{App,api,auth,config::Config,monitor,rpc::Rpc,tools,worker,smtp};
+use crate::{App,api,auth,config::Config,monitor,rpc::Rpc,tools,worker,smtp,safe_http};
 use serde_json::{json,Value};
 use sqlx::{PgPool,Row};
 use std::{sync::Arc,time::Duration};
@@ -44,16 +44,31 @@ async fn real_anvil_postgres_api_worker_journey(){
     assert_eq!(distribution["status"],"VERIFIED");assert_eq!(distribution["expectedTotal"],"3750000");
     let permissions=tools::permissions(&json!({"chain":"base-sepolia","contract":control,"fromBlock":0,"toBlock":last}),&rpc).await.unwrap();
     assert_eq!(permissions["facts"]["owner"],sender.to_ascii_lowercase());assert_eq!(permissions["coverage"]["status"],"COMPLETE");
-    std::fs::write("/tmp/pit-v2-parity-local.json",json!({"token":token,"control":control,"from":from,"last":last,"recipient1":r1,"recipient2":r2,"transactionHashes":[tx_hash(&a),tx_hash(&b)],"events":events,"permissions":permissions,"distribution":distribution}).to_string()).unwrap();
+    let metadata_listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let metadata_origin=format!("http://127.0.0.1:{}",metadata_listener.local_addr().unwrap().port());
+    let metadata_origin_for_server=metadata_origin.clone();
+    let metadata_server=tokio::spawn(async move {
+        let router=axum::Router::new()
+            .route("/token/1",axum::routing::get(move || {let origin=metadata_origin_for_server.clone();async move{([(axum::http::header::CONTENT_TYPE,"application/json")],json!({"name":"Fixture NFT","description":"Local fixture","image":format!("{origin}/image.png")}).to_string())}}))
+            .route("/image.png",axum::routing::head(||async{([(axum::http::header::CONTENT_TYPE,"image/png")],"")}))
+            .route("/redirect",axum::routing::get(||async{(axum::http::StatusCode::FOUND,[(axum::http::header::LOCATION,"http://169.254.169.254/latest/meta-data")])}))
+            .route("/large",axum::routing::get(||async{vec![b'x';1024]}));
+        axum::serve(metadata_listener,router).await.unwrap();
+    });
+    assert_eq!(safe_http::fetch_local_fixture("http://169.254.169.254/latest/meta-data",&metadata_origin,reqwest::Method::GET,1024).await.unwrap_err(),"LOCAL_METADATA_ORIGIN_FORBIDDEN");
+    assert_eq!(safe_http::fetch_local_fixture("http://127.0.0.1:8000/admin",&metadata_origin,reqwest::Method::GET,1024).await.unwrap_err(),"LOCAL_METADATA_ORIGIN_FORBIDDEN");
+    assert_eq!(safe_http::fetch_local_fixture("http://[::1]:58546/internal",&metadata_origin,reqwest::Method::GET,1024).await.unwrap_err(),"LOCAL_METADATA_ORIGIN_FORBIDDEN");
+    assert_eq!(safe_http::fetch_local_fixture(&format!("{metadata_origin}/redirect"),&metadata_origin,reqwest::Method::GET,1024).await.unwrap_err(),"REDIRECT_FORBIDDEN");
+    assert_eq!(safe_http::fetch_local_fixture(&format!("{metadata_origin}/large"),&metadata_origin,reqwest::Method::GET,32).await.unwrap_err(),"BODY_LIMIT");
     let nft_contract=send(&client,&url,sender,None,&artifact("PitBackendNftFixture")).await["contractAddress"].as_str().unwrap().to_owned();
-    let uri="https://example.com/pit-token-1.json";
-    let calldata=format!("0x{}",hex::encode(setTokenURICall{value:uri.into()}.abi_encode()));
+    let uri=format!("{metadata_origin}/token/1");
+    let calldata=format!("0x{}",hex::encode(setTokenURICall{value:uri.clone()}.abi_encode()));
     send(&client,&url,sender,Some(&nft_contract),&calldata).await;
-    let metadata=serde_json::to_vec(&json!({"name":"Fixture NFT","description":"Local fixture","image":"https://example.com/image.png"})).unwrap();
-    let checked=tools::nft_with_fetcher(&json!({"chain":"base-sepolia","contract":nft_contract,"tokenIds":["1"]}),&rpc,move |_uri,method,_limit|{let metadata=metadata.clone();async move{if method==reqwest::Method::HEAD {Ok(("image/png".into(),vec![]))}else{Ok(("application/json".into(),metadata))}}}).await.unwrap();
+    let checked=tools::nft_local(&json!({"chain":"base-sepolia","contract":nft_contract,"tokenIds":["1"]}),&rpc,&metadata_origin).await.unwrap();
     assert_eq!(checked["rows"][0]["status"],"OK");
     let invite="local-test-private-invite";let secret="local_test_key_32_bytes_long_aaaaaaaa";
-    let app=Arc::new(App{pool:pool.clone(),config:Config{database_url:db_url,invite_hash:auth::hash(invite),edge_key:secret.into(),allowed_origin:"http://127.0.0.1:4000".into(),nft_enabled:false,port:58789,allowed_emails:Vec::new(),local_rpc_url:Some(url.clone()),local_smtp:None},http:client.clone(),request_gate:Arc::new(tokio::sync::Semaphore::new(32))});
+    std::fs::write("/tmp/pit-v2-parity-local.json",json!({"token":token,"control":control,"nft":nft_contract,"from":from,"last":last,"recipient1":r1,"recipient2":r2,"transactionHashes":[tx_hash(&a),tx_hash(&b)],"events":events,"permissions":permissions,"distribution":distribution}).to_string()).unwrap();
+    let app=Arc::new(App{pool:pool.clone(),config:Config{database_url:db_url,invite_hash:auth::hash(invite),edge_key:secret.into(),allowed_origin:"http://127.0.0.1:4000".into(),nft_enabled:true,port:58789,allowed_emails:Vec::new(),local_rpc_url:Some(url.clone()),local_smtp:None,local_metadata_origin:Some(metadata_origin)},http:client.clone(),request_gate:Arc::new(tokio::sync::Semaphore::new(32))});
     let server=tokio::spawn(api::serve(app.clone()));
     let health="http://127.0.0.1:58789/pit/api/v1/health";let mut ready=false;
     for _ in 0..30 {if server.is_finished(){panic!("Rust API failed before readiness: {:?}",server.await)}if client.get(health).send().await.is_ok(){ready=true;break}tokio::time::sleep(Duration::from_millis(100)).await}assert!(ready,"Rust API did not bind localhost");
@@ -69,6 +84,17 @@ async fn real_anvil_postgres_api_worker_journey(){
     let row=sqlx::query("SELECT status,result_json FROM pit_jobs WHERE id=$1").bind(id_uuid).fetch_one(&pool).await.unwrap();assert_eq!(row.get::<String,_>("status"),"COMPLETED");let result:Value=row.get("result_json");assert_eq!(result["events"].as_array().unwrap().len(),2);
     let job_url=format!("{api_url}/{id}");let unauthorized=client.get(&job_url).send().await.unwrap();assert_eq!(unauthorized.status(),403); // edge before capability
     let path=format!("{path}/{id}");let mut authorized=client.get(&job_url).header("authorization",format!("Bearer {access}"));for(k,v)in signed_headers(secret,"GET",&path,b"","22222222222222222222222222222222"){authorized=authorized.header(k,v)}let fetched=authorized.send().await.unwrap();assert_eq!(fetched.status(),200);
+    let page_path=format!("{path}?offset=1&limit=1");let page_url=format!("{job_url}?offset=1&limit=1");
+    let mut page_request=client.get(&page_url).header("authorization",format!("Bearer {access}"));for(k,v)in signed_headers(secret,"GET",&page_path,b"","22222222222222222222222222222223"){page_request=page_request.header(k,v)}
+    let page_response=page_request.send().await.unwrap();assert_eq!(page_response.status(),200);let page:Value=page_response.json().await.unwrap();
+    assert_eq!(page["result"]["totalEvents"],2);assert_eq!(page["result"]["events"].as_array().unwrap().len(),1);
+    let nft_body=json!({"kind":"nft","input":{"chain":"base-sepolia","contract":nft_contract,"tokenIds":["1"]}}).to_string();
+    let mut nft_request=client.post(api_url).header("x-pit-invite",invite).header("idempotency-key","integration_nft_job_123").header("content-type","application/json").body(nft_body.clone());
+    for (k,v) in signed_headers(secret,"POST","/pit/api/v1/jobs",nft_body.as_bytes(),"33333333333333333333333333333333"){nft_request=nft_request.header(k,v)}
+    let nft_created=nft_request.send().await.unwrap();assert_eq!(nft_created.status(),202);let nft_id:Uuid=Uuid::parse_str(nft_created.json::<Value>().await.unwrap()["id"].as_str().unwrap()).unwrap();
+    worker::tick(&app).await.unwrap();let nft_result:Value=sqlx::query_scalar("SELECT result_json FROM pit_jobs WHERE id=$1").bind(nft_id).fetch_one(&pool).await.unwrap();
+    assert_eq!(nft_result["rows"][0]["metadata"]["name"],"Fixture NFT");
+    assert_eq!(nft_result["status"],"COMPLETE");
     let _=monitor::validate(&json!({"chain":"base-sepolia","contract":token,"startBlock":last,"rule":{"type":"mint"}})).unwrap();
     let monitor_id=Uuid::new_v4();let monitor_start=rpc.head().await.unwrap()+1;
     sqlx::query("INSERT INTO pit_monitors(id,access_hash,invite_hash,chain,contract,rule_json,cursor_block,expires_at,email) VALUES($1,$2,$3,'base-sepolia',$4,$5,$6,now()+interval '1 day',$7)")
@@ -83,5 +109,5 @@ async fn real_anvil_postgres_api_worker_journey(){
     let status=smtp::deliver_once(&fresh,Some(&(String::from("127.0.0.1"),smtp_port,String::from("pit-test@example.com")))).await.unwrap();assert_eq!(status,"SENT");let message=sink.await.unwrap();assert!(message.iter().any(|line|line.contains("PIT Crypto contract alert")));
     let deliveries:i64=sqlx::query_scalar("SELECT count(*) FROM pit_deliveries WHERE status='SENT'").fetch_one(&fresh).await.unwrap();assert_eq!(deliveries,1);
     fresh.close().await;
-    server.abort();pool.close().await;
+    metadata_server.abort();server.abort();pool.close().await;
 }

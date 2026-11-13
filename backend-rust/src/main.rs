@@ -1,6 +1,8 @@
 mod api;
 mod auth;
 mod config;
+mod event_abi;
+mod event_scan;
 mod monitor;
 mod rpc;
 mod safe_http;
@@ -8,6 +10,9 @@ mod smtp;
 mod tools;
 mod worker;
 #[cfg(test)] mod integration;
+#[cfg(test)] mod integration_races;
+#[cfg(test)] mod integration_restore;
+#[cfg(test)] mod integration_bench;
 
 use std::sync::Arc;
 use config::Config;

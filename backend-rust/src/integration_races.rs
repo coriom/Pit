@@ -1,0 +1,128 @@
+use crate::{App, api, auth, config::Config, event_scan, rpc::Rpc, worker};
+use serde_json::{json, Value};
+use sqlx::{PgPool, Row};
+use std::{sync::Arc, time::Duration};
+use uuid::Uuid;
+
+async fn rpc(url: &str, method: &str, params: Value) -> Value {
+    let response: Value = reqwest::Client::new().post(url).json(&json!({"jsonrpc":"2.0","id":1,"method":method,"params":params})).send().await.unwrap().json().await.unwrap();
+    assert!(response.get("error").is_none(), "local Anvil {method}: {response}");
+    response["result"].clone()
+}
+fn app(pool: PgPool, url: &str) -> Arc<App> {
+    Arc::new(App {
+        pool, config: Config {database_url:"postgres://corio@127.0.0.1:55439/pit_v21_races".into(),
+            invite_hash:auth::hash("race-test-invitation"),edge_key:"race_test_hmac_secret_32_bytes_000000".into(),
+            allowed_origin:"http://127.0.0.1:4300".into(),nft_enabled:false,port:58791,
+            allowed_emails:vec![],local_rpc_url:Some(url.into()),local_smtp:None,local_metadata_origin:None},
+        http:reqwest::Client::new(),request_gate:Arc::new(tokio::sync::Semaphore::new(32)),
+    })
+}
+async fn insert(pool:&PgPool,id:Uuid,input:Value,status:&str,claim:Option<Uuid>){
+    sqlx::query("INSERT INTO pit_jobs(id,kind,access_hash,invite_hash,input_json,status,claim_token,lease_until,attempts) VALUES($1,'events',$2,$3,$4,$5,$6,now()-interval '1 second',$7)")
+        .bind(id).bind(auth::hash("race-capability")).bind(auth::hash("race-test-invitation"))
+        .bind(input).bind(status).bind(claim).bind(if claim.is_some(){1}else{0}).execute(pool).await.unwrap();
+}
+async fn signed_post(url:&str,nonce:&str,body:&str,key:&str)->reqwest::Response {
+    let path="/pit/api/v1/jobs";let timestamp=chrono::Utc::now().timestamp_millis().to_string();
+    let signature=auth::sign("race_test_hmac_secret_32_bytes_000000",&timestamp,nonce,"POST",path,body.as_bytes());
+    reqwest::Client::new().post(url).header("x-pit-edge-timestamp",timestamp)
+        .header("x-pit-edge-nonce",nonce).header("x-pit-edge-signature",signature)
+        .header("x-pit-invite","race-test-invitation").header("idempotency-key",key)
+        .header("content-type","application/json").body(body.to_owned()).send().await.unwrap()
+}
+async fn signed_access(url:&str,path:&str,method:reqwest::Method,token:&str)->reqwest::Response {
+    let timestamp=chrono::Utc::now().timestamp_millis().to_string();
+    let nonce=Uuid::new_v4().simple().to_string();
+    let signature=auth::sign("race_test_hmac_secret_32_bytes_000000",&timestamp,&nonce,method.as_str(),path,b"");
+    reqwest::Client::new().request(method,url).header("x-pit-edge-timestamp",timestamp)
+        .header("x-pit-edge-nonce",nonce).header("x-pit-edge-signature",signature)
+        .header("authorization",format!("Bearer {token}")).send().await.unwrap()
+}
+
+#[tokio::test(flavor="multi_thread",worker_threads=4)]
+async fn local_concurrent_claim_checkpoint_recovery_and_replay(){
+    let (Ok(db),Ok(url))=(std::env::var("PIT_TEST_RACE_DATABASE_URL"),std::env::var("PIT_TEST_RPC_URL")) else {eprintln!("SKIP race integration: disposable local DB and Anvil required");return};
+    assert_eq!(db,"postgres://corio@127.0.0.1:55439/pit_v21_races");
+    assert!(url.starts_with("http://127.0.0.1:58545"));
+    let pool=PgPool::connect(&db).await.unwrap();
+    for migration in [include_str!("../../backend/migrations/001_init.sql"),include_str!("../../backend/migrations/002_edge_nonces.sql"),include_str!("../migrations/003_retry_schedule.sql")] {sqlx::raw_sql(migration).execute(&pool).await.unwrap();}
+    sqlx::query("TRUNCATE pit_deliveries,pit_alerts,pit_monitors,pit_jobs,pit_edge_nonces,pit_worker_heartbeat CASCADE").execute(&pool).await.unwrap();
+    let head=rpc(&url,"eth_blockNumber",json!([])).await.as_str().and_then(|s|u64::from_str_radix(s.trim_start_matches("0x"),16).ok()).unwrap();
+    if head<630 {rpc(&url,"anvil_mine",json!([format!("0x{:x}",630-head)])).await;}
+    let contract="0x1111111111111111111111111111111111111111";
+    let first=Uuid::new_v4();
+    let input=json!({"chain":"base-sepolia","contract":contract,"fromBlock":1,"toBlock":1});
+    insert(&pool,first,input.clone(),"QUEUED",None).await;
+    let app=app(pool.clone(),&url);
+    let (one,two)=tokio::join!(worker::tick(&app),worker::tick(&app));one.unwrap();two.unwrap();
+    let state=sqlx::query("SELECT status,attempts FROM pit_jobs WHERE id=$1").bind(first).fetch_one(&pool).await.unwrap();
+    assert_eq!(state.get::<String,_>("status"),"COMPLETED");assert_eq!(state.get::<i32,_>("attempts"),1);
+
+    let resumed=Uuid::new_v4();let old_claim=Uuid::new_v4();
+    let full=json!({"chain":"base-sepolia","contract":contract,"fromBlock":1,"toBlock":600});
+    insert(&pool,resumed,full.clone(),"RUNNING",Some(old_claim)).await;
+    let first_range=json!({"chain":"base-sepolia","contract":contract,"fromBlock":1,"toBlock":500});
+    let chain=Rpc::local(url.clone(),84532,reqwest::Client::new());
+    event_scan::scan(&first_range,&chain,None,Some(&event_scan::Checkpoint{pool:&pool,job_id:resumed,claim_token:old_claim})).await.unwrap();
+    let checkpoint:Value=sqlx::query_scalar("SELECT progress_json FROM pit_jobs WHERE id=$1").bind(resumed).fetch_one(&pool).await.unwrap();
+    assert_eq!(checkpoint["coverage"].as_array().unwrap().len(),1);
+    // This is the durable state left by an interrupted worker after the first range.
+    sqlx::query("UPDATE pit_jobs SET lease_until=now()-interval '1 second' WHERE id=$1")
+        .bind(resumed).execute(&pool).await.unwrap();
+    worker::tick(&app).await.unwrap();
+    let state=sqlx::query("SELECT status,attempts,result_json FROM pit_jobs WHERE id=$1").bind(resumed).fetch_one(&pool).await.unwrap();
+    assert_eq!(state.get::<String,_>("status"),"COMPLETED");assert_eq!(state.get::<i32,_>("attempts"),2);
+    let result:Value=state.get("result_json");assert_eq!(result["coverage"].as_array().unwrap().len(),2);
+    assert_eq!(result["rpcLogRequests"],1,"must query only the uncovered second interval");
+    let mut stale_coverage=checkpoint.clone();stale_coverage["coverage"][0]["toHash"]=json!(format!("0x{}","0".repeat(64)));
+    let rechecked=event_scan::scan(&full,&chain,Some(&stale_coverage),None).await.unwrap();
+    assert_eq!(rechecked["status"],"COMPLETE");
+    assert_eq!(rechecked["rpcLogRequests"],2,"a noncanonical checkpoint must be discarded and rescanned");
+
+    let cancelled=Uuid::new_v4();let cancelled_claim=Uuid::new_v4();
+    insert(&pool,cancelled,input.clone(),"RUNNING",Some(cancelled_claim)).await;
+    sqlx::query("UPDATE pit_jobs SET status='CANCELLED' WHERE id=$1").bind(cancelled).execute(&pool).await.unwrap();
+    let stale=event_scan::scan(&input,&chain,None,Some(&event_scan::Checkpoint{pool:&pool,job_id:cancelled,claim_token:cancelled_claim})).await;
+    assert_eq!(stale.unwrap_err(),"STALE_LEASE");
+
+    let server=tokio::spawn(api::serve(app.clone()));
+    let health="http://127.0.0.1:58791/pit/api/v1/health";
+    for _ in 0..30 {if reqwest::get(health).await.is_ok(){break}tokio::time::sleep(Duration::from_millis(100)).await;}
+    let jobs="http://127.0.0.1:58791/pit/api/v1/jobs";
+    let body=json!({"kind":"events","input":input.clone()}).to_string();
+    let nonce=Uuid::new_v4().simple().to_string();
+    let (a,b)=tokio::join!(signed_post(jobs,&nonce,&body,"race_nonce_key_0000001"),signed_post(jobs,&nonce,&body,"race_nonce_key_0000002"));
+    let winner=if a.status()==202 {"race_nonce_key_0000001"}else{"race_nonce_key_0000002"};
+    let mut codes=[a.status().as_u16(),b.status().as_u16()];codes.sort();assert_eq!(codes,[202,403]);
+    let conflict=signed_post(jobs,&Uuid::new_v4().simple().to_string(),&body,winner).await;
+    assert_eq!(conflict.status(),409);
+    let first_url=format!("{jobs}/{first}");let first_path=format!("/pit/api/v1/jobs/{first}");
+    assert_eq!(signed_access(&first_url,&first_path,reqwest::Method::GET,"wrong-capability").await.status(),404);
+    let export_url=format!("{first_url}/export?format=json");let export_path=format!("{first_path}/export?format=json");
+    assert_eq!(signed_access(&export_url,&export_path,reqwest::Method::GET,"wrong-capability").await.status(),404);
+    let cancel_url=format!("{first_url}/cancel");let cancel_path=format!("{first_path}/cancel");
+    assert_eq!(signed_access(&cancel_url,&cancel_path,reqwest::Method::POST,"wrong-capability").await.status(),404);
+    let invalid_page=format!("{first_url}?limit=101");let invalid_path=format!("{first_path}?limit=101");
+    assert_eq!(signed_access(&invalid_page,&invalid_path,reqwest::Method::GET,"race-capability").await.status(),400);
+    let valid_page=format!("{first_url}?offset=0&limit=1");let valid_path=format!("{first_path}?offset=0&limit=1");
+    let page=signed_access(&valid_page,&valid_path,reqwest::Method::GET,"race-capability").await;
+    assert_eq!(page.status(),200);let page:Value=page.json().await.unwrap();assert_eq!(page["result"]["totalEvents"],0);
+    let timestamp=chrono::Utc::now().timestamp_millis().to_string();let tampered=body.replace("events","permissions");
+    let tamper_nonce=Uuid::new_v4().simple().to_string();
+    let sig=auth::sign("race_test_hmac_secret_32_bytes_000000",&timestamp,&tamper_nonce,"POST","/pit/api/v1/jobs",body.as_bytes());
+    // A signature over a different body must fail even before invitation validation.
+    let tamper=reqwest::Client::new().post(jobs).header("x-pit-edge-timestamp",timestamp)
+        .header("x-pit-edge-nonce",tamper_nonce).header("x-pit-edge-signature",sig)
+        .body(tampered).send().await.unwrap();assert_eq!(tamper.status(),403);
+    let too_large=reqwest::Client::new().post(jobs).body(vec![b'x';256*1024+1]).send().await.unwrap();
+    assert_eq!(too_large.status(),413);
+    let old_timestamp=(chrono::Utc::now().timestamp_millis()-61_000).to_string();let expired_nonce=Uuid::new_v4().simple().to_string();
+    let expired_sig=auth::sign("race_test_hmac_secret_32_bytes_000000",&old_timestamp,&expired_nonce,"POST","/pit/api/v1/jobs",body.as_bytes());
+    let expired=reqwest::Client::new().post(jobs).header("x-pit-edge-timestamp",old_timestamp).header("x-pit-edge-nonce",expired_nonce)
+        .header("x-pit-edge-signature",expired_sig).body(body.clone()).send().await.unwrap();assert_eq!(expired.status(),403);
+    for _ in 0..20 {insert(&pool,Uuid::new_v4(),input.clone(),"QUEUED",None).await;}
+    let quota=signed_post(jobs,&Uuid::new_v4().simple().to_string(),&body,"race_quota_key_0000001").await;
+    assert_eq!(quota.status(),429);
+    server.abort();pool.close().await;
+}

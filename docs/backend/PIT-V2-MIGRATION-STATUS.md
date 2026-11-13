@@ -1,26 +1,21 @@
-# PIT Crypto V2: local migration status
+# PIT Crypto V2.1: local migration status
 
-This branch adds a separate Next.js dashboard and a Rust API/worker. It does not replace the deployed Node.js canary or modify its database. The Astro Toolbox and Explorer remain in place.
+V2 is a separate Next.js dashboard and a Rust API/worker. It does not replace the deployed Node.js canary or modify its PostgreSQL database. The Astro Toolbox and Explorer remain unchanged.
 
-## Implemented and locally exercised
+## Verified locally
 
-- The Rust binary runs in API, worker, migration and healthcheck modes. Axum serves `/pit/api/v1`; Tokio and PostgreSQL run the durable queue. Alloy transports bounded, read-only EVM RPC calls.
-- The Rust database starts from the unchanged V1 schema migrations and adds only `next_attempt_at` for retry scheduling. Tests use a disposable database and local Anvil.
-- The dashboard has five tool routes. The four hosted-eligible workflows submit to the Rust API through a server-side Next gateway; the hosted NFT button is disabled. The gateway HMAC key stays server-side.
-- A local integration test deployed ERC-20, permissions and NFT fixtures to Anvil. It checked actual log coverage, exact distribution accounting, ownership, NFT metadata parsing, HMAC/replay rejection, PostgreSQL persistence, monitoring and delivery to a local SMTP sink.
-- The Node V1 and Rust V2 material comparison passed on the same Anvil fixture for event history, permissions and distribution. Chromium, Firefox and mobile Chromium exercised browser → Next → Rust API → worker → PostgreSQL on local fixtures for event, permissions, distribution and monitor workflows.
+- Axum API and Tokio worker use the V1 PostgreSQL schema plus an additive retry scheduling migration. The API preserves signed gateway requests, one-time nonces, private invitations, scoped capabilities, idempotency and quotas.
+- Event scans persist verified range checkpoints and canonical hashes, resume after interruption, expose missing intervals, decode standard user ABI event fragments, and page results. A missing `anonymous` ABI field is interpreted as `false`, as in a standard non-anonymous fragment.
+- Chromium and Firefox completed real browser to Next.js to Rust API to worker to PostgreSQL journeys for events, permissions, distribution, monitoring and local NFT metadata. Mobile Chromium exercised event, permission, distribution and local NFT forms.
+- Rust integration tests use Anvil transactions, a local metadata server and SMTP sink. Two separate worker processes claimed one job once. A disposable V1 PostgreSQL backup was restored and read after the V2 additive migration.
+- The V2 Compose candidate has dedicated data and RPC networks, no published ports or Traefik routers, and 0.25/0.5/0.5 CPU and 256/512/512 MiB limits for API/worker/database. Its source render is checked before any future hosted materialization.
 
-## Gaps before V1 replacement
+## Release boundaries
 
-- Full API contract parity is not established. Event scans do not yet persist range checkpoints or decode a user-supplied ABI. Result pagination, every V1 error semantic, comprehensive proxy/role analysis and all monitor rules require equivalent fixture comparison.
-- NFT metadata processing was tested with a local injected fetcher, but a real browser → API → worker → HTTP metadata journey was not completed. Hosted NFT fetching remains disabled. Independent outbound isolation is still required before it can be enabled on Netcup.
-- Worker lease recovery, retries and cancellation have code paths but do not yet have the full crash/concurrency matrix requested for a replacement decision. V1-compatible database restoration and a mixed V1/V2 concurrency test are outstanding.
-- Email delivery was verified only against a local SMTP sink. No external delivery provider is configured.
-- The V2 Docker image has not been published. The Compose file is source-only and has not been materialized by Coolify; its image reference must be an actual immutable digest before deployment. No VPS capacity or network observations were made for V2.
-- Comparable Node/Rust latency, RSS and CPU benchmarks were not completed. No performance improvement is claimed.
+- Hosted NFT fetching remains disabled. Local fixture protection does not establish independent hosted egress isolation.
+- Local SMTP delivery does not establish external email delivery. No public dashboard or API is deployed.
+- Node V1 and Rust V2 must not write the same live database without a separate compatibility decision. The local restore test covers representative V1 jobs, monitor cursor, alert and nonce, not every historic production record.
+- The V2 image is a local artifact until an immutable registry digest is published and independently verified. A local Compose render is not a Coolify-generated deployment configuration.
+- Performance measurements are bounded, local and mostly I/O-sensitive. No production throughput or sustained resource guarantee is inferred from them.
 
-## Cutover boundary
-
-Keep Node V1 as the known-good internal canary. Finish the contract and security gaps, then build and scan an immutable V2 image, run a separate private V2 canary with a new database and validated Coolify-generated Compose, perform hosted smoke and resource measurements, and obtain separate deployment approval. Never attach V2 to the writable V1 database by default.
-
-No public API, payments, signing, externally broadcast transactions or production data migration are enabled by this branch.
+Keep the Node V1 canary as the known-good rollback candidate. A later V2 private canary needs a separate database, Coolify-generated Compose validation, network checks, hosted smoke and explicit deployment approval.

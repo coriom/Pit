@@ -6,6 +6,8 @@ rust-version = "1.95"
 
 [dependencies]
 alloy = { version = "=2.5.0", default-features = false, features = ["provider-http", "rpc-types", "sol-types", "reqwest-rustls-tls"] }
+alloy-dyn-abi = "=1.7.3"
+alloy-json-abi = "=1.7.3"
 axum = { version = "=0.8.9", features = ["macros"] }
 chrono = { version = "=0.4.45", features = ["serde"] }
 csv = "=1.4.0"

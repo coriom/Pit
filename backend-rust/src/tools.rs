@@ -24,6 +24,7 @@ pub fn validate(kind:&str,input:&Value,nft_enabled:bool)->Result<Value,String>{
             if v.to_block<v.from_block||v.to_block-v.from_block>=20_000 {return Err("BLOCK_RANGE_LIMIT".into())}
             if let Some(t)=&v.topic0 {rpc::hash32(t)?;}
             if v.abi.as_ref().is_some_and(|a|a.len()>30){return Err("VALIDATION_ERROR".into())}
+            if kind=="events" { crate::event_abi::compile(v.abi.as_deref())?; }
             if kind=="permissions" {v.abi=None;v.topic0=None;}
             serde_json::to_value(v).map_err(|_|"VALIDATION_ERROR".into())
         },
@@ -56,52 +57,11 @@ pub async fn run(kind:&str,input:&Value,rpc:&Rpc)->Result<Value,String>{
 }
 
 pub async fn events(input:&Value,rpc:&Rpc)->Result<Value,String>{
-    let v:RangeInput=serde_json::from_value(input.clone()).map_err(|_|"VALIDATION_ERROR")?;
-    rpc.assert_chain().await?;
-    let head=rpc.head().await?;let safe=head.saturating_sub(12);let end=v.to_block.min(safe);
-    let mut rows=Vec::<Value>::new();let mut completed=Vec::<Value>::new();let mut coverage=Vec::<Value>::new();let mut missing=Vec::<Value>::new();let mut seen=BTreeSet::<String>::new();
-    let mut requests=0u32;let mut ranges=Vec::<(u64,u64)>::new();
-    if end>=v.from_block {let mut cursor=v.from_block;while cursor<=end {let to=(cursor+499).min(end);ranges.push((cursor,to));cursor=to+1;}}
-    while let Some((from,to))=ranges.pop(){
-        if requests>=120 {missing.push(json!({"from":from,"to":to,"reason":"RPC_BUDGET"}));continue}
-        requests+=1;
-        let mut filter=json!({"address":v.contract,"fromBlock":rpc::hex_number(from),"toBlock":rpc::hex_number(to)});
-        if let Some(t)=&v.topic0 {filter["topics"]=json!([t]);}
-        let fetched=rpc.call("eth_getLogs",json!([filter])).await;
-        match fetched {
-            Ok(Value::Array(logs)) if logs.len()<900 && rows.len()+logs.len()<=5000=>{
-                let mut valid=true;let mut batch=Vec::new();let mut block_cache=HashMap::<u64,String>::new();
-                for log in logs {
-                    let bn=rpc::hex_u64(&log["blockNumber"])?;
-                    let contract=log["address"].as_str().unwrap_or("");
-                    if bn<from||bn>to||!contract.eq_ignore_ascii_case(&v.contract){valid=false;break}
-                    let block_hash=log["blockHash"].as_str().unwrap_or("");
-                    let canonical=if let Some(h)=block_cache.get(&bn){h.clone()}else{let h=rpc.block_hash(bn).await?;block_cache.insert(bn,h.clone());h};
-                    if !canonical.eq_ignore_ascii_case(block_hash){valid=false;break}
-                    let tx=log["transactionHash"].as_str().unwrap_or("");let index=rpc::hex_u64(&log["logIndex"])?;
-                    let id=format!("{}:{}:{}",block_hash.to_ascii_lowercase(),tx.to_ascii_lowercase(),index);
-                    if seen.insert(id.clone()) {let topics=log["topics"].as_array().cloned().unwrap_or_default();
-                        let signature=topics.first().and_then(Value::as_str).map(str::to_owned);
-                        let decoded=decode_known(&topics,&log["data"]);
-                        batch.push(json!({"id":id,"chainId":rpc.chain_id(),"contract":contract,"blockNumber":bn,"blockHash":block_hash,"transactionHash":tx,"transactionIndex":rpc::hex_u64(&log["transactionIndex"]).unwrap_or(0),"logIndex":index,"signature":signature,"topics":topics,"data":log["data"],"decoded":decoded}));}
-                }
-                if !valid {missing.push(json!({"from":from,"to":to,"reason":"REORGANIZED_OR_RPC_LOG_MISMATCH"}));continue}
-                let to_hash=rpc.block_hash(to).await?;rows.extend(batch);completed.push(json!([from,to]));coverage.push(json!({"from":from,"to":to,"toHash":to_hash}));
-            },
-            Ok(Value::Array(logs)) if from<to && (logs.len()>=900||rows.len()+logs.len()>5000)=>{let mid=(from+to)/2;ranges.push((mid+1,to));ranges.push((from,mid));},
-            Err(e) if from<to && (e.contains("range")||e.contains("results")||e.contains("response size"))=>{let mid=(from+to)/2;ranges.push((mid+1,to));ranges.push((from,mid));},
-            Ok(_) => missing.push(json!({"from":from,"to":to,"reason":"RPC_LOG_LIMIT_OR_INVALID_RESPONSE"})),
-            Err(e)=>missing.push(json!({"from":from,"to":to,"reason":e.chars().take(100).collect::<String>()})),
-        }
-    }
-    if safe<v.to_block {missing.push(json!({"from":v.from_block.max(safe+1),"to":v.to_block,"reason":"UNCONFIRMED_HEAD"}));}
-    rows.sort_by_key(|r|(r["blockNumber"].as_u64().unwrap_or(0),r["transactionIndex"].as_u64().unwrap_or(0),r["logIndex"].as_u64().unwrap_or(0)));
-    completed.sort_by_key(|r|r[0].as_u64().unwrap_or(0));coverage.sort_by_key(|r|r["from"].as_u64().unwrap_or(0));
-    Ok(json!({"status":if missing.is_empty(){"COMPLETE"}else{"PARTIAL"},"requested":[v.from_block,v.to_block],"completed":completed,"coverage":coverage,"missing":missing,"events":rows,"rpcLogRequests":requests,"providerLimitation":"Public RPC completeness depends on conforming provider responses and historical retention."}))
+    crate::event_scan::scan(input,rpc,None,None).await
 }
 
 fn topic_address(topic:&Value)->Option<String>{let s=topic.as_str()?;if s.len()!=66 {return None}Some(format!("0x{}",&s[26..]).to_ascii_lowercase())}
-fn decode_known(topics:&[Value],data:&Value)->Value{
+pub(crate) fn decode_known(topics:&[Value],data:&Value)->Value{
     let signature=topics.first().and_then(Value::as_str).unwrap_or("").to_ascii_lowercase();
     if signature==rpc::event_sig("Transfer(address,address,uint256)") && topics.len()>=3 {
         let value=U256::from_str_radix(data.as_str().unwrap_or("0x").trim_start_matches("0x"),16).ok();
@@ -223,7 +183,15 @@ fn decode_abi_string(hex_data:&str)->Result<String,String>{
 pub async fn nft(input:&Value,rpc:&Rpc)->Result<Value,String>{
     nft_with_fetcher(input,rpc,|uri:String,method,max_bytes|async move{safe_http::fetch(&uri,method,max_bytes).await}).await
 }
+pub async fn nft_local(input:&Value,rpc:&Rpc,origin:&str)->Result<Value,String>{
+    let origin=origin.to_owned();
+    nft_with_fetcher_policy(input,rpc,move |uri:String,method,max_bytes|{let origin=origin.clone();async move{safe_http::fetch_local_fixture(&uri,&origin,method,max_bytes).await}},true).await
+}
 pub async fn nft_with_fetcher<F,Fut>(input:&Value,rpc:&Rpc,fetcher:F)->Result<Value,String>
+where F:Fn(String,reqwest::Method,usize)->Fut,Fut:std::future::Future<Output=Result<(String,Vec<u8>),String>>{
+    nft_with_fetcher_policy(input,rpc,fetcher,false).await
+}
+async fn nft_with_fetcher_policy<F,Fut>(input:&Value,rpc:&Rpc,fetcher:F,local_fixture:bool)->Result<Value,String>
 where F:Fn(String,reqwest::Method,usize)->Fut,Fut:std::future::Future<Output=Result<(String,Vec<u8>),String>>{
     let v:NftInput=serde_json::from_value(input.clone()).map_err(|_|"VALIDATION_ERROR")?;rpc.assert_chain().await?;
     if rpc.code(&v.contract).await?=="0x"{return Err("NO_CONTRACT_CODE".into())}
@@ -235,7 +203,7 @@ where F:Fn(String,reqwest::Method,usize)->Fut,Fut:std::future::Future<Output=Res
             let id=token_id.parse::<U256>().map_err(|_|"INVALID_TOKEN_ID")?;let arg=format!("{id:064x}");
             let raw=match rpc.eth_call(&v.contract,&format!("0xc87b56dd{arg}"),json!("latest")).await{Ok(s)=>s,Err(_)=>rpc.eth_call(&v.contract,&format!("0x0e89341c{arg}"),json!("latest")).await?};
             let token_uri=decode_abi_string(&raw)?.replace("{id}",&arg);uri=json!(token_uri);
-            safe_http::normalize(&token_uri)?;let (content_type,body)=fetcher(token_uri.clone(),reqwest::Method::GET,512*1024).await?;
+            if !local_fixture {safe_http::normalize(&token_uri)?;}let (content_type,body)=fetcher(token_uri.clone(),reqwest::Method::GET,512*1024).await?;
             if !content_type.to_ascii_lowercase().contains("json"){issues.push("METADATA_CONTENT_TYPE".into())}
             let value:Value=serde_json::from_slice(&body).map_err(|_|"INVALID_JSON")?;
             if !value.is_object(){return Err("METADATA_OBJECT_REQUIRED".into())}

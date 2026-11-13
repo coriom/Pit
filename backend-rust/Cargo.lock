@@ -3045,6 +3045,8 @@ name = "pit-crypto-backend-v2"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "alloy-dyn-abi",
+ "alloy-json-abi",
  "axum",
  "chrono",
  "csv",
