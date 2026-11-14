@@ -4,6 +4,7 @@ const compose=JSON.parse(raw);
 const expectedImage=process.env.PIT_V2_EXPECTED_IMAGE;
 assert.match(expectedImage??'',/^ghcr\.io\/coriom\/pit-rust-backend@sha256:[0-9a-f]{64}$/,'exact immutable V2 image required');
 assert.deepEqual(Object.keys(compose.services).sort(),['pit-v2-api','pit-v2-db','pit-v2-migrate','pit-v2-worker']);
+assert.equal(compose.services['pit-v2-migrate'].restart,'no','one-shot migration excluded from Coolify health');
 assert.deepEqual(Object.keys(compose.networks).sort(),['pit-v2-data','pit-v2-rpc']);
 assert.equal(compose.networks['pit-v2-data'].internal,true);
 assert.equal(compose.networks['pit-v2-rpc'].internal??false,false);

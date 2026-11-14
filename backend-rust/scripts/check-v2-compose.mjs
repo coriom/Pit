@@ -6,6 +6,7 @@ const value=JSON.parse(readFileSync(0,'utf8'));
 const services=value.services??{};
 const expected=['pit-v2-api','pit-v2-db','pit-v2-migrate','pit-v2-worker'];
 if(JSON.stringify(Object.keys(services).sort())!==JSON.stringify(expected))throw Error('SERVICE_SET_CHANGED');
+if(services['pit-v2-migrate'].restart!=='no')throw Error('MIGRATION_HEALTH_EXCLUSION_MISSING');
 const networks=Object.keys(value.networks??{}).sort();
 if(JSON.stringify(networks)!==JSON.stringify(['pit-v2-data','pit-v2-rpc']))throw Error('NETWORK_SET_CHANGED');
 if(!value.networks['pit-v2-data'].name?.endsWith('_pit-v2-data')||!value.networks['pit-v2-rpc'].name?.endsWith('_pit-v2-rpc'))throw Error('NETWORK_IDENTITY_CHANGED');

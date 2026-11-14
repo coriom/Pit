@@ -51,6 +51,11 @@ async fn real_anvil_postgres_api_worker_journey(){
         let router=axum::Router::new()
             .route("/token/1",axum::routing::get(move || {let origin=metadata_origin_for_server.clone();async move{([(axum::http::header::CONTENT_TYPE,"application/json")],json!({"name":"Fixture NFT","description":"Local fixture","image":format!("{origin}/image.png")}).to_string())}}))
             .route("/image.png",axum::routing::head(||async{([(axum::http::header::CONTENT_TYPE,"image/png")],"")}))
+            .route("/parity-valid",axum::routing::get(||async{([(axum::http::header::CONTENT_TYPE,"application/json")],"{\"name\":\"Fixture NFT\",\"description\":\"Parity HTTP\",\"image\":\"https://fixture.example/image.png\"}")}))
+            .route("/parity-invalid",axum::routing::get(||async{([(axum::http::header::CONTENT_TYPE,"application/json")],"{invalid")}))
+            .route("/parity-media-missing",axum::routing::get(||async{([(axum::http::header::CONTENT_TYPE,"application/json")],"{\"name\":\"Fixture NFT\",\"description\":\"Parity HTTP\",\"image\":\"https://fixture.example/missing.png\"}")}))
+            .route("/parity-oversized",axum::routing::get(||async{([(axum::http::header::CONTENT_TYPE,"application/json")],vec![b'x';512*1024+1])}))
+            .route("/parity-slow",axum::routing::get(||async{tokio::time::sleep(std::time::Duration::from_secs(4)).await;([(axum::http::header::CONTENT_TYPE,"application/json")],"{}") }))
             .route("/redirect",axum::routing::get(||async{(axum::http::StatusCode::FOUND,[(axum::http::header::LOCATION,"http://169.254.169.254/latest/meta-data")])}))
             .route("/large",axum::routing::get(||async{vec![b'x';1024]}))
             .route("/slow",axum::routing::get(||async{tokio::time::sleep(std::time::Duration::from_secs(4)).await;"slow"}));
@@ -70,7 +75,7 @@ async fn real_anvil_postgres_api_worker_journey(){
     assert_eq!(checked["rows"][0]["status"],"OK");
     let invite="local-test-private-invite";let secret="local_test_key_32_bytes_long_aaaaaaaa";
     std::fs::write("/tmp/pit-v2-parity-local.json",json!({"token":token,"control":control,"nft":nft_contract,"from":from,"last":last,"recipient1":r1,"recipient2":r2,"transactionHashes":[tx_hash(&a),tx_hash(&b)],"events":events,"permissions":permissions,"distribution":distribution}).to_string()).unwrap();
-    let app=Arc::new(App{pool:pool.clone(),config:Config{database_url:db_url,invite_hash:auth::hash(invite),edge_key:secret.into(),allowed_origin:"http://127.0.0.1:4000".into(),nft_enabled:true,port:58789,allowed_emails:Vec::new(),local_rpc_url:Some(url.clone()),local_smtp:None,local_metadata_origin:Some(metadata_origin)},http:client.clone(),request_gate:Arc::new(tokio::sync::Semaphore::new(32))});
+    let app=Arc::new(App{pool:pool.clone(),config:Config{database_url:db_url,invite_hash:auth::hash(invite),edge_key:secret.into(),allowed_origin:"http://127.0.0.1:4000".into(),nft_enabled:true,port:58789,allowed_emails:Vec::new(),local_rpc_url:Some(url.clone()),local_smtp:None,local_metadata_origin:Some(metadata_origin.clone())},http:client.clone(),request_gate:Arc::new(tokio::sync::Semaphore::new(32))});
     let server=tokio::spawn(api::serve(app.clone()));
     let health="http://127.0.0.1:58789/pit/api/v1/health";let mut ready=false;
     for _ in 0..30 {if server.is_finished(){panic!("Rust API failed before readiness: {:?}",server.await)}if client.get(health).send().await.is_ok(){ready=true;break}tokio::time::sleep(Duration::from_millis(100)).await}assert!(ready,"Rust API did not bind localhost");
@@ -164,6 +169,35 @@ async fn real_anvil_postgres_api_worker_journey(){
     fixture["nftOversized"]=oversized;
     fixture["nftUnsupported"]=unsupported;
     fixture["monitorEvent"]=monitor_event;
+    // The Node comparison rebinds this disposable port after this test exits.
+    // Both implementations see the same on-chain HTTPS URI and fetch the same
+    // bytes through an explicit local-only HTTP fixture adapter.
+    let mut http_cases=serde_json::Map::new();
+    for (name,path,ids) in [
+        ("valid","/parity-valid",vec!["1"]),
+        ("partial_duplicate","/parity-valid",vec!["1","2"]),
+        ("invalid_json","/parity-invalid",vec!["1"]),
+        ("media_failure","/parity-media-missing",vec!["1"]),
+        ("oversized","/parity-oversized",vec!["1"]),
+        ("timeout","/parity-slow",vec!["1"]),
+    ] {
+        let uri=format!("https://fixture.example{path}");
+        let calldata=format!("0x{}",hex::encode(setTokenURICall{value:uri.clone()}.abi_encode()));
+        send(&client,&url,sender,Some(&nft_contract),&calldata).await;
+        let origin=metadata_origin.clone();
+        let result=tools::nft_with_fetcher(&json!({"chain":"base-sepolia","contract":nft_contract,"tokenIds":ids}),&rpc,move |uri,method,max_bytes|{
+            let origin=origin.clone();
+            async move {
+                let parsed=reqwest::Url::parse(&uri).map_err(|_|"URI_INVALID".to_owned())?;
+                if parsed.scheme()!="https"||parsed.host_str()!=Some("fixture.example") {return Err("FIXTURE_HOST_FORBIDDEN".into())}
+                let local=format!("{origin}{}",parsed.path());
+                safe_http::fetch_local_fixture(&local,&origin,method,max_bytes).await
+            }
+        }).await.unwrap();
+        http_cases.insert(name.into(),json!({"uri":uri,"tokenIds":ids,"result":result}));
+    }
+    fixture["nftHttpOrigin"]=json!(metadata_origin);
+    fixture["nftHttpCases"]=json!(http_cases);
     std::fs::write("/tmp/pit-v2-parity-local.json",fixture.to_string()).unwrap();
     metadata_server.abort();server.abort();pool.close().await;
 }

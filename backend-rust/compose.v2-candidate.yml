@@ -19,6 +19,9 @@ services:
   pit-v2-migrate:
     image: ${PIT_V2_IMAGE:?immutable V2 GHCR digest required}
     command: ["migrate"]
+    # Docker's default is already no restart. Coolify 4.7.5 also uses this
+    # explicit value to exclude the successful one-shot job from app health.
+    restart: "no"
     environment:
       PIT_DATABASE_URL: ${PIT_V2_DATABASE_URL:?separate V2 database URL required}
       PIT_BACKEND_INVITE_SHA256: ${PIT_V2_BACKEND_INVITE_SHA256:?V2 invite hash required}
