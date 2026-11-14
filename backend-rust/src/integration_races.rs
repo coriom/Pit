@@ -59,6 +59,16 @@ async fn local_concurrent_claim_checkpoint_recovery_and_replay(){
     let state=sqlx::query("SELECT status,attempts FROM pit_jobs WHERE id=$1").bind(first).fetch_one(&pool).await.unwrap();
     assert_eq!(state.get::<String,_>("status"),"COMPLETED");assert_eq!(state.get::<i32,_>("attempts"),1);
 
+    // A worker killed after claiming but before any checkpoint leaves a
+    // leased RUNNING row. A new worker must reclaim it exactly once.
+    let precheckpoint=Uuid::new_v4();
+    insert(&pool,precheckpoint,input.clone(),"RUNNING",Some(Uuid::new_v4())).await;
+    worker::tick(&test_app(PgPool::connect(&db).await.unwrap(),&url)).await.unwrap();
+    let recovered=sqlx::query("SELECT status,attempts,result_json FROM pit_jobs WHERE id=$1").bind(precheckpoint).fetch_one(&pool).await.unwrap();
+    assert_eq!(recovered.get::<String,_>("status"),"COMPLETED");
+    assert_eq!(recovered.get::<i32,_>("attempts"),2);
+    assert_eq!(recovered.get::<Value,_>("result_json")["events"].as_array().unwrap().len(),0);
+
     let resumed=Uuid::new_v4();let old_claim=Uuid::new_v4();
     let full=json!({"chain":"base-sepolia","contract":contract,"fromBlock":1,"toBlock":600});
     insert(&pool,resumed,full.clone(),"RUNNING",Some(old_claim)).await;
@@ -135,6 +145,19 @@ async fn local_concurrent_claim_checkpoint_recovery_and_replay(){
     assert_eq!(signed_access(&first_url,&first_path,reqwest::Method::GET,"race-capability").await.status(),404);
     sqlx::query("UPDATE pit_jobs SET expires_at=now()-interval '1 second' WHERE id=$1").bind(first).execute(&pool).await.unwrap();
     assert_eq!(signed_access(&first_url,&first_path,reqwest::Method::GET,"revoked-capability").await.status(),404);
+    sqlx::query("TRUNCATE pit_jobs,pit_edge_nonces CASCADE").execute(&pool).await.unwrap();
+    let mut submissions=tokio::task::JoinSet::new();
+    for number in 0..12 {
+        let body=body.clone();let jobs=jobs.to_owned();
+        submissions.spawn(async move {
+            signed_post(&jobs,&Uuid::new_v4().simple().to_string(),&body,&format!("race_parallel_quota_{number:04}")).await.status().as_u16()
+        });
+    }
+    let mut accepted=0;let mut limited=0;
+    while let Some(status)=submissions.join_next().await {match status.unwrap(){202=>accepted+=1,429=>limited+=1,other=>panic!("unexpected concurrent quota response {other}")}}
+    assert_eq!((accepted,limited),(10,2),"concurrent signed requests must not bypass owner quota");
+    let jobs_created:i64=sqlx::query_scalar("SELECT count(*) FROM pit_jobs").fetch_one(&pool).await.unwrap();assert_eq!(jobs_created,10);
+    sqlx::query("TRUNCATE pit_jobs,pit_edge_nonces CASCADE").execute(&pool).await.unwrap();
     server.abort();
     sqlx::query("UPDATE pit_jobs SET status='CANCELLED' WHERE status='QUEUED'").execute(&pool).await.unwrap();
     let fake=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -166,6 +189,22 @@ async fn local_concurrent_claim_checkpoint_recovery_and_replay(){
     assert_eq!(terminal.get::<String,_>("error_code"),"RPC_RATE_LIMIT");
     assert_eq!(terminal.get::<i32,_>("attempts"),3);
     fake_server.abort();
+    let terminal_listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let terminal_url=format!("http://{}",terminal_listener.local_addr().unwrap());
+    let terminal_server=tokio::spawn(async move {
+        let router=axum::Router::new().route("/",axum::routing::post(||async{
+            axum::Json(json!({"jsonrpc":"2.0","id":1,"error":{"code":-32000,"message":"execution reverted"}}))
+        }));
+        axum::serve(terminal_listener,router).await.unwrap();
+    });
+    let terminal_id=Uuid::new_v4();insert(&pool,terminal_id,input.clone(),"QUEUED",None).await;
+    worker::tick(&test_app(pool.clone(),&terminal_url)).await.unwrap();
+    let terminal_rpc=sqlx::query("SELECT status,error_code,attempts FROM pit_jobs WHERE id=$1")
+        .bind(terminal_id).fetch_one(&pool).await.unwrap();
+    assert_eq!(terminal_rpc.get::<String,_>("status"),"FAILED");
+    assert_eq!(terminal_rpc.get::<String,_>("error_code"),"RPC_REVERT");
+    assert_eq!(terminal_rpc.get::<i32,_>("attempts"),1);
+    terminal_server.abort();
     let reached=Arc::new(tokio::sync::Notify::new());
     let proceed=Arc::new(tokio::sync::Notify::new());
     let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -200,5 +239,25 @@ async fn local_concurrent_claim_checkpoint_recovery_and_replay(){
     let final_row=sqlx::query("SELECT status,result_json,progress_json FROM pit_jobs WHERE id=$1").bind(cancel_id).fetch_one(&pool).await.unwrap();
     assert_eq!(final_row.get::<String,_>("status"),"CANCELLED");
     assert!(final_row.get::<Option<Value>,_>("result_json").is_none(),"cancelled job must not publish a completed result");
-    delayed_server.abort();pool.close().await;
+    delayed_server.abort();
+    let expired_job=Uuid::new_v4();insert(&pool,expired_job,input.clone(),"QUEUED",None).await;
+    sqlx::query("UPDATE pit_jobs SET expires_at=now()-interval '1 second' WHERE id=$1").bind(expired_job).execute(&pool).await.unwrap();
+    let retained_job=Uuid::new_v4();insert(&pool,retained_job,input.clone(),"QUEUED",None).await;
+    let expired_monitor=Uuid::new_v4();
+    sqlx::query("INSERT INTO pit_monitors(id,access_hash,invite_hash,chain,contract,rule_json,cursor_block,expires_at) VALUES($1,$2,$3,'base-sepolia',$4,$5,0,now()-interval '1 second')")
+        .bind(expired_monitor).bind(auth::hash("expired-monitor-capability")).bind(auth::hash("race-test-invitation")).bind(contract).bind(json!({"type":"mint"})).execute(&pool).await.unwrap();
+    sqlx::query("INSERT INTO pit_edge_nonces(nonce,expires_at) VALUES($1,now()-interval '1 second')")
+        .bind("ffffffffffffffffffffffffffffffff").execute(&pool).await.unwrap();
+    worker::cleanup_expired(&pool).await.unwrap();
+    let remaining:i64=sqlx::query_scalar("SELECT count(*) FROM pit_jobs WHERE id=$1").bind(expired_job).fetch_one(&pool).await.unwrap();assert_eq!(remaining,0);
+    let remaining:i64=sqlx::query_scalar("SELECT count(*) FROM pit_jobs WHERE id=$1").bind(retained_job).fetch_one(&pool).await.unwrap();assert_eq!(remaining,1);
+    let remaining:i64=sqlx::query_scalar("SELECT count(*) FROM pit_monitors WHERE id=$1").bind(expired_monitor).fetch_one(&pool).await.unwrap();assert_eq!(remaining,0);
+    let remaining:i64=sqlx::query_scalar("SELECT count(*) FROM pit_edge_nonces WHERE nonce=$1").bind("ffffffffffffffffffffffffffffffff").fetch_one(&pool).await.unwrap();assert_eq!(remaining,0);
+    let closed=PgPool::connect(&db).await.unwrap();closed.close().await;
+    let offline=test_app(closed,&url);
+    assert_eq!(worker::tick(&offline).await.unwrap_err(),"DB_UNAVAILABLE");
+    let still_queued:String=sqlx::query_scalar("SELECT status FROM pit_jobs WHERE id=$1").bind(retained_job).fetch_one(&pool).await.unwrap();assert_eq!(still_queued,"QUEUED");
+    worker::tick(&test_app(pool.clone(),&url)).await.unwrap();
+    let recovered:String=sqlx::query_scalar("SELECT status FROM pit_jobs WHERE id=$1").bind(retained_job).fetch_one(&pool).await.unwrap();assert_eq!(recovered,"COMPLETED");
+    pool.close().await;
 }

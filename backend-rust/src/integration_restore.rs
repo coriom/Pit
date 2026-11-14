@@ -1,4 +1,6 @@
+use crate::{App,auth,config::Config,rpc::Rpc,worker};
 use sqlx::{PgPool,Row};
+use std::{sync::Arc,time::Duration};
 use uuid::Uuid;
 
 #[tokio::test]
@@ -30,6 +32,7 @@ async fn restored_v1_schema_and_records(){
         ("66666666-6666-4666-8666-666666666666","FAILED",2),
         ("77777777-7777-4777-8777-777777777778","COMPLETED",1),
         ("88888888-8888-4888-8888-888888888888","EXPIRED",1),
+        ("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","CANCELLED",1),
     ];
     for (id,status,attempts) in expected {
         let row=sqlx::query("SELECT status,attempts,access_hash,invite_hash FROM pit_jobs WHERE id=$1")
@@ -52,5 +55,23 @@ async fn restored_v1_schema_and_records(){
         .bind(Uuid::parse_str("33333333-3333-4333-8333-333333333333").unwrap()).fetch_one(&pool).await.unwrap();
     assert_eq!(delivery.get::<String,_>("status"),"QUEUED");
     assert_eq!(delivery.get::<i32,_>("attempts"),1);
+    let rpc_url=std::env::var("PIT_TEST_RPC_URL").expect("disposable local Anvil required for restored worker recovery");
+    assert_eq!(rpc_url,"http://127.0.0.1:58545");
+    let rpc=Rpc::local(rpc_url.clone(),84532,reqwest::Client::new());
+    assert!(rpc.head().await.unwrap()>=2,"Anvil fixture needs two blocks");
+    sqlx::query("UPDATE pit_jobs SET next_attempt_at=now()+interval '1 hour' WHERE id=$1")
+        .bind(Uuid::parse_str("44444444-4444-4444-8444-444444444444").unwrap()).execute(&pool).await.unwrap();
+    let app=App{pool:pool.clone(),config:Config{database_url:url,invite_hash:auth::hash("restore-local-invite"),edge_key:"restore_local_hmac_key_32_bytes_0000".into(),allowed_origin:"http://127.0.0.1:4300".into(),nft_enabled:false,port:0,allowed_emails:vec![],local_rpc_url:Some(rpc_url),local_smtp:None,local_metadata_origin:None},http:reqwest::Client::builder().timeout(Duration::from_secs(12)).build().unwrap(),request_gate:Arc::new(tokio::sync::Semaphore::new(32))};
+    worker::tick(&app).await.unwrap();
+    let recovered=sqlx::query("SELECT status,attempts,result_json FROM pit_jobs WHERE id=$1")
+        .bind(Uuid::parse_str("55555555-5555-4555-8555-555555555555").unwrap()).fetch_one(&pool).await.unwrap();
+    assert_eq!(recovered.get::<String,_>("status"),"COMPLETED");
+    assert_eq!(recovered.get::<i32,_>("attempts"),2);
+    let result:serde_json::Value=recovered.get("result_json");
+    assert_eq!(result["status"],"COMPLETE");
+    assert_eq!(result["missing"],serde_json::json!([]));
+    let cancelled:String=sqlx::query_scalar("SELECT status FROM pit_jobs WHERE id=$1")
+        .bind(Uuid::parse_str("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa").unwrap()).fetch_one(&pool).await.unwrap();
+    assert_eq!(cancelled,"CANCELLED");
     pool.close().await;
 }

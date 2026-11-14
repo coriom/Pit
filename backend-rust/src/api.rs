@@ -150,11 +150,11 @@ fn csv_export(kind:&str,result:&Value)->String{
     if rows.is_empty(){return String::new()}
     let mut lines=Vec::with_capacity(rows.len()+1);lines.push(columns.join(","));
     for row in rows {let values:Vec<_>=columns.iter().map(|column|{
-        let value=&row[*column];let mut cell=if value.is_null(){String::new()}else if let Some(text)=value.as_str(){text.to_owned()}else{value.to_string()};
+        let mut cell=match row.get(*column){None=>String::new(),Some(Value::String(text))=>text.to_owned(),Some(value)=>value.to_string()};
         if cell.starts_with(['=','+','-','@','\t','\r']){cell.insert(0,'\'');}
         format!("\"{}\"",cell.replace('"',"\"\""))
     }).collect();lines.push(values.join(","));}
     lines.join("\n")
 }
 
-#[cfg(test)] mod tests{use super::*;#[test]fn access_token_entropy_shape(){let t=token();assert_eq!(t.len(),43);assert!(t.bytes().all(|b|b.is_ascii_alphanumeric()||b==b'_'||b==b'-'));}#[test]fn csv_escapes_formula(){let s=csv_export("distribution",&json!({"rows":[{"recipient":"=cmd","amount":"1","status":"MISMATCH"}]}));assert!(s.contains("'=cmd"));}}
+#[cfg(test)] mod tests{use super::*;#[test]fn access_token_entropy_shape(){let t=token();assert_eq!(t.len(),43);assert!(t.bytes().all(|b|b.is_ascii_alphanumeric()||b==b'_'||b==b'-'));}#[test]fn csv_escapes_formula(){let s=csv_export("distribution",&json!({"rows":[{"recipient":"=cmd","amount":"1","status":"MISMATCH"}]}));assert!(s.contains("'=cmd"));}#[test]fn csv_preserves_explicit_null(){let s=csv_export("events",&json!({"events":[{"chainId":1,"decoded":null}]}));assert!(s.ends_with("\"null\""));assert!(s.contains("\"1\",\"\""));}}

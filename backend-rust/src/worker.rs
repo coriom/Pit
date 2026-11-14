@@ -8,11 +8,18 @@ pub async fn run(app:Arc<App>)->Result<(),Box<dyn std::error::Error+Send+Sync>>{
     let mut shutdown=Box::pin(tokio::signal::ctrl_c());let mut cycles=0u64;
     loop {
         tokio::select!{_=&mut shutdown=>break,_=tokio::time::sleep(Duration::from_secs(1))=>{}}
-        if cycles%30==0 {sqlx::query("INSERT INTO pit_worker_heartbeat(singleton,last_seen) VALUES(true,now()) ON CONFLICT(singleton) DO UPDATE SET last_seen=now()") .execute(&app.pool).await?;}
+        if cycles%30==0 {if sqlx::query("INSERT INTO pit_worker_heartbeat(singleton,last_seen) VALUES(true,now()) ON CONFLICT(singleton) DO UPDATE SET last_seen=now()") .execute(&app.pool).await.is_err(){tracing::warn!(code="DB_UNAVAILABLE","worker heartbeat deferred");}}
         if let Err(error)=tick(&app).await {tracing::warn!(code=%error,"worker iteration failed");}
-        cycles+=1;if cycles%60==0 {sqlx::query("DELETE FROM pit_jobs WHERE expires_at<now()").execute(&app.pool).await?;sqlx::query("DELETE FROM pit_monitors WHERE expires_at<now()").execute(&app.pool).await?;sqlx::query("DELETE FROM pit_edge_nonces WHERE expires_at<now()").execute(&app.pool).await?;}
+        cycles+=1;if cycles%60==0 {if cleanup_expired(&app.pool).await.is_err(){tracing::warn!(code="DB_UNAVAILABLE","worker cleanup deferred");}}
     }
     app.pool.close().await;Ok(())
+}
+pub async fn cleanup_expired(pool:&sqlx::PgPool)->Result<(),String>{
+    let mut tx=pool.begin().await.map_err(|_|"DB_UNAVAILABLE")?;
+    sqlx::query("DELETE FROM pit_jobs WHERE expires_at<now()").execute(&mut *tx).await.map_err(|_|"DB_UNAVAILABLE")?;
+    sqlx::query("DELETE FROM pit_monitors WHERE expires_at<now()").execute(&mut *tx).await.map_err(|_|"DB_UNAVAILABLE")?;
+    sqlx::query("DELETE FROM pit_edge_nonces WHERE expires_at<now()").execute(&mut *tx).await.map_err(|_|"DB_UNAVAILABLE")?;
+    tx.commit().await.map_err(|_|"DB_UNAVAILABLE")?;Ok(())
 }
 pub async fn tick(app:&App)->Result<(),String>{
     let mut tx=app.pool.begin().await.map_err(|_|"DB_UNAVAILABLE")?;

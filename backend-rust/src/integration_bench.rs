@@ -1,4 +1,4 @@
-use crate::{App,auth,config::Config,rpc::Rpc,tools,worker};
+use crate::{App,auth,config::Config,event_abi,rpc::Rpc,tools,worker};
 use serde_json::{json,Value};
 use std::{sync::Arc,time::Instant};
 use sqlx::{PgPool,Row};
@@ -21,6 +21,13 @@ async fn bounded_local_event_scan_benchmark(){
     samples.sort_by(|a,b|a.total_cmp(b));
     let rss=std::fs::read_to_string("/proc/self/status").unwrap().lines().find(|line|line.starts_with("VmRSS:")).unwrap().to_owned();
     println!("PIT_RUST_SCAN_BENCH samples_ms={samples:?} median_ms={:.2} range_ms={:.2}-{:.2} {}",samples[3],samples[0],samples[6],rss);
+    let mut rpc_samples=Vec::new();for i in 0..8 {let started=Instant::now();rpc.head().await.unwrap();if i>0{rpc_samples.push(started.elapsed().as_secs_f64()*1000.0)}}
+    rpc_samples.sort_by(|a,b|a.total_cmp(b));println!("PIT_RUST_RPC_HEAD_BENCH median_ms={:.2} range_ms={:.2}-{:.2}",rpc_samples[3],rpc_samples[0],rpc_samples[6]);
+    let abi=event_abi::compile(Some(&[json!({"type":"event","name":"Transfer","inputs":[{"name":"from","type":"address","indexed":true},{"name":"to","type":"address","indexed":true},{"name":"value","type":"uint256","indexed":false}]})])).unwrap();
+    let topics=vec![json!(crate::rpc::event_sig("Transfer(address,address,uint256)")),json!(format!("0x{:064x}",1)),json!(format!("0x{:064x}",2))];
+    let data=json!(format!("0x{:064x}",123456789u64));let mut decode_samples=Vec::new();
+    for i in 0..8 {let started=Instant::now();for _ in 0..1000 {let decoded=event_abi::decode(&abi,&topics,&data).unwrap();std::hint::black_box(decoded);}if i>0{decode_samples.push(started.elapsed().as_secs_f64()*1000.0)}}
+    decode_samples.sort_by(|a,b|a.total_cmp(b));println!("PIT_RUST_DECODE_1000_BENCH median_ms={:.2} range_ms={:.2}-{:.2}",decode_samples[3],decode_samples[0],decode_samples[6]);
 }
 
 #[tokio::test]
@@ -49,5 +56,7 @@ async fn bounded_local_full_job_benchmark(){
     }
     samples.sort_by(|a,b|a.total_cmp(b));
     println!("PIT_RUST_FULL_JOB_BENCH samples_ms={samples:?} median_ms={:.2} range_ms={:.2}-{:.2}",samples[3],samples[0],samples[6]);
+    let mut db_samples=Vec::new();for i in 0..8 {let started=Instant::now();sqlx::query("SELECT 1").execute(&pool).await.unwrap();if i>0{db_samples.push(started.elapsed().as_secs_f64()*1000.0)}}
+    db_samples.sort_by(|a,b|a.total_cmp(b));println!("PIT_RUST_PG_ROUNDTRIP_BENCH median_ms={:.2} range_ms={:.2}-{:.2}",db_samples[3],db_samples[0],db_samples[6]);
     pool.close().await;
 }

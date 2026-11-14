@@ -211,8 +211,12 @@ where F:Fn(String,reqwest::Method,usize)->Fut,Fut:std::future::Future<Output=Res
             if value["description"].as_str().is_none(){issues.push("DESCRIPTION_MISSING".into())}
             metadata=json!({"name":value["name"].as_str().map(|s|s.chars().take(500).collect::<String>()),"description":value["description"].as_str().map(|s|s.chars().take(2000).collect::<String>())});
             let hash=hex::encode(sha2::Sha256::digest(&body));metadata_hash=json!(hash);
-            if let Some(previous)=hashes.insert(hash,token_id.clone()){issues.push(format!("DUPLICATE_METADATA_WITH_{previous}"))}
-            if let Some(image)=value["image"].as_str(){match fetcher(image.to_owned(),reqwest::Method::HEAD,0).await {Ok((type_,_)) if type_.starts_with("image/")||type_.starts_with("video/")||type_.starts_with("audio/")=>media=json!({"uri":image,"contentType":type_,"status":"ACCESSIBLE"}),Ok(_)=>{issues.push("MEDIA_UNAVAILABLE".into());media=json!({"uri":image,"status":"UNAVAILABLE","reason":"MEDIA_CONTENT_TYPE"})},Err(code)=>{issues.push("MEDIA_UNAVAILABLE".into());media=json!({"uri":image,"status":"UNAVAILABLE","reason":code})}}}else{issues.push("IMAGE_MISSING".into())}
+            if let Some(previous)=hashes.get(&hash){issues.push(format!("DUPLICATE_METADATA_WITH_{previous}"))}else{hashes.insert(hash,token_id.clone());}
+            if let Some(image)=value["image"].as_str(){
+                let allowed=if local_fixture{Ok(())}else{safe_http::normalize(image).map(|_|())};
+                let fetched=match allowed {Ok(())=>fetcher(image.to_owned(),reqwest::Method::HEAD,0).await,Err(code)=>Err(code)};
+                match fetched {Ok((type_,_)) if type_.starts_with("image/")||type_.starts_with("video/")||type_.starts_with("audio/")=>media=json!({"uri":image,"contentType":type_,"status":"ACCESSIBLE"}),Ok(_)=>{issues.push("MEDIA_UNAVAILABLE".into());media=json!({"uri":image,"status":"UNAVAILABLE","reason":"MEDIA_CONTENT_TYPE"})},Err(code)=>{issues.push("MEDIA_UNAVAILABLE".into());media=json!({"uri":image,"status":"UNAVAILABLE","reason":code})}}
+            }else{issues.push("IMAGE_MISSING".into())}
             Ok(())
         }.await;
         let status=if let Err(code)=result {issues.push(code);"UNAVAILABLE"}else if issues.is_empty(){"OK"}else{"ISSUES"};

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {performance} from 'node:perf_hooks';
 import {randomUUID} from 'node:crypto';
-import {http} from '../../backend/node_modules/viem/_esm/index.js';
+import {http,decodeEventLog,toEventSelector} from '../../backend/node_modules/viem/_esm/index.js';
 import {clientFor} from '../../backend/src/rpc.mjs';
 import {scanEvents} from '../../backend/src/events.mjs';
 import {createPool,claimJob,hashToken} from '../../backend/src/db.mjs';
@@ -20,6 +20,13 @@ for(let i=0;i<8;i++){
 }
 samples.sort((a,b)=>a-b);
 console.log(`PIT_NODE_SCAN_BENCH samples_ms=${samples.map(x=>x.toFixed(2)).join(',')} median_ms=${samples[3].toFixed(2)} range_ms=${samples[0].toFixed(2)}-${samples[6].toFixed(2)} rss_kib=${Math.round(process.memoryUsage().rss/1024)}`);
+const rpcSamples=[];for(let i=0;i<8;i++){const started=performance.now();await client.getBlockNumber();if(i>0)rpcSamples.push(performance.now()-started)}
+rpcSamples.sort((a,b)=>a-b);console.log('PIT_NODE_RPC_HEAD_BENCH median_ms='+rpcSamples[3].toFixed(2)+' range_ms='+rpcSamples[0].toFixed(2)+'-'+rpcSamples[6].toFixed(2));
+const abi=[{type:'event',name:'Transfer',anonymous:false,inputs:[{name:'from',type:'address',indexed:true},{name:'to',type:'address',indexed:true},{name:'value',type:'uint256',indexed:false}]}];
+const topics=[toEventSelector('Transfer(address,address,uint256)'),'0x'+(1).toString(16).padStart(64,'0'),'0x'+(2).toString(16).padStart(64,'0')];
+const data='0x'+(123456789).toString(16).padStart(64,'0');
+const decodeSamples=[];for(let i=0;i<8;i++){const started=performance.now();let sum=0;for(let n=0;n<1000;n++){const decoded=decodeEventLog({abi,data,topics,strict:true});sum+=Number(decoded.args.value)}assert.equal(sum,123456789000);if(i>0)decodeSamples.push(performance.now()-started)}
+decodeSamples.sort((a,b)=>a-b);console.log('PIT_NODE_DECODE_1000_BENCH median_ms='+decodeSamples[3].toFixed(2)+' range_ms='+decodeSamples[0].toFixed(2)+'-'+decodeSamples[6].toFixed(2));
 if(process.env.PIT_BENCH_DATABASE_URL){
   assert.equal(process.env.PIT_BENCH_DATABASE_URL,'postgres://corio@127.0.0.1:55439/pit_v22_bench');
   const pool=createPool(process.env.PIT_BENCH_DATABASE_URL);
@@ -34,5 +41,7 @@ if(process.env.PIT_BENCH_DATABASE_URL){
   }
   jobs.sort((a,b)=>a-b);
   console.log(`PIT_NODE_FULL_JOB_BENCH samples_ms=${jobs.map(x=>x.toFixed(2)).join(',')} median_ms=${jobs[3].toFixed(2)} range_ms=${jobs[0].toFixed(2)}-${jobs[6].toFixed(2)} rss_kib=${Math.round(process.memoryUsage().rss/1024)}`);
+  const dbSamples=[];for(let i=0;i<8;i++){const started=performance.now();await pool.query('SELECT 1');if(i>0)dbSamples.push(performance.now()-started)}
+  dbSamples.sort((a,b)=>a-b);console.log('PIT_NODE_PG_ROUNDTRIP_BENCH median_ms='+dbSamples[3].toFixed(2)+' range_ms='+dbSamples[0].toFixed(2)+'-'+dbSamples[6].toFixed(2));
   await pool.end();
 }

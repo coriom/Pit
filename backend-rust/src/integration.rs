@@ -52,7 +52,8 @@ async fn real_anvil_postgres_api_worker_journey(){
             .route("/token/1",axum::routing::get(move || {let origin=metadata_origin_for_server.clone();async move{([(axum::http::header::CONTENT_TYPE,"application/json")],json!({"name":"Fixture NFT","description":"Local fixture","image":format!("{origin}/image.png")}).to_string())}}))
             .route("/image.png",axum::routing::head(||async{([(axum::http::header::CONTENT_TYPE,"image/png")],"")}))
             .route("/redirect",axum::routing::get(||async{(axum::http::StatusCode::FOUND,[(axum::http::header::LOCATION,"http://169.254.169.254/latest/meta-data")])}))
-            .route("/large",axum::routing::get(||async{vec![b'x';1024]}));
+            .route("/large",axum::routing::get(||async{vec![b'x';1024]}))
+            .route("/slow",axum::routing::get(||async{tokio::time::sleep(std::time::Duration::from_secs(4)).await;"slow"}));
         axum::serve(metadata_listener,router).await.unwrap();
     });
     assert_eq!(safe_http::fetch_local_fixture("http://169.254.169.254/latest/meta-data",&metadata_origin,reqwest::Method::GET,1024).await.unwrap_err(),"LOCAL_METADATA_ORIGIN_FORBIDDEN");
@@ -60,6 +61,7 @@ async fn real_anvil_postgres_api_worker_journey(){
     assert_eq!(safe_http::fetch_local_fixture("http://[::1]:58546/internal",&metadata_origin,reqwest::Method::GET,1024).await.unwrap_err(),"LOCAL_METADATA_ORIGIN_FORBIDDEN");
     assert_eq!(safe_http::fetch_local_fixture(&format!("{metadata_origin}/redirect"),&metadata_origin,reqwest::Method::GET,1024).await.unwrap_err(),"REDIRECT_FORBIDDEN");
     assert_eq!(safe_http::fetch_local_fixture(&format!("{metadata_origin}/large"),&metadata_origin,reqwest::Method::GET,32).await.unwrap_err(),"BODY_LIMIT");
+    assert_eq!(safe_http::fetch_local_fixture(&format!("{metadata_origin}/slow"),&metadata_origin,reqwest::Method::GET,32).await.unwrap_err(),"TIMEOUT");
     let nft_contract=send(&client,&url,sender,None,&artifact("PitBackendNftFixture")).await["contractAddress"].as_str().unwrap().to_owned();
     let uri=format!("{metadata_origin}/token/1");
     let calldata=format!("0x{}",hex::encode(setTokenURICall{value:uri.clone()}.abi_encode()));
@@ -103,6 +105,12 @@ async fn real_anvil_postgres_api_worker_journey(){
     let fresh=PgPool::connect("postgres://corio@127.0.0.1:55439/pit_v2_test").await.unwrap();
     assert!(monitor::poll_one(&fresh,&client,Some(&url)).await.unwrap());
     let alerts:i64=sqlx::query_scalar("SELECT count(*) FROM pit_alerts WHERE monitor_id=$1 AND transaction_hash=$2").bind(monitor_id).bind(tx_hash(&observed)).fetch_one(&fresh).await.unwrap();assert_eq!(alerts,1);
+    let cursor_before:i64=sqlx::query_scalar("SELECT cursor_block FROM pit_monitors WHERE id=$1").bind(monitor_id).fetch_one(&fresh).await.unwrap();
+    sqlx::query("UPDATE pit_monitors SET next_poll_at=now()-interval '1 second' WHERE id=$1").bind(monitor_id).execute(&fresh).await.unwrap();
+    assert!(monitor::poll_one(&fresh,&client,Some(&url)).await.unwrap());
+    let cursor_after:i64=sqlx::query_scalar("SELECT cursor_block FROM pit_monitors WHERE id=$1").bind(monitor_id).fetch_one(&fresh).await.unwrap();
+    let alerts_after:i64=sqlx::query_scalar("SELECT count(*) FROM pit_alerts WHERE monitor_id=$1").bind(monitor_id).fetch_one(&fresh).await.unwrap();
+    assert_eq!(cursor_before,cursor_after);assert_eq!(alerts_after,1,"restart poll must not duplicate a confirmed alert");
     use tokio::io::{AsyncBufReadExt,AsyncWriteExt,BufReader};
     let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();let smtp_port=listener.local_addr().unwrap().port();
     let sink=tokio::spawn(async move {let (socket,_)=listener.accept().await.unwrap();let mut socket=BufReader::new(socket);socket.get_mut().write_all(b"220 local smtp\r\n").await.unwrap();let mut data=false;let mut lines=Vec::new();loop{let mut line=String::new();if socket.read_line(&mut line).await.unwrap()==0{break}let clean=line.trim_end_matches(['\r','\n']);if data {if clean=="."{data=false;socket.get_mut().write_all(b"250 queued\r\n").await.unwrap()}else{lines.push(clean.to_owned())}continue}let reply=if clean.starts_with("EHLO") {"250 local\r\n"}else if clean.starts_with("MAIL FROM")||clean.starts_with("RCPT TO"){"250 ok\r\n"}else if clean=="DATA"{data=true;"354 send\r\n"}else if clean=="QUIT"{"221 bye\r\n"}else{"500 error\r\n"};socket.get_mut().write_all(reply.as_bytes()).await.unwrap();if clean=="QUIT"{break}}lines});
@@ -114,7 +122,7 @@ async fn real_anvil_postgres_api_worker_journey(){
     let parity_uri="https://fixture.example/metadata.json";
     let calldata=format!("0x{}",hex::encode(setTokenURICall{value:parity_uri.into()}.abi_encode()));
     send(&client,&url,sender,Some(&nft_contract),&calldata).await;
-    let parity_input=json!({"chain":"base-sepolia","contract":nft_contract,"tokenIds":["1","2"]});
+    let parity_input=json!({"chain":"base-sepolia","contract":nft_contract,"tokenIds":["1","2","3"]});
     let parity_nft=tools::nft_with_fetcher(&parity_input,&rpc,|uri,method,_|async move{
         if uri=="https://fixture.example/metadata.json"&&method==reqwest::Method::GET {
             Ok(("application/json".into(),b"{\"name\":\"Fixture NFT\",\"description\":\"Parity\",\"image\":\"https://fixture.example/image.png\"}".to_vec()))
@@ -124,15 +132,37 @@ async fn real_anvil_postgres_api_worker_journey(){
     assert_eq!(parity_nft["status"],"PARTIAL");
     assert_eq!(parity_nft["rows"][0]["status"],"OK");
     assert_eq!(parity_nft["rows"][1]["status"],"ISSUES");
+    assert_eq!(parity_nft["rows"][2]["issues"][0],"DUPLICATE_METADATA_WITH_1");
     let invalid_nft=tools::nft_with_fetcher(&json!({"chain":"base-sepolia","contract":nft_contract,"tokenIds":["1"]}),&rpc,|_,_,_|async{
         Ok(("application/json".into(),b"{invalid".to_vec()))
     }).await.unwrap();
     assert_eq!(invalid_nft["status"],"PARTIAL");
+    let single=json!({"chain":"base-sepolia","contract":nft_contract,"tokenIds":["1"]});
+    let media_failure=tools::nft_with_fetcher(&single,&rpc,|_,method,_|async move{
+        if method==reqwest::Method::GET {Ok(("application/json".into(),b"{\"name\":\"Fixture NFT\",\"description\":\"Parity\",\"image\":\"https://fixture.example/missing.png\"}".to_vec()))}
+        else {Err("HTTP_404".into())}
+    }).await.unwrap();
+    assert_eq!(media_failure["rows"][0]["media"]["reason"],"HTTP_404");
+    let timed_out=tools::nft_with_fetcher(&single,&rpc,|_,_,_|async{Err("TIMEOUT".into())}).await.unwrap();
+    assert_eq!(timed_out["rows"][0]["issues"][0],"TIMEOUT");
+    let oversized=tools::nft_with_fetcher(&single,&rpc,|_,_,_|async{Err("BODY_LIMIT".into())}).await.unwrap();
+    assert_eq!(oversized["rows"][0]["issues"][0],"BODY_LIMIT");
+    let unsafe_uri="http://127.0.0.1/internal";
+    let calldata=format!("0x{}",hex::encode(setTokenURICall{value:unsafe_uri.into()}.abi_encode()));
+    send(&client,&url,sender,Some(&nft_contract),&calldata).await;
+    let unsupported=tools::nft_with_fetcher(&single,&rpc,|_,_,_|async{Err("FETCH_MUST_NOT_RUN".into())}).await.unwrap();
+    assert_eq!(unsupported["rows"][0]["issues"][0],"URI_SCHEME_FORBIDDEN");
+    let calldata=format!("0x{}",hex::encode(setTokenURICall{value:parity_uri.into()}.abi_encode()));
+    send(&client,&url,sender,Some(&nft_contract),&calldata).await;
     let monitor_event:Value=sqlx::query_scalar("SELECT event_json FROM pit_alerts WHERE monitor_id=$1 LIMIT 1")
         .bind(monitor_id).fetch_one(&pool).await.unwrap();
     let mut fixture:Value=serde_json::from_str(&std::fs::read_to_string("/tmp/pit-v2-parity-local.json").unwrap()).unwrap();
     fixture["nftParity"]=parity_nft;
     fixture["nftInvalid"]=invalid_nft;
+    fixture["nftMediaFailure"]=media_failure;
+    fixture["nftTimeout"]=timed_out;
+    fixture["nftOversized"]=oversized;
+    fixture["nftUnsupported"]=unsupported;
     fixture["monitorEvent"]=monitor_event;
     std::fs::write("/tmp/pit-v2-parity-local.json",fixture.to_string()).unwrap();
     metadata_server.abort();server.abort();pool.close().await;

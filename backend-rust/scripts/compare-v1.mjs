@@ -6,6 +6,7 @@ import {scanEvents} from '../../backend/src/events.mjs';
 import {analyzePermissions} from '../../backend/src/permissions.mjs';
 import {verifyDistribution} from '../../backend/src/distribution.mjs';
 import {checkNft} from '../../backend/src/nft.mjs';
+import {normalizeMetadataUri} from '../../backend/src/safe-http.mjs';
 import {matchesRule} from '../../backend/src/monitor.mjs';
 
 const url=process.env.PIT_TEST_RPC_URL;
@@ -31,14 +32,33 @@ const fixtureFetch=async(uri,{method}={})=>{
   if(uri==='https://fixture.example/image.png'&&method==='HEAD')return {contentType:'image/png',body:Buffer.alloc(0)};
   throw Error('HTTP_404');
 };
-const nft=await checkNft({chain:'base-sepolia',contract:fixture.nft,tokenIds:['1','2']},{client,fetcher:fixtureFetch});
-assert.equal(nft.status,fixture.nftParity.status);
-assert.deepEqual(nft.rows.map(x=>x.status),fixture.nftParity.rows.map(x=>x.status));
-assert.deepEqual(nft.rows.map(x=>x.issues),fixture.nftParity.rows.map(x=>x.issues));
-assert.deepEqual(nft.rows.map(x=>x.metadataHash),fixture.nftParity.rows.map(x=>x.metadataHash));
+const single={chain:'base-sepolia',contract:fixture.nft,tokenIds:['1']};
+const compareNft=(actual,expected,{compareIssues=true}={})=>{
+  assert.equal(actual.status,expected.status);
+  assert.deepEqual(actual.rows.map(x=>x.status),expected.rows.map(x=>x.status));
+  if(compareIssues)assert.deepEqual(actual.rows.map(x=>x.issues),expected.rows.map(x=>x.issues));
+  assert.deepEqual(actual.rows.map(x=>x.metadataHash),expected.rows.map(x=>x.metadataHash));
+  assert.deepEqual(actual.rows.map(x=>x.media?.reason??null),expected.rows.map(x=>x.media?.reason??null));
+  assert.deepEqual(actual.summary,expected.summary);
+};
+const nft=await checkNft({chain:'base-sepolia',contract:fixture.nft,tokenIds:['1','2','3']},{client,fetcher:fixtureFetch});
+compareNft(nft,fixture.nftParity);
+assert.equal(nft.rows[2].issues[0],'DUPLICATE_METADATA_WITH_1');
 const invalid=await checkNft({chain:'base-sepolia',contract:fixture.nft,tokenIds:['1']},{client,fetcher:async()=>({contentType:'application/json',body:Buffer.from('{invalid')})});
-assert.equal(invalid.status,fixture.nftInvalid.status);
-assert.deepEqual(invalid.rows.map(x=>x.status),fixture.nftInvalid.rows.map(x=>x.status));
+compareNft(invalid,fixture.nftInvalid,{compareIssues:false});
+assert.equal(fixture.nftInvalid.rows[0].issues[0],'INVALID_JSON');
+assert.match(invalid.rows[0].issues[0],/JSON|Unexpected token/); // V1 includes the parser's message; V2 uses a stable code.
+const mediaFailure=await checkNft(single,{client,fetcher:async(_uri,{method}={})=>{
+  if(method==='HEAD')throw Error('HTTP_404');
+  return {contentType:'application/json',body:Buffer.from('{"name":"Fixture NFT","description":"Parity","image":"https://fixture.example/missing.png"}')};
+}});
+compareNft(mediaFailure,fixture.nftMediaFailure);
+const timeout=await checkNft(single,{client,fetcher:async()=>{throw Error('TIMEOUT')}});
+compareNft(timeout,fixture.nftTimeout);
+const oversized=await checkNft(single,{client,fetcher:async()=>{throw Error('BODY_LIMIT')}});
+compareNft(oversized,fixture.nftOversized);
+assert.throws(()=>normalizeMetadataUri('http://127.0.0.1/internal'),{message:'URI_SCHEME_FORBIDDEN'});
+assert.equal(fixture.nftUnsupported.rows[0].issues[0],'URI_SCHEME_FORBIDDEN');
 assert(matchesRule(fixture.monitorEvent,{type:'transfer-threshold',minimum:'2000000'}));
 assert(!matchesRule(fixture.monitorEvent,{type:'transfer-threshold',minimum:'4000000'}));
-console.log('PIT_V1_V2_MATERIAL_PARITY_PASS events permissions distribution nft monitor-rule');
+console.log('PIT_V1_V2_MATERIAL_PARITY_PASS events permissions distribution nft-success-partial-duplicate-invalid-media-timeout-size-unsafe monitor-rule');

@@ -1,6 +1,8 @@
 use std::{net::{IpAddr,SocketAddr},time::Duration};
 use reqwest::Url;
 
+fn fetch_error(error:reqwest::Error)->String {if error.is_timeout(){"TIMEOUT".into()}else{"FETCH_UNAVAILABLE".into()}}
+
 pub fn public_ip(ip:IpAddr)->bool{match ip {
     IpAddr::V4(v)=>{let o=v.octets();!(v.is_private()||v.is_loopback()||v.is_link_local()||v.is_multicast()||v.is_unspecified()||o[0]==0||o[0]>=224||(o[0]==100&&(64..=127).contains(&o[1]))||(o[0]==198&&(18..=19).contains(&o[1]))||(o[0]==192&&o[1]==0&&o[2]==0))},
     IpAddr::V6(v)=>{let s=v.segments();if let Some(mapped)=v.to_ipv4_mapped(){return public_ip(IpAddr::V4(mapped))}!(v.is_loopback()||v.is_unspecified()||v.is_multicast()||v.is_unique_local()||v.is_unicast_link_local())&&s[0]&0xe000==0x2000}
@@ -23,10 +25,10 @@ pub async fn fetch(uri:&str,method:reqwest::Method,max_bytes:usize)->Result<(Str
     let addresses:Vec<IpAddr>=tokio::net::lookup_host((host.as_str(),443)).await.map_err(|_|"DNS_UNAVAILABLE")?.map(|x|x.ip()).collect();
     let pinned=SocketAddr::new(validate_answers(&addresses)?,443);
     let client=reqwest::Client::builder().no_proxy().timeout(Duration::from_secs(8)).redirect(reqwest::redirect::Policy::none()).resolve(&host,pinned).build().map_err(|_|"FETCH_CONFIG")?;
-    let mut response=client.request(method,url).header("Accept","application/json,image/*;q=0.5").header("User-Agent","PIT-Crypto-Metadata-Checker/2.0").send().await.map_err(|_|"FETCH_UNAVAILABLE")?;
+    let mut response=client.request(method,url).header("Accept","application/json,image/*;q=0.5").header("User-Agent","PIT-Crypto-Metadata-Checker/2.0").send().await.map_err(fetch_error)?;
     if response.status().is_redirection(){return Err("REDIRECT_FORBIDDEN".into())}if !response.status().is_success(){return Err(format!("HTTP_{}",response.status().as_u16()))}
     let content_type=response.headers().get("content-type").and_then(|v|v.to_str().ok()).unwrap_or("").to_owned();
-    let mut body=Vec::new();while let Some(chunk)=response.chunk().await.map_err(|_|"FETCH_UNAVAILABLE")?{if body.len()+chunk.len()>max_bytes{return Err("BODY_LIMIT".into())}body.extend(chunk)}Ok((content_type,body))
+    let mut body=Vec::new();while let Some(chunk)=response.chunk().await.map_err(fetch_error)?{if body.len()+chunk.len()>max_bytes{return Err("BODY_LIMIT".into())}body.extend(chunk)}Ok((content_type,body))
 }
 
 /// Only the explicitly configured loopback fixture is reachable in local test mode.
@@ -39,11 +41,11 @@ pub async fn fetch_local_fixture(uri:&str,origin:&str,method:reqwest::Method,max
         return Err("LOCAL_METADATA_ORIGIN_FORBIDDEN".into())
     }
     let client=reqwest::Client::builder().no_proxy().timeout(Duration::from_secs(3)).redirect(reqwest::redirect::Policy::none()).build().map_err(|_|"FETCH_CONFIG")?;
-    let mut response=client.request(method,url).send().await.map_err(|_|"FETCH_UNAVAILABLE")?;
+    let mut response=client.request(method,url).send().await.map_err(fetch_error)?;
     if response.status().is_redirection(){return Err("REDIRECT_FORBIDDEN".into())}
     if !response.status().is_success(){return Err(format!("HTTP_{}",response.status().as_u16()))}
     let content_type=response.headers().get("content-type").and_then(|v|v.to_str().ok()).unwrap_or("").to_owned();
-    let mut body=Vec::new();while let Some(chunk)=response.chunk().await.map_err(|_|"FETCH_UNAVAILABLE")?{
+    let mut body=Vec::new();while let Some(chunk)=response.chunk().await.map_err(fetch_error)?{
         if body.len()+chunk.len()>max_bytes{return Err("BODY_LIMIT".into())}body.extend(chunk)
     }
     Ok((content_type,body))
