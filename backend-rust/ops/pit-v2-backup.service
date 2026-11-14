@@ -1,0 +1,16 @@
+[Unit]
+Description=PIT V2 PostgreSQL custom-format backup
+OnFailure=pit-v2-backup-failure@%n.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/pit-v2-backup/pit-v2-backup.py
+User=root
+Group=root
+UMask=0077
+TimeoutStartSec=10min
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/backups/pit-v2

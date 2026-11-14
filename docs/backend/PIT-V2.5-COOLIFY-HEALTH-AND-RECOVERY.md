@@ -1,0 +1,37 @@
+# PIT V2.5 — Coolify health and PostgreSQL recovery
+
+## Exact scope
+
+V2 Coolify Raw Application `b8ohynbyx8dwsl5n46qdgjop` and Compose project `pit-crypto-v2-canary` remain internal. V1 Application `c1fsywygziaxxyz2aeks8ktt`, DeOpt, HBI, Toolio and the shared proxy are outside this change. The V2 runtime image remains `ghcr.io/coriom/pit-rust-backend@sha256:af396343aabd7e4988d1fd9bdb4308848c79702a0a47baaab73ab043325b9e3d`.
+
+The sole source Compose difference from the deployed runtime commit `0427bbb39445f45a8f058e72be8c53d5173cc890` is `restart: "no"` on `pit-v2-migrate`. The three SQL migrations use `IF NOT EXISTS` and completed a second run against a disposable populated database without changing its job count. The migration command remains one-shot. The candidate Compose SHA-256 is `1412cf03b8f349d8ca5893149deeeb584d3b9ea1e6615f26e92bf6695de71bdc`. This change requires a separate V2-only Coolify deployment authorization; updating the status field directly is forbidden.
+
+The installed Coolify 4.7.5 code excludes a Compose service from aggregate health if it explicitly has `restart: "no"` or `exclude_from_hc: true`. The live stored Compose has neither for the exited, successful migration. Three read-only Docker observations found the API, worker and PostgreSQL `healthy`, with zero restarts and zero OOM flags, and the migration `exited` with code 0. The stored and accessor status are both `degraded:unhealthy`. This is a false application aggregate, not a failed API/worker/database healthcheck. Do not turn off the three real healthchecks.
+
+## PIT V2-only backup design
+
+The V2 PostgreSQL instance is embedded in the Raw Compose Application. Coolify's application volume snapshot is not a substitute for a transactionally consistent `pg_dump` of an active PostgreSQL database. A PIT V2-specific systemd timer on the existing VPS will run a root-owned script that checks exact Compose identity, network and volume, then calls `pg_dump -Fc` inside **only** `pit-crypto-v2-canary-pit-v2-db-1`. The database role `pit_v2_backup` is a dedicated read-only login role in the dedicated V2 cluster. It inherits `pg_read_all_data`; it has no superuser, create-database or create-role privileges and no stored password. It relies on local Unix-socket authentication inside the database container. This authentication must pass the read-only hosted preflight before installation. The script never uses V1 or neighboring credentials or volumes.
+
+- Schedule: daily 03:17 UTC with at most 15 minutes randomized delay; run one verified first backup before enabling the timer.
+- Destination: `/var/backups/pit-v2`, owner root, mode `0700`; each custom-format archive and checksum sidecar has mode `0600`. Backups contain database data and must be treated as confidential.
+- Retention: seven most recent successful archives, at most 4 GiB total. A single database/archive above 1 GiB or less than 2 GiB free disk fails closed and requires a reviewed capacity change. These limits fit the synthetic internal canary, not an unbounded customer database.
+- Integrity: SHA-256 sidecar plus `pg_restore --list` containing the expected PIT tables. The script uses a lock and an atomic archive creation step. It never logs database rows, credentials or archive bytes.
+- Failure: the systemd job fails nonzero, stays visible in `systemctl --failed` and logs `PIT_V2_BACKUP_FAILED` through an `OnFailure` unit. This is local failure reporting, not a verified external page or email alert. Check the unit status and most recent archive age at least daily until an authorized external alert route exists.
+- Recovery test: `pit-v2-restore-check.py` verifies ownership, permissions and checksum, then restores into a new `pit_v2_restore_probe_*` database in the **V2-only** PostgreSQL container. It checks six PIT tables and `next_attempt_at`, then drops only the probe database. It never restores over `pit_crypto_v2`.
+
+The schedule and local archives do **not** protect against loss of the VPS or its SSD. Before real user data, use a dedicated PIT V2 S3-compatible bucket in an operator-controlled, off-host account, with a PIT-only least-privilege identity, server-side encryption, 30-day versioned retention and an independently verified restore. No bucket or paid service is created by this campaign.
+
+## Local rehearsal
+
+A disposable PostgreSQL container using the pinned V2 database image was populated with a completed job, monitor, alert and all three migrations. The backup role could dump but was denied an `INSERT`. A custom-format archive was created, listed, SHA-256 checked and restored into a separate disposable database; the schema and three representative records passed. A tampered archive was refused before restore. The retention routine kept the seven newest of nine synthetic archives. Re-running all three migrations preserved the populated job. `systemd-analyze verify` accepted the unit/timer definitions. These tests do not establish an active hosted backup schedule.
+
+## Controlled rollout after a new exact authorization
+
+1. Recheck the final manifest SHA, source commit, Compose hash, Coolify 4.7.5, V2 Application UUID, job queue, pinned image, network/volume identities, host headroom, trusted HTTPS and neighbor health. Verify the current stored Compose and private-variable **names only**. Stop if any differ.
+2. Install only the reviewed PIT V2 backup scripts and systemd units in `/opt/pit-v2-backup` and `/etc/systemd/system`; create only `/var/backups/pit-v2` with mode `0700`. No timer is enabled yet.
+3. Update only the V2 Raw Application Git reference to the final source commit, preserve all private variables and the V2 volume, and perform **one** standard Coolify deployment. API and worker may be recreated; the migration may run again. The V2 database may be restarted or recreated against the same persistent volume. Expect a brief V2-only interruption. V1 and neighbors must not be touched.
+4. Inspect the generated Compose and actual Docker topology immediately: the management network contains only `coolify-proxy`; the proxy is absent from `pit-v2-data` and `pit-v2-rpc`; the database is only on `pit-v2-data`; no PIT port/router exists; CPU/RAM limits and hosted NFT disablement remain. If this fails, stop only V2 API and worker and preserve all database volumes.
+5. Confirm the migration exit code is zero, Docker API/worker/database are healthy, Coolify status becomes `running:healthy` after its normal reconciliation, and existing synthetic data survives. Run bounded, signed, read-only Base Sepolia event/export smoke tests and recheck DeOpt, HBI, Toolio, V1 and Traefik.
+6. Apply the PIT V2 backup role SQL through the V2 PostgreSQL container, verify read-only privileges, run one PIT-only backup and disposable restore, then enable the PIT V2 timer. Confirm its next run and local failure reporting. Do not claim the timer has completed a scheduled run until that run actually succeeds.
+
+If the Coolify status remains degraded, inspect its actual service aggregation and stop; do not redeploy speculatively. For a health or data failure, use the previous immutable Git reference and image only within a separately reviewed V2 rollback, preserving the V2 volume. For an isolation failure, stop V2 API/worker immediately and preserve the volume. Host backup units can be disabled without deleting archives. Never run global Docker cleanup or remove another project's data.

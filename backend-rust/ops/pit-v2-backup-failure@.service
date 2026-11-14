@@ -1,0 +1,8 @@
+[Unit]
+Description=Record PIT V2 PostgreSQL backup failure for %i
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/logger -p daemon.err -t pit-v2-backup PIT_V2_BACKUP_FAILED unit=%i
+User=root
+Group=root
