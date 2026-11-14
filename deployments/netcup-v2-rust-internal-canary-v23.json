@@ -1,0 +1,94 @@
+{
+  "schema": "pit.netcup.rust-internal-canary.v2.3",
+  "authorization_state": "AWAITING_EXPLICIT_GO",
+  "authorization_prefix": "GO PIT V2 INTERNAL CANARY",
+  "scope": "Create and start one independent Coolify Raw Application for synthetic, internal-only PIT Rust V2 traffic; no V1, neighbor, proxy configuration, Cloudflare, DNS, payment or external chain-write changes.",
+  "source": {
+    "repository": "coriom/Pit",
+    "runtime_commit": "0427bbb39445f45a8f058e72be8c53d5173cc890",
+    "compose_path": "backend-rust/compose.v2-candidate.yml",
+    "compose_sha256": "d197fd9f4c76f1995d54b8901a5bc2f368f64af58b3f3864c19228f49613e6d2",
+    "migration_003_sha256": "6ad453a1de5037124d33024fc330995db050751001eeb884d005d82d41f01d55"
+  },
+  "image": {
+    "reference": "ghcr.io/coriom/pit-rust-backend@sha256:af396343aabd7e4988d1fd9bdb4308848c79702a0a47baaab73ab043325b9e3d",
+    "registry_digest_independently_verified": true,
+    "source_revision_label": "0427bbb39445f45a8f058e72be8c53d5173cc890",
+    "runtime_uid": "65532:65532",
+    "manual_ghcr_run": 43543401239,
+    "ci_high_critical_findings": 0,
+    "ci_sbom_sha256": "758fb0477acd443449d4b277dc6fd49d26c0d0bda4421de19d627a7c3e5af27f"
+  },
+  "coolify": {
+    "installed_version_last_verified": "4.7.5",
+    "resource_type": "Git Docker Compose Application",
+    "deployment_mode": "Raw",
+    "new_resource_name": "pit-backend-v2-internal-canary",
+    "new_application_uuid": "assigned_by_Coolify_at_creation",
+    "new_project_environment": "PIT / internal-canary-v2",
+    "reference": "0427bbb39445f45a8f058e72be8c53d5173cc890",
+    "automatic_deploy": false,
+    "preview_deployments": false,
+    "custom_compose_command": null,
+    "pre_and_post_deployment_commands": [],
+    "domain": null,
+    "host_ports": [],
+    "traefik_routers": [],
+    "generated_compose_sha256": "record_after_Coolify_materialization_before_smoke",
+    "permitted_management_side_effect": "Coolify may create deployment records, a helper container, temporary files and an Application management network and attach coolify-proxy only to that otherwise empty management network. The shared proxy must not join any V2 service network."
+  },
+  "topology": {
+    "compose_project": "pit-crypto-v2-canary",
+    "pit_v2_data": {"internal": true, "expected_members": ["pit-v2-api", "pit-v2-worker", "pit-v2-db", "pit-v2-migrate-when-running"]},
+    "pit_v2_rpc": {"internal": false, "expected_members": ["pit-v2-api", "pit-v2-worker"]},
+    "proxy_must_not_join": ["pit-crypto-v2-canary_pit-v2-data", "pit-crypto-v2-canary_pit-v2-rpc"],
+    "foreign_project_networks_or_volumes": false,
+    "privileged_or_docker_socket": false,
+    "hosted_nft_fetch": false,
+    "external_email": false,
+    "blockchain_signing_or_broadcasting": false,
+    "production_payments": false
+  },
+  "services": {
+    "pit-v2-api": {"replicas": 1, "cpus": 0.25, "memory_mib": 256, "network_membership": ["pit-v2-data", "pit-v2-rpc"]},
+    "pit-v2-worker": {"replicas": 1, "cpus": 0.5, "memory_mib": 512, "network_membership": ["pit-v2-data", "pit-v2-rpc"]},
+    "pit-v2-db": {"replicas": 1, "cpus": 0.5, "memory_mib": 512, "network_membership": ["pit-v2-data"]},
+    "pit-v2-migrate": {"replicas_after_success": 0, "cpus_when_running": 0.25, "memory_mib_when_running": 192, "network_membership": ["pit-v2-data"]}
+  },
+  "database": {
+    "name": "pit_crypto_v2",
+    "role": "pit_v2_api",
+    "new_volume": "pit-crypto-v2-canary_pit-v2-db-data",
+    "v1_writable_database_access": false,
+    "migrations": ["backend/migrations/001_init.sql", "backend/migrations/002_edge_nonces.sql", "backend-rust/migrations/003_retry_schedule.sql"],
+    "canary_data": "synthetic only; no customer uploads",
+    "backup_and_restore": "After first successful migration, create a PIT-V2-only pg_dump in a private temporary operator-managed path and restore it into a separate disposable PIT-V2-only database; do not access or change V1 backups. Delete only disposable restore fixtures. A scheduled backup is required before real users."
+  },
+  "secrets": {
+    "mechanism": "Coolify private runtime variables generated separately for V2; values never stored in Git, manifest or logs",
+    "required_names": ["PIT_V2_DB_PASSWORD", "PIT_V2_DATABASE_URL", "PIT_V2_BACKEND_INVITE_SHA256", "PIT_V2_EDGE_HMAC_KEY", "PIT_V2_ALLOWED_ORIGIN"],
+    "private_origin_policy": "Set PIT_V2_ALLOWED_ORIGIN exactly to https://pit-v2.invalid for this internal-only canary; this reserved .invalid name has no DNS record or public browser route."
+  },
+  "last_read_only_host_observation": {
+    "utc": "2026-11-14T01:34:55Z",
+    "available_memory_mib": 6108,
+    "free_root_disk_gib": 142,
+    "load_averages": [0.52, 0.80, 0.69],
+    "deopt_https": "200; normal TLS validation",
+    "hbi_https": "200; normal TLS validation",
+    "certificate_san": "94.16.113.122",
+    "certificate_expires_utc": "2026-11-19T14:57:18Z"
+  },
+  "single_authorized_attempt": {
+    "before_start": "Recheck manifest/source/image hashes, actual Coolify version and saved Raw settings, five V2-only variables present without values, no domain/ports/hooks/autodeploy/extra networks, no existing V2 app, no concurrent deployment, host headroom, TLS and DeOpt/HBI/Toolio health. Stop if any check fails.",
+    "start": "Allow one standard Coolify Raw deployment only; no custom config --quiet job. Coolify may materialize its management resources before container startup. No second automatic attempt.",
+    "immediately_after_start": "Inspect actual generated Compose, Docker labels, all PIT and proxy network memberships, host port bindings, Traefik routers, effective cgroup CPU/RAM, image digests, migration exit, health and secrets-by-name. If proxy joins a V2 service network, or any public route/port or foreign mount appears, stop all new V2 containers before functional smoke; preserve V1 and both database volumes.",
+    "smoke": "Synthetic invitation and scoped HMAC requests; reject unsigned/replayed requests and hosted NFT jobs; bounded Base Sepolia eth_chainId, eth_getLogs, events export, permissions and distribution read-only jobs; worker restart/recovery; PIT-V2-only backup/restore; no external transaction or email.",
+    "observe": "Measure PIT CPU/RAM, VPS available memory/CPU pressure/disk, restarts/OOM and job latency; recheck DeOpt, HBI, Toolio and TLS. Stop only V2 on material neighbor degradation.",
+    "rollback": "Stop only newly created V2 API, worker and database containers; preserve V2 volume and all V1 resources. Do not restart or manually alter shared Traefik. Remove only V2 management resources after checking their membership and ownership.",
+    "residual_risk": "Coolify's generated Compose and management network are only fully observable during the one controlled start. A transient network attachment could exist before immediate post-start inspection; this is restricted to synthetic internal traffic with no public route. Stop and report rather than retry if isolation fails."
+  },
+  "budget": {"maximum_cpu_vcpu": 1.25, "maximum_memory_mib": 1280, "initial_instances": {"api": 1, "worker": 1, "database": 1}, "planned_incremental_paid_cost": 0, "capacity_must_be_rechecked": true},
+  "v1_preservation": {"coolify_application_uuid": "c1fsywygziaxxyz2aeks8ktt", "restart_or_redeploy": false, "database_or_volume_mutation": false},
+  "deployment_executed": false
+}
