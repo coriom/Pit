@@ -63,7 +63,7 @@ sql = ("SELECT current_setting('server_version_num')||'|'||"
        "(SELECT coalesce(bool_or(type='local' AND auth_method='trust'),false) FROM pg_hba_file_rules WHERE error IS NULL)||'|'||"
        "(SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename LIKE 'pit_%')")
 pg = output('docker', 'exec', '-u', 'postgres', PROJECT + '-pit-v2-db-1', 'psql', '-X', '-Atq',
-            '-U', 'postgres', '-d', 'pit_crypto_v2', '-c', sql).strip().split('|')
+            '-U', 'pit_v2_api', '-d', 'pit_crypto_v2', '-c', sql).strip().split('|')
 print('POSTGRES_MAJOR=' + str(int(pg[0]) // 10000), flush=True)
 print('V2_DB_SIZE_BYTES=' + pg[1], flush=True)
 print('BACKUP_ROLE_COUNT=' + pg[2], flush=True)

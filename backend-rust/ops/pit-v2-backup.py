@@ -18,6 +18,7 @@ CONTAINER = f'{PROJECT}-{SERVICE}-1'
 VOLUME = f'{PROJECT}_pit-v2-db-data'
 DATA_NETWORK = f'{PROJECT}_pit-v2-data'
 DB = 'pit_crypto_v2'
+ADMIN = 'pit_v2_api'
 ROLE = 'pit_v2_backup'
 PROD_ROOT = Path('/var/backups/pit-v2')
 MAX_ARCHIVE_BYTES = 1024 ** 3
@@ -76,7 +77,7 @@ def safe_root(root, local):
 
 def verify_role(container):
     query = "SELECT rolcanlogin AND NOT rolsuper AND pg_has_role('pit_v2_backup','pg_read_all_data','member') FROM pg_roles WHERE rolname='pit_v2_backup'"
-    output = run(['docker', 'exec', '-u', 'postgres', container, 'psql', '-X', '-Atq', '-U', 'postgres', '-d', DB, '-c', query])
+    output = run(['docker', 'exec', '-u', 'postgres', container, 'psql', '-X', '-Atq', '-U', ADMIN, '-d', DB, '-c', query])
     if output.strip() != b't':
         raise RuntimeError('BACKUP_ROLE_NOT_READY')
 
@@ -131,7 +132,7 @@ def backup(local):
 
 def create_archive(container, root):
     size = int(run(['docker', 'exec', '-u', 'postgres', container, 'psql', '-X', '-Atq',
-                    '-U', 'postgres', '-d', DB, '-c', "SELECT pg_database_size('pit_crypto_v2')"]).strip())
+                    '-U', ADMIN, '-d', DB, '-c', "SELECT pg_database_size('pit_crypto_v2')"]).strip())
     if size > MAX_ARCHIVE_BYTES:
         raise RuntimeError('DATABASE_SIZE_LIMIT')
     if shutil.disk_usage(root).free < max(2 * size, 2 * 1024 ** 3):

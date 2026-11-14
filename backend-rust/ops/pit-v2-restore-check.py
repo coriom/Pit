@@ -37,23 +37,23 @@ def check(filename, local):
     probe = 'pit_v2_restore_probe_' + os.urandom(4).hex()
     created = False
     try:
-        backup.run(['docker', 'exec', '-u', 'postgres', container, 'createdb', '-U', 'postgres', '-T', 'template0', probe])
+        backup.run(['docker', 'exec', '-u', 'postgres', container, 'createdb', '-U', backup.ADMIN, '-T', 'template0', probe])
         created = True
         with archive.open('rb') as source:
             backup.run(['docker', 'exec', '-i', '-u', 'postgres', container, 'pg_restore',
-                        '--exit-on-error', '--no-owner', '--no-acl', '-U', 'postgres', '-d', probe],
+                        '--exit-on-error', '--no-owner', '--no-acl', '-U', backup.ADMIN, '-d', probe],
                        stdin=source, timeout=300)
         query = ("SELECT (SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN "
                  "('pit_jobs','pit_monitors','pit_alerts','pit_deliveries','pit_worker_heartbeat','pit_edge_nonces'))=6 "
                  "AND EXISTS (SELECT 1 FROM information_schema.columns "
                  "WHERE table_name='pit_jobs' AND column_name='next_attempt_at')")
         valid = backup.run(['docker', 'exec', '-u', 'postgres', container, 'psql', '-X', '-Atq',
-                            '-U', 'postgres', '-d', probe, '-c', query]).strip()
+                            '-U', backup.ADMIN, '-d', probe, '-c', query]).strip()
         if valid != b't':
             raise RuntimeError('RESTORED_SCHEMA_INVALID')
         if local:
             fixture = backup.run(['docker', 'exec', '-u', 'postgres', container, 'psql', '-X', '-Atq',
-                                  '-U', 'postgres', '-d', probe, '-c',
+                                  '-U', backup.ADMIN, '-d', probe, '-c',
                                   "SELECT (SELECT count(*) FROM pit_jobs WHERE id='11111111-1111-4111-8111-111111111111')=1 "
                                   "AND (SELECT count(*) FROM pit_monitors WHERE id='22222222-2222-4222-8222-222222222222')=1 "
                                   "AND (SELECT count(*) FROM pit_alerts WHERE id='33333333-3333-4333-8333-333333333333')=1"] ).strip()
@@ -63,7 +63,7 @@ def check(filename, local):
     finally:
         if created:
             backup.run(['docker', 'exec', '-u', 'postgres', container, 'dropdb', '--if-exists',
-                        '--force', '-U', 'postgres', probe])
+                        '--force', '-U', backup.ADMIN, probe])
 
 
 if __name__ == '__main__':
