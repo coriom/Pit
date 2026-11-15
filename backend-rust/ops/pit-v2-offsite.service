@@ -1,0 +1,16 @@
+[Unit]
+Description=Encrypt and verify PIT V2 PostgreSQL backup in private R2
+OnFailure=pit-v2-offsite-failure@%n.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/pit-v2-backup/pit-v2-offsite.py --upload-latest
+User=root
+Group=root
+UMask=0077
+TimeoutStartSec=15min
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/backups/pit-v2
