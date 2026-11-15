@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Local-only GPG, object readback and disposable PostgreSQL restore rehearsal."""
+"""Local-only age, object readback and disposable PostgreSQL restore rehearsal."""
 import importlib.util
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -57,8 +58,7 @@ def fixture():
                                                     ('data', 'socket', 'backups', 'settings', 'objects'))
         for path in (socket, backups, settings, objects):
             path.mkdir(mode=0o700)
-        private = base / 'offline-private-key'
-        private.mkdir(mode=0o700)
+        identity = base / 'offline-private-key.agekey'
         port = str(54000 + secrets.randbelow(10000))
         env = dict(os.environ, PGHOST=str(socket), PGPORT=port, PGUSER=os.getlogin()
                    if os.isatty(0) else os.environ.get('USER', 'corio'))
@@ -92,16 +92,12 @@ def fixture():
             sidecar.write_text(f'{offsite.sha256(archive)}  {archive.name}\n', encoding='ascii')
             sidecar.chmod(0o600)
 
-            run(['gpg', '--homedir', str(private), '--batch', '--pinentry-mode', 'loopback',
-                 '--passphrase', '', '--quick-generate-key', 'PIT fixture <pit@example.invalid>',
-                 'rsa3072', 'encr', '1d'])
-            listing = run(['gpg', '--homedir', str(private), '--batch', '--with-colons',
-                           '--fingerprint', '--list-keys']).decode('ascii')
-            fingerprint = next(line.split(':')[9] for line in listing.splitlines() if line.startswith('fpr:'))
-            public = run(['gpg', '--homedir', str(private), '--batch', '--armor', '--export', fingerprint])
-            (settings / 'recipient.asc').write_bytes(public)
+            run(['age-keygen', '-o', str(identity)])
+            recipient = run(['age-keygen', '-y', str(identity)]).decode('ascii').strip()
+            recipient_sha256 = hashlib.sha256(recipient.encode('ascii')).hexdigest()
+            (settings / 'recipient.txt').write_text(recipient + '\n', encoding='ascii')
             (settings / 'config.json').write_text(json.dumps({
-                'account_id': 'a' * 32, 'recipient_fingerprint': fingerprint,
+                'account_id': 'a' * 32, 'recipient_sha256': recipient_sha256,
                 'retention_days': 7}), encoding='ascii')
             (settings / 'rclone.conf').write_text(
                 '[pit_v2_r2]\ntype = s3\nprovider = Cloudflare\nregion = auto\n'
@@ -113,12 +109,21 @@ def fixture():
             store = LocalStore(objects)
             offsite.upload(backups, settings, store, uid=os.geteuid(), dump=archive)
             stored = [p for p in objects.rglob('*') if p.is_file()]
-            assert len(stored) == 2 and all(p.suffix in ('.gpg', '.json') for p in stored)
-            cipher = next(p for p in stored if p.suffix == '.gpg')
+            assert len(stored) == 2 and all(p.suffix in ('.age', '.json') for p in stored)
+            cipher = next(p for p in stored if p.suffix == '.age')
             manifest = Path(str(cipher) + '.json')
             with patch.dict(os.environ, {'PGHOST': str(socket), 'PGPORT': port,
                                           'PGUSER': env['PGUSER']}):
-                recovery.recover(cipher, manifest, private)
+                recovery.recover(cipher, manifest, identity)
+            other_identity = base / 'wrong-identity.agekey'
+            run(['age-keygen', '-o', str(other_identity)])
+            try:
+                with patch.dict(os.environ, {'PGHOST': str(socket), 'PGPORT': port,
+                                              'PGUSER': env['PGUSER']}):
+                    recovery.recover(cipher, manifest, other_identity)
+                raise AssertionError('WRONG_RECOVERY_KEY_ACCEPTED')
+            except recovery.offsite.CheckFailed as error:
+                assert str(error) == 'RECOVERY_RECIPIENT_MISMATCH'
             assert not run(['psql', '-X', '-Atq', '-d', 'postgres', '-c',
                             "SELECT datname FROM pg_database WHERE datname LIKE 'pit_v2_offsite_restore_%'"],
                            env=env).strip()
@@ -129,7 +134,7 @@ def fixture():
             try:
                 with patch.dict(os.environ, {'PGHOST': str(socket), 'PGPORT': port,
                                               'PGUSER': env['PGUSER']}):
-                    recovery.recover(corrupted, manifest, private)
+                    recovery.recover(corrupted, manifest, identity)
                 raise AssertionError('TAMPER_ACCEPTED')
             except recovery.offsite.CheckFailed as error:
                 assert str(error) == 'CIPHERTEXT_INTEGRITY'
@@ -145,13 +150,20 @@ def fixture():
                 raise AssertionError('STORAGE_CAP_BYPASSED')
             except offsite.CheckFailed as error:
                 assert str(error) == 'REMOTE_8_GIB_CAP'
+            (settings / 'recipient.txt').write_text('age1' + 'a' * 58 + '\n', encoding='ascii')
+            try:
+                offsite.upload(backups, settings, store, uid=os.geteuid(), dump=archive)
+                raise AssertionError('WRONG_UPLOAD_RECIPIENT_ACCEPTED')
+            except offsite.CheckFailed as error:
+                assert str(error) == 'RECIPIENT_HASH'
+            (settings / 'recipient.txt').write_text(recipient + '\n', encoding='ascii')
             sidecar.write_text('0' * 64 + '  ' + archive.name + '\n', encoding='ascii')
             try:
                 offsite.upload(backups, settings, store, uid=os.geteuid(), dump=archive)
                 raise AssertionError('BAD_SOURCE_CHECKSUM_ACCEPTED')
             except offsite.CheckFailed as error:
                 assert str(error) == 'ARCHIVE_SHA256'
-            print('PIT_V27_OFFSITE_LOCAL_FIXTURE_PASS encrypted_only readback tamper_denial disposable_restore storage_cap source_checksum_denial')
+            print('PIT_V27_OFFSITE_LOCAL_FIXTURE_PASS encrypted_only readback tamper_denial disposable_restore storage_cap source_checksum_denial recipient_mismatch_denial')
         finally:
             if running:
                 run([str(pg_bin / 'pg_ctl'), '-D', str(data), '-m', 'immediate', 'stop'])

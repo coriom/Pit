@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""Verify an R2-downloaded PIT V2 ciphertext on a separate recovery machine."""
+"""Verify and restore an R2-downloaded age ciphertext on a separate machine."""
 import importlib.util
 import json
 import os
 from pathlib import Path
 import re
 import secrets
-import stat
 import subprocess
 import sys
 import tempfile
@@ -22,41 +21,43 @@ def run(args, env):
     return result.stdout
 
 
-def recover(cipher, manifest, gnupg_home):
-    cipher, manifest, gnupg_home = map(Path, (cipher, manifest, gnupg_home))
+def recover(cipher, manifest, identity):
+    cipher, manifest, identity = map(Path, (cipher, manifest, identity))
     offsite.check(cipher.is_file() and not cipher.is_symlink() and manifest.is_file() and
                   not manifest.is_symlink() and manifest.stat().st_size <= 4096 and
                   cipher.stat().st_size <= offsite.MAX_DUMP + 1024 * 1024, 'DOWNLOAD_FILES')
     meta = json.loads(manifest.read_text(encoding='ascii'))
     offsite.check(set(meta) == {'schema', 'archive', 'plaintext_sha256', 'ciphertext_sha256',
-                                'ciphertext_bytes', 'recipient_fingerprint'} and
-                  meta['schema'] == 'pit.v2.offsite.gpg.v1' and
+                                'ciphertext_bytes', 'recipient_sha256'} and
+                  meta['schema'] == 'pit.v2.offsite.age.v1' and
                   isinstance(meta['archive'], str) and offsite.ARCHIVE.fullmatch(meta['archive']) and
-                  cipher.name == meta['archive'] + '.gpg' and
-                  isinstance(meta['recipient_fingerprint'], str) and
-                  offsite.FINGERPRINT.fullmatch(meta['recipient_fingerprint']) and
+                  cipher.name == meta['archive'] + '.age' and
+                  isinstance(meta['recipient_sha256'], str) and
+                  re.fullmatch(r'[a-f0-9]{64}', meta['recipient_sha256']) and
                   isinstance(meta['plaintext_sha256'], str) and
                   re.fullmatch(r'[a-f0-9]{64}', meta['plaintext_sha256']) and
                   isinstance(meta['ciphertext_sha256'], str) and
                   re.fullmatch(r'[a-f0-9]{64}', meta['ciphertext_sha256']) and
                   meta['ciphertext_bytes'] == cipher.stat().st_size and
                   offsite.sha256(cipher) == meta['ciphertext_sha256'], 'CIPHERTEXT_INTEGRITY')
-    offsite.check(gnupg_home.is_dir() and not gnupg_home.is_symlink() and
-                  stat.S_IMODE(gnupg_home.stat().st_mode) == 0o700, 'RECOVERY_KEY_HOME')
+    offsite.check(identity.is_file() and not identity.is_symlink() and
+                  identity.stat().st_size <= 4096 and identity.stat().st_mode & 0o077 == 0,
+                  'RECOVERY_KEY_FILE')
     pg_host = os.environ.get('PGHOST', '')
     pg_port = os.environ.get('PGPORT', '5432')
     pg_user = os.environ.get('PGUSER', '')
     offsite.check(pg_host.startswith('/') and pg_port.isdecimal() and
                   1 <= int(pg_port) <= 65535 and re.fullmatch(r'[a-z_][a-z0-9_]*', pg_user),
                   'LOCAL_POSTGRES_SOCKET_REQUIRED')
-    env = {'PATH': '/usr/sbin:/usr/bin:/bin', 'HOME': str(gnupg_home),
-           'GNUPGHOME': str(gnupg_home), 'PGHOST': pg_host,
+    env = {'PATH': '/usr/sbin:/usr/bin:/bin', 'PGHOST': pg_host,
            'PGPORT': pg_port, 'PGUSER': pg_user, 'PGDATABASE': 'postgres'}
-    keys = run(['gpg', '--batch', '--no-tty', '--with-colons', '--fingerprint', '--list-secret-keys'], env)
-    offsite.check(meta['recipient_fingerprint'].encode() in keys, 'PRIVATE_KEY_UNAVAILABLE')
+    recipient = run(['age-keygen', '-y', str(identity)], env).strip()
+    offsite.check(offsite.RECIPIENT.fullmatch(recipient.decode('ascii')) and
+                  offsite.hashlib.sha256(recipient).hexdigest() == meta['recipient_sha256'],
+                  'RECOVERY_RECIPIENT_MISMATCH')
     with tempfile.TemporaryDirectory(prefix='pit-v2-recover-') as temp:
         dump = Path(temp) / meta['archive']
-        run(['gpg', '--batch', '--no-tty', '--yes', '--output', str(dump), '--decrypt', str(cipher)], env)
+        run(['age', '--decrypt', '--identity', str(identity), '--output', str(dump), str(cipher)], env)
         offsite.check(offsite.sha256(dump) == meta['plaintext_sha256'], 'PLAINTEXT_INTEGRITY')
         listing = run(['pg_restore', '--list', str(dump)], env)
         offsite.check(all(table in listing for table in (b'pit_jobs', b'pit_monitors',

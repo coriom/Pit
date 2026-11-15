@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PIT V2-only encrypted offsite transfer. Activation requires separate approval."""
+"""PIT V2-only age-encrypted offsite transfer. Activation requires separate approval."""
 import configparser
 import fcntl
 import hashlib
@@ -21,7 +21,7 @@ PREFIX = 'pit-v2/'
 MAX_DUMP = 1024 ** 3
 MAX_REMOTE = 8 * 1024 ** 3
 ARCHIVE = re.compile(r'pit-v2-\d{8}T\d{6}Z-[0-9a-f]{8}\.dump')
-FINGERPRINT = re.compile(r'[A-F0-9]{40}')
+RECIPIENT = re.compile(r'age1[0-9a-z]{58}')
 
 
 class CheckFailed(Exception):
@@ -83,16 +83,22 @@ def latest_dump(root):
 
 def config_check(root, uid):
     private_dir(root, uid)
-    for name in ('config.json', 'recipient.asc', 'rclone.conf'):
+    for name in ('config.json', 'recipient.txt', 'rclone.conf'):
         private_file(Path(root) / name, uid)
     check((Path(root) / 'config.json').stat().st_size <= 4096 and
           (Path(root) / 'rclone.conf').stat().st_size <= 4096 and
-          (Path(root) / 'recipient.asc').stat().st_size <= 65536, 'CONFIG_SIZE')
+          (Path(root) / 'recipient.txt').stat().st_size <= 128, 'CONFIG_SIZE')
     cfg = json.loads((Path(root) / 'config.json').read_text(encoding='ascii'))
-    check(set(cfg) == {'account_id', 'recipient_fingerprint', 'retention_days'} and
+    check(set(cfg) == {'account_id', 'recipient_sha256', 'retention_days'} and
           isinstance(cfg['account_id'], str) and re.fullmatch(r'[a-f0-9]{32}', cfg['account_id']) and
-          isinstance(cfg['recipient_fingerprint'], str) and FINGERPRINT.fullmatch(cfg['recipient_fingerprint']) and
+          isinstance(cfg['recipient_sha256'], str) and
+          re.fullmatch(r'[a-f0-9]{64}', cfg['recipient_sha256']) and
           cfg['retention_days'] == 7, 'OFFSITE_CONFIG')
+    recipient_text = (Path(root) / 'recipient.txt').read_text(encoding='ascii')
+    recipient = recipient_text.removesuffix('\n')
+    check(RECIPIENT.fullmatch(recipient) and recipient_text in (recipient, recipient + '\n') and
+          hashlib.sha256(recipient.encode('ascii')).hexdigest() == cfg['recipient_sha256'],
+          'RECIPIENT_HASH')
     parser = configparser.RawConfigParser()
     check(bool(parser.read(Path(root) / 'rclone.conf')) and parser.sections() == [REMOTE],
           'RCLONE_CONFIG')
@@ -105,37 +111,20 @@ def config_check(root, uid):
           remote.get('endpoint') == f'https://{cfg["account_id"]}.r2.cloudflarestorage.com' and
           bool(remote.get('access_key_id')) and bool(remote.get('secret_access_key')),
           'RCLONE_DESTINATION')
-    return cfg
+    return cfg, recipient
 
 
-def encrypt(dump, public_cert, fingerprint, output, workspace):
-    home = workspace / 'gnupg'
-    home.mkdir(mode=0o700)
-    env = {'PATH': '/usr/sbin:/usr/bin:/bin', 'HOME': str(home), 'GNUPGHOME': str(home)}
-    command(['gpg', '--batch', '--no-tty', '--import', str(public_cert)], env=env)
-    lines = command(['gpg', '--batch', '--no-tty', '--with-colons', '--fingerprint',
-                     '--list-keys'], env=env).decode('ascii', errors='replace').splitlines()
-    primary, after_pub = [], False
-    for line in lines:
-        fields = line.split(':')
-        if fields[0] == 'pub':
-            after_pub = True
-        elif fields[0] == 'fpr' and after_pub:
-            primary.append(fields[9])
-            after_pub = False
-    check(primary == [fingerprint], 'RECIPIENT_FINGERPRINT')
-    check(not command(['gpg', '--batch', '--no-tty', '--with-colons', '--list-secret-keys'], env=env).strip(),
-          'PRIVATE_KEY_ON_UPLOAD_HOST')
-    command(['gpg', '--batch', '--no-tty', '--yes', '--trust-model', 'always',
-             '--cipher-algo', 'AES256', '--compress-algo', 'none', '--recipient', fingerprint,
-             '--output', str(output), '--encrypt', str(dump)], env=env)
+def encrypt(dump, recipient, output):
+    check(RECIPIENT.fullmatch(recipient), 'RECIPIENT')
+    command(['age', '--encrypt', '--recipient', recipient, '--output', str(output), str(dump)],
+            env={'PATH': '/usr/sbin:/usr/bin:/bin', 'HOME': '/var/backups/pit-v2'})
     os.chmod(output, 0o600)
     check(output.stat().st_size > 0, 'ENCRYPTION_EMPTY')
 
 
 def object_key(dump):
     stamp = dump.name[7:15]
-    return f'{PREFIX}{stamp[:4]}/{stamp[4:6]}/{dump.name}.gpg'
+    return f'{PREFIX}{stamp[:4]}/{stamp[4:6]}/{dump.name}.age'
 
 
 class Rclone:
@@ -167,7 +156,7 @@ class Rclone:
 
 def upload(root=BACKUPS, settings=CONFIG, store=None, *, uid=0, dump=None):
     root, settings = Path(root), Path(settings)
-    cfg = config_check(settings, uid)
+    cfg, recipient = config_check(settings, uid)
     dump = verified_dump(root, dump or latest_dump(root), uid)
     store = store or Rclone(settings / 'rclone.conf')
     key = object_key(dump)
@@ -178,19 +167,19 @@ def upload(root=BACKUPS, settings=CONFIG, store=None, *, uid=0, dump=None):
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         with tempfile.TemporaryDirectory(prefix='.offsite-', dir=root) as temp:
             work = Path(temp)
-            cipher = work / (dump.name + '.gpg')
-            encrypt(dump, settings / 'recipient.asc', cfg['recipient_fingerprint'], cipher, work)
-            meta = {'schema': 'pit.v2.offsite.gpg.v1', 'archive': dump.name,
+            cipher = work / (dump.name + '.age')
+            encrypt(dump, recipient, cipher)
+            meta = {'schema': 'pit.v2.offsite.age.v1', 'archive': dump.name,
                     'plaintext_sha256': sha256(dump), 'ciphertext_sha256': sha256(cipher),
                     'ciphertext_bytes': cipher.stat().st_size,
-                    'recipient_fingerprint': cfg['recipient_fingerprint']}
+                    'recipient_sha256': cfg['recipient_sha256']}
             manifest = work / (cipher.name + '.json')
             manifest.write_text(json.dumps(meta, sort_keys=True, separators=(',', ':')) + '\n', encoding='ascii')
             os.chmod(manifest, 0o600)
             check(store.used() + cipher.stat().st_size + manifest.stat().st_size <= MAX_REMOTE,
                   'REMOTE_8_GIB_CAP')
             store.put(cipher, key)
-            readback = work / 'readback.gpg'
+            readback = work / 'readback.age'
             store.get(key, readback)
             check(sha256(readback) == meta['ciphertext_sha256'], 'CIPHER_READBACK')
             store.put(manifest, key + '.json')
