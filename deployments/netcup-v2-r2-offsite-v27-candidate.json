@@ -1,7 +1,7 @@
 {
   "schema": "pit.netcup.v2.offsite.candidate.v2.7",
-  "authorization_state": "BLOCKED_PENDING_RECOVERY_KEY_AND_EXPLICIT_GO",
-  "source_commit": "05704f53f2b25e11915a0873e0ae6e5d0713a4f6",
+  "authorization_state": "BLOCKED_PENDING_PRIVATE_KEY_BACKUP_AND_EXPLICIT_GO",
+  "source_commit": "c904696b374e873caf997a3861f944d5937e8f25",
   "application_uuid": "b8ohynbyx8dwsl5n46qdgjop",
   "existing_v2_image": "ghcr.io/coriom/pit-rust-backend@sha256:af396343aabd7e4988d1fd9bdb4308848c79702a0a47baaab73ab043325b9e3d",
   "existing_v2_database": "pit_crypto_v2",
@@ -33,21 +33,25 @@
     "future_charges_not_guaranteed_zero": true
   },
   "encryption": {
-    "format": "OpenPGP AES-256 encrypted PostgreSQL custom archive",
-    "recipient_public_fingerprint": null,
+    "format": "age X25519 encrypted PostgreSQL custom archive",
+    "recipient_public_key": "age1degj2m0cc2spmswztv5ks7h3lqc7kwmjnh0j354mxqgzhhenrshsu3pn47",
+    "recipient_sha256": "38491e09ea047c92227a1d87583a8a72534b01225394f374f2caa8d7fe358830",
     "private_key_location": "independent recovery machine, never Netcup or R2",
     "private_key_backup_required": true,
+    "private_key_backup_verified": false,
     "plaintext_upload_allowed": false
   },
   "reviewed_artifact_sha256": {
-    "backend-rust/ops/pit-v2-offsite.py": "f903918deaad1628c1c733e7ccac7e53e72922a6fecdfa7bda25d0d2527e8c6f",
-    "backend-rust/ops/pit-v2-offsite-recover.py": "d022cd7db511aec383c3c61ccfb91da88877ccadbaa00f0b2eeb0202041dfc39",
+    "backend-rust/ops/pit-v2-offsite.py": "9cb9f3a0a76cb8fa0eebb7ddeb4f85348fe5c1c36d442653c494321921eee5f4",
+    "backend-rust/ops/pit-v2-offsite-recover.py": "af8ab0f922fb4bec9e57c7b919f004b8fa9231dd6d83db37af011867ed4b1fbd",
     "backend-rust/ops/pit-v2-offsite.service": "358634baca26be9df26f65c9e035af29ea417e025b3b938a9f106753aa5b8db0",
     "backend-rust/ops/pit-v2-offsite-failure@.service": "38b403b208db5af935ec4fd36db2834daee862f1322254ad6340d33b5ccdc55d",
     "backend-rust/ops/pit-v2-backup-offsite.conf": "07222a9af7a22ebc9641eb8a36ef2f3cb6a2d4ba82b0a1c43529fe00b815e572"
   },
   "first_activation_requires": [
-    "new PIT-only manifest with real public recipient fingerprint and exact SHA-256",
+    "new PIT-only manifest with reviewed age scripts and exact SHA-256",
+    "independent protected private identity backup verified",
+    "install Debian age package 1.2.1-1+b5 only on Netcup",
     "explicit hash-bound operator GO",
     "fresh V1 V2 neighbor TLS R2 usage and bucket checks",
     "PIT-only bucket and two bucket-scoped token creations",
