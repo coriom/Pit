@@ -1,0 +1,107 @@
+{
+  "schema": "pit.netcup.cleanup.candidate.v1",
+  "authorization_state": "NOT_AUTHORIZABLE_CURRENT_HOST_BASELINE",
+  "future_authorization_requires_new_verified_manifest": true,
+  "authorization_prefix_if_ready": "GO PIT NETCUP CLEANUP",
+  "source_repository": "coriom/Pit",
+  "source_baseline_commit": "2f2cf4cffc908418ecfcc603277d26fa72a8387c",
+  "preparation_commit": "9f3fbb302043c37f19c65e7fa2786dbc086bdd8f",
+  "coolify_version_reviewed": "4.7.5",
+  "host_observation_utc": "2026-11-25T07:38:21Z",
+  "current_host_blockers": [
+    "all six CORIMOX Control Plane containers exited; health not established",
+    "DeOpt backend and HBI web containers exited; DeOpt HTTPS /health returned 503",
+    "PIT data may change while V1 and V2 remain running; destructive volume deletion requires a fresh quiesced snapshot and separate data gate"
+  ],
+  "pit_coolify_resources": [
+    {"kind": "application", "uuid": "c1fsywygziaxxyz2aeks8ktt", "name": "pit-backend-canary-raw", "environment_id": 8, "autodeploy": false, "previews": false},
+    {"kind": "application", "uuid": "b8ohynbyx8dwsl5n46qdgjop", "name": "pit-backend-v2-internal-canary", "environment_id": 9, "autodeploy": false, "previews": false},
+    {"kind": "service", "uuid": "d47gm6kkdopzfurtmcd4lgpo", "name": "pit-crypto-backend-canary", "environment_id": 8}
+  ],
+  "pit_compose_projects": ["d47gm6kkdopzfurtmcd4lgpo", "pit-crypto-backend-canary", "pit-crypto-v2-canary"],
+  "pit_container_names": [
+    "pit-api-d47gm6kkdopzfurtmcd4lgpo",
+    "pit-db-d47gm6kkdopzfurtmcd4lgpo",
+    "pit-migrate-d47gm6kkdopzfurtmcd4lgpo",
+    "pit-worker-d47gm6kkdopzfurtmcd4lgpo",
+    "pit-crypto-backend-canary-pit-api-1",
+    "pit-crypto-backend-canary-pit-db-1",
+    "pit-crypto-backend-canary-pit-migrate-1",
+    "pit-crypto-backend-canary-pit-worker-1",
+    "pit-crypto-v2-canary-pit-v2-api-1",
+    "pit-crypto-v2-canary-pit-v2-db-1",
+    "pit-crypto-v2-canary-pit-v2-migrate-1",
+    "pit-crypto-v2-canary-pit-v2-worker-1"
+  ],
+  "pit_private_network_names": [
+    "d47gm6kkdopzfurtmcd4lgpo_pit-data",
+    "d47gm6kkdopzfurtmcd4lgpo_pit-rpc",
+    "pit-crypto-backend-canary_pit-data",
+    "pit-crypto-backend-canary_pit-rpc",
+    "pit-crypto-v2-canary_pit-v2-data",
+    "pit-crypto-v2-canary_pit-v2-rpc"
+  ],
+  "pit_management_networks_with_shared_proxy": [
+    "c1fsywygziaxxyz2aeks8ktt",
+    "b8ohynbyx8dwsl5n46qdgjop"
+  ],
+  "pit_volume_names_preserved_by_this_manifest": [
+    "d47gm6kkdopzfurtmcd4lgpo_pit-db-data",
+    "pit-crypto-backend-canary_pit-db-data",
+    "pit-crypto-v2-canary_pit-v2-db-data"
+  ],
+  "immutable_images_to_preserve_for_redeployment": [
+    "ghcr.io/coriom/pit-backend@sha256:b9e9c812e00b0a782c92579c22254941dddc81ca7b24fd49077acb7525486000",
+    "ghcr.io/coriom/pit-rust-backend@sha256:af396343aabd7e4988d1fd9bdb4308848c79702a0a47baaab73ab043325b9e3d",
+    "postgres@sha256:43f9275df91e012c3da3d86bea5d7bb5e67a473296cc906c5f9e80b8176b1a37"
+  ],
+  "recovery": {
+    "encrypted_bundle_name": "pit-netcup-preservation-20261125T064735Z.tar.age",
+    "encrypted_bundle_bytes": 51038568,
+    "sha256": "b5a7f2923bd487765407df2ef9d9ee92bc7a2a463ccc685c6f15270f50c53c6a",
+    "recipient_sha256": "38491e09ea047c92227a1d87583a8a72534b01225394f374f2caa8d7fe358830",
+    "copies": ["private WSL recovery directory", "Windows C:\\Users\\corio\\Documents\\PIT-Recovery"],
+    "private_identity": "WSL only; never stored in Git or on Netcup",
+    "tested": ["V1 pg_dump restored into disposable PostgreSQL 16 with six PIT tables", "V2 pg_dump restored into disposable PostgreSQL 16 with six PIT tables", "old stopped Service volume started as a disposable PostgreSQL 16 cluster with six PIT tables", "Windows ciphertext SHA-256 and full age decryption passed"]
+  },
+  "preconditions_before_any_cleanup": [
+    "new explicit authorization matching final manifest bytes",
+    "CORIMOX Control Plane state acknowledged and safe for PIT-only removal",
+    "DeOpt and HBI stopped state/HTTPS baseline explained or explicitly accepted; no neighboring deterioration",
+    "Coolify 4.7.5 exact three PIT identities, two Applications auto/preview disabled and no concurrent deployments",
+    "all PIT-only network/volume ownership and proxy attachments match expected inventory",
+    "WSL and Windows encrypted copies have the expected SHA-256 and WSL decryption identity is available",
+    "no CORIMOX or non-PIT container uses any PIT volume or private network"
+  ],
+  "permitted_sequence_after_approval_only": [
+    "disable the PIT V2 backup timer and verify no PIT backup service is running; retain local archives",
+    "stage-stop V2 and V1 Applications with StopApplication removeContainers=false and dockerCleanup=false; verify CORIMOX and neighbors against the approved baseline",
+    "remove the two PIT Applications and the old PIT Service with explicit flags below; preserve the three named Docker volumes; stop if remote cleanup fails even though Coolify may still delete its local record",
+    "allow Coolify to detach coolify-proxy only from the two named PIT Application management networks; no proxy restart or other network change",
+    "inspect exact members; remove only empty named PIT private networks and any leftover PIT containers by exact ownership labels",
+    "remove only PIT-specific Coolify configuration and staging files after encrypted backup validation; retain /var/backups/pit-v2 and the three volumes",
+    "verify no PIT application/resource/route remains, shared services unchanged, and measure actual disk and RAM delta"
+  ],
+  "coolify_delete_flags_required": {
+    "deleteVolumes": false,
+    "deleteConnectedNetworks": false,
+    "deleteConfigurations": true,
+    "dockerCleanup": false,
+    "deleteFromCoolifyOnly": false,
+    "note": "Coolify 4.7.5 StopApplication removes Compose containers and its management network even with deleteConnectedNetworks=false; only the two PIT proxy attachments are in scope"
+  },
+  "forbidden": [
+    "delete or alter any PIT database volume under this authorization",
+    "global Docker cleanup or image prune",
+    "restart or change shared proxy, Coolify, CORIMOX, DeOpt, HBI or Toolio",
+    "remove shared PostgreSQL image or any non-PIT network/volume",
+    "change external domains, contracts, Vercel, Supabase or payment systems"
+  ],
+  "rollback": {
+    "before_coolify_resource_deletion": "stop sequence and restart only the previously running PIT Application containers from their unchanged Coolify configuration if the approved scope allows; preserve volumes and first inspect shared services",
+    "after_coolify_resource_deletion": "no automatic in-place rollback; use encrypted off-VPS bundle, immutable images and separately approved redeployment",
+    "after_volume_deletion": "not applicable; volume deletion excluded"
+  },
+  "volume_deletion_gate": "NOT_IN_THIS_MANIFEST; requires a fresh snapshot after writes stop, independent restore, then a distinct destructive-data authorization",
+  "corimox_redeployment_gate": "NOT_READY; current CORIMOX AppSpec cannot directly express PIT API/worker modes, private ingress, probes or GHCR digest, and managed PostgreSQL restore is untested"
+}

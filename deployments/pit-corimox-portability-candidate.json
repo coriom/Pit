@@ -1,0 +1,72 @@
+{
+  "schema": "pit.corimox.portability.candidate.v1",
+  "status": "NOT_DEPLOYABLE_BY_CURRENT_CORIMOX_API",
+  "source_repository": "coriom/Pit",
+  "source_baseline_commit": "2f2cf4cffc908418ecfcc603277d26fa72a8387c",
+  "source_compose": "backend-rust/compose.v2-candidate.yml",
+  "source_compose_sha256": "1412cf03b8f349d8ca5893149deeeb584d3b9ea1e6615f26e92bf6695de71bdc",
+  "rust_image": "ghcr.io/coriom/pit-rust-backend@sha256:af396343aabd7e4988d1fd9bdb4308848c79702a0a47baaab73ab043325b9e3d",
+  "postgres_image": "postgres@sha256:43f9275df91e012c3da3d86bea5d7bb5e67a473296cc906c5f9e80b8176b1a37",
+  "components": {
+    "api": {
+      "mode": "api",
+      "replicas": 1,
+      "cpu_millicores": 250,
+      "memory_mib": 256,
+      "internal_port": 8789,
+      "readiness_path": "/pit/api/v1/ready",
+      "public_ingress": false,
+      "secret_env_names": ["PIT_DATABASE_URL", "PIT_BACKEND_INVITE_SHA256", "PIT_EDGE_HMAC_KEY", "PIT_ALLOWED_ORIGIN"]
+    },
+    "worker": {
+      "mode": "worker",
+      "replicas": 1,
+      "cpu_millicores": 500,
+      "memory_mib": 512,
+      "http_port": null,
+      "readiness_command": ["/usr/local/bin/pit-crypto-backend-v2", "worker-health"],
+      "secret_env_names": ["PIT_DATABASE_URL", "PIT_BACKEND_INVITE_SHA256", "PIT_EDGE_HMAC_KEY", "PIT_ALLOWED_ORIGIN"]
+    },
+    "migration": {
+      "mode": "migrate",
+      "one_shot": true,
+      "restart": "no",
+      "cpu_millicores": 250,
+      "memory_mib": 192,
+      "run_before_api_worker": true
+    },
+    "database": {
+      "name": "pit_crypto_v2",
+      "role": "pit_v2_api",
+      "cpu_millicores": 500,
+      "memory_mib": 512,
+      "storage": "dedicated_persistent_volume",
+      "restore_source": "pit-netcup-preservation-20261125T064735Z.tar.age",
+      "public_ingress": false
+    }
+  },
+  "network_contract": {
+    "api_worker_database": "PIT_only_private_data_network",
+    "api_worker_rpc": "separate_bounded_egress_network",
+    "database_rpc_access": false,
+    "shared_proxy_data_access": false,
+    "public_ports_or_routes": false,
+    "hosted_nft_fetch": false
+  },
+  "current_corimox_gaps": [
+    "Application AppSpec fixes port 8080 and HTTP /ready,/health probes; PIT API uses 8789 and a versioned readiness path",
+    "Application AppSpec always creates an Ingress; the PIT private API and worker require no public route",
+    "Application AppSpec has no per-service command/mode; PIT uses one Rust image in api, worker and migrate modes",
+    "Application image allowlist accepts only CORIMOX local-registry digests, not this verified GHCR digest directly",
+    "Current managed PostgreSQL uses CORIMOX image, app database and app role; PIT restore into that layout is untested"
+  ],
+  "acceptance_before_contabo_deployment": [
+    "CORIMOX Control Plane and broker healthy",
+    "reviewed CORIMOX support for private services, command, port and probes, or a documented owned alternative",
+    "PIT-only Kubernetes secrets supplied without Git values",
+    "dedicated volume and verified restore of the PIT V2 snapshot",
+    "network policy and actual runtime isolation verified",
+    "API/worker/database hosted smoke, backups and PIT-only rollback verified",
+    "separate operator deployment authorization"
+  ]
+}
